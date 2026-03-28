@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, DM_Serif_Display } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
+import Providers from "./providers";
 import "./globals.css";
 
 const inter = Inter({
@@ -24,11 +26,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${dmSerif.variable} h-full antialiased`}
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: "#4a8c65",
+          colorBackground: "#1a3a2a",
+          colorText: "#f0ebe3",
+          colorInputBackground: "#040a07",
+          colorInputText: "#f0ebe3",
+        },
+      }}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
-    </html>
+      <html
+        lang="en"
+        className={`${inter.variable} ${dmSerif.variable} h-full antialiased`}
+      >
+        <body className="min-h-full flex flex-col">
+          <Providers>{children}</Providers>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
