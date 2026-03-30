@@ -11,6 +11,20 @@
   --tan-muted: #a08960;
 }
 
+/* global.css */
+::-webkit-scrollbar {
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: 9999px;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -27,6 +41,16 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Pipeline kanban cards (P1 tokens) */
+.kanban-card {
+  --surface: #141f19;
+  --t2: var(--tan-muted);
+  --border: rgba(240, 235, 227, 0.12);
+}
+.pipeline-kanban {
+  --bg-3 :#0f1814;
 }
 
 @keyframes float {
