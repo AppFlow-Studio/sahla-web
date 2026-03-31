@@ -18,6 +18,7 @@ export type Column = {
 /** Mosque card on the board (P1 layout; wire to Supabase later) */
 export type KanbanCard = {
   id: Id;
+  mosqueId: Id;
   mosqueName: string;
   city: string;
   /** e.g. "NY" — optional; shown as "City, ST" when set */

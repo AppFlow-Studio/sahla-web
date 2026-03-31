@@ -1,51 +1,70 @@
 import KanbanBoard from "@/app/components/kanban/KanbanBoard";
-import type { KanbanCard } from "@/app/components/kanban/types";
-
+import type { KanbanCard, Stage } from "@/app/components/kanban/types";
+import { createClerkSupabaseClient } from "@/lib/supabase/server";
 // For P1 we can keep this as a server component and
 // pass plain data into the client KanbanBoard.
-export default function PipelinePage() {
-  const MOCK_CARDS: KanbanCard[] = [
-    {
-      id: "1",
-      mosqueName: "Masjid Al-Rahman",
-      city: "New York",
-      state: "NY",
-      contactName: "John Doe",
-      stage: "lead",
-      onboardingProgress: null,
-      updatedAt: "2026-03-30T12:00:00.000Z",
-    },
-    {
-      id: "2",
-      mosqueName: "Masjid Mosab",
-      city: "New York",
-      state: "NY",
-      contactName: "John Doe",
-      stage: "demo",
-      onboardingProgress: null,
-      updatedAt: "2026-03-29T15:00:00.000Z",
-    },
-    {
-      id: "3",
-      mosqueName: "Masjid al-Huda",
-      city: "Brunswick",
-      state: "NJ",
-      contactName: "Moe Money",
-      stage: "onboarding",
-      onboardingProgress: 60,
-      updatedAt: "2026-03-30T09:30:00.000Z",
-    },
-    {
-      id: "4",
-      mosqueName: "Masjid MAS SI",
-      city: "Staten Island",
-      state: "NY",
-      contactName: "John Doe",
-      stage: "lead",
-      onboardingProgress: null,
-      updatedAt: "2026-03-30T12:00:00.000Z",
-    }
-  ];
+export default async function PipelinePage() {
+  const supabase = await createClerkSupabaseClient();
+  const VALID_STAGES = new Set<Stage>([
+    "lead",
+    "contacted",
+    "demo",
+    "contract",
+    "onboarding",
+    "live",
+  ]);
+  const normalizeStage = (stage: string | null | undefined): Stage => {
+    const s = (stage ?? "lead").toLowerCase();
+    return VALID_STAGES.has(s as Stage) ? (s as Stage) : "lead";
+  };
+  type PipelineRow = {
+    id: string;
+    stage: string | null;
+    contact_name: string | null;
+    updated_at: string | null;
+    mosques: {
+      id: string;
+      name: string | null;
+      city: string | null;
+      state: string | null;
+      onboarding_progress: number | null | Record<string, unknown>;
+    } | null;
+  };
+  const { data } = await supabase
+  .from("pipeline_stages")
+  .select(`
+    id,
+    stage,
+    contact_name,
+    updated_at,
+    mosques (
+      id, 
+      name,
+      city,
+      state,
+      onboarding_progress
+    )
+  `)
+  .order("updated_at", { ascending: false });
+  console.log("FIRST ROW:", JSON.stringify(data?.[0], null, 2));
+  const cards: KanbanCard[] = ((data ?? []) as PipelineRow[]).map((row) => {
+    const mosque = row.mosques
+  
+    return {
+      id: row.id,
+      mosqueId: mosque?.id ?? "—",
+      mosqueName: mosque?.name ?? "—",
+      city: mosque?.city ?? "—",
+      state: mosque?.state ?? null,
+      contactName: row.contact_name ?? "—",
+      stage: normalizeStage(row.stage),
+      onboardingProgress:
+        typeof mosque?.onboarding_progress === "number"
+          ? mosque.onboarding_progress
+          : null,
+      updatedAt: row.updated_at ?? new Date(0).toISOString(),
+    };
+  });
 
   return (
     <div>
@@ -53,7 +72,7 @@ export default function PipelinePage() {
       <p className="mt-2 text-tan-muted">
         Mosque onboarding pipeline. Track leads and progress here.
       </p>
-      <KanbanBoard cards={MOCK_CARDS} />
+      <KanbanBoard cards={cards} />
     </div>
   );
 }

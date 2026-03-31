@@ -50,7 +50,8 @@ body {
   --border: rgba(240, 235, 227, 0.12);
 }
 .pipeline-kanban {
-  --bg-3 :#0f1814;
+  --bg-3: #0f1814;
+  --bg-4: #152018;
 }
 
 @keyframes float {
