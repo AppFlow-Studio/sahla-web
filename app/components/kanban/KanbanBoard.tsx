@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -15,6 +16,7 @@ import {
 } from "@dnd-kit/core";
 import { defaultColumns, type Column, type KanbanCard, type Stage } from "./types";
 import MasjidCard from "./MasjidCard";
+import Modal from "@/app/components/Modal";
 
 const VALID_STAGES = new Set<Stage>([
   "lead",
@@ -118,9 +120,11 @@ function DroppableColumn({
 }
 
 export default function KanbanBoard({ cards }: Props) {
+  const router = useRouter();
   const [localCards, setLocalCards] = useState(cards);
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
 
   useEffect(() => {
     setLocalCards(cards);
@@ -258,6 +262,12 @@ export default function KanbanBoard({ cards }: Props) {
     setActiveCard(null);
   }
 
+  function handleAddLeadSuccess(mosqueName: string) {
+    setIsAddLeadOpen(false);
+    pushToast(`${mosqueName} added to pipeline.`, "success");
+    router.refresh();
+  }
+
   const dragging = activeCard !== null;
 
   return (
@@ -265,11 +275,17 @@ export default function KanbanBoard({ cards }: Props) {
       <div className="mb-4 flex justify-end">
         <button
           type="button"
+          onClick={() => setIsAddLeadOpen(true)}
           className="rounded-lg border border-[#161C22] bg-black px-4 py-2 text-white"
         >
           + Add Lead
         </button>
       </div>
+      <Modal
+        open={isAddLeadOpen}
+        onClose={() => setIsAddLeadOpen(false)}
+        onSuccess={handleAddLeadSuccess}
+      />
 
       <div className="mt-4">
         <DndContext
