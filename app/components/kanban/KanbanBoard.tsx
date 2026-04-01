@@ -264,7 +264,7 @@ export default function KanbanBoard({ cards }: Props) {
 
   function handleAddLeadSuccess(mosqueName: string) {
     setIsAddLeadOpen(false);
-    pushToast(`${mosqueName} added to pipeline.`, "success");
+    pushToast(`${mosqueName} account created.`, "success");
     router.refresh();
   }
 
@@ -278,7 +278,7 @@ export default function KanbanBoard({ cards }: Props) {
           onClick={() => setIsAddLeadOpen(true)}
           className="rounded-lg border border-[#161C22] bg-black px-4 py-2 text-white"
         >
-          + Add Lead
+          + Create account
         </button>
       </div>
       <Modal

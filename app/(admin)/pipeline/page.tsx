@@ -17,44 +17,56 @@ export default async function PipelinePage() {
     const s = (stage ?? "lead").toLowerCase();
     return VALID_STAGES.has(s as Stage) ? (s as Stage) : "lead";
   };
+  type MosqueEmbed = {
+    id: string | null;
+    name: string | null;
+    city: string | null;
+    state: string | null;
+    onboarding_progress: number | null | Record<string, unknown>;
+  };
   type PipelineRow = {
     id: string;
+    mosque_id: string | null;
     stage: string | null;
     contact_name: string | null;
     updated_at: string | null;
-    mosques: {
-      id: string;
-      name: string | null;
-      city: string | null;
-      state: string | null;
-      onboarding_progress: number | null | Record<string, unknown>;
-    } | null;
+    mosques: MosqueEmbed | MosqueEmbed[] | null;
   };
+
+  function unwrapMosque(m: PipelineRow["mosques"]): MosqueEmbed | null {
+    if (!m) return null;
+    return Array.isArray(m) ? (m[0] ?? null) : m;
+  }
+
   const { data } = await supabase
-  .from("pipeline_stages")
-  .select(`
+    .from("pipeline_stages")
+    .select(
+      `
     id,
+    mosque_id,
     stage,
     contact_name,
     updated_at,
     mosques (
-      id, 
+      id,
       name,
       city,
       state,
       onboarding_progress
     )
-  `)
-  .order("updated_at", { ascending: false });
-  console.log("FIRST ROW:", JSON.stringify(data?.[0], null, 2));
+  `
+    )
+    .order("updated_at", { ascending: false });
+
   const cards: KanbanCard[] = ((data ?? []) as PipelineRow[]).map((row) => {
-    const mosque = row.mosques
-  
+    const mosque = unwrapMosque(row.mosques);
+    const mosqueId = row.mosque_id ?? mosque?.id ?? "";
+
     return {
-      id: row.id,
-      mosqueId: mosque?.id ?? "—",
-      mosqueName: mosque?.name ?? "—",
-      city: mosque?.city ?? "—",
+      id: mosqueId || row.id,
+      mosqueId,
+      mosqueName: mosque?.name ?? "Unknown mosque",
+      city: mosque?.city ?? "",
       state: mosque?.state ?? null,
       contactName: row.contact_name ?? "—",
       stage: normalizeStage(row.stage),

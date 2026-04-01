@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/server";
-
+import { auth, clerkClient } from "@clerk/nextjs/server";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 type AddLeadRequest = {
   mosqueName?: string;
   city?: string;
   state?: string;
   contactName?: string;
   contactEmail?: string;
+  phone?: string;
   notes?: string;
 };
 
@@ -16,6 +18,7 @@ type NormalizedLead = {
   state: string | null;
   contactName: string | null;
   contactEmail: string | null;
+  phone: string | null;
   notes: string | null;
 };
 
@@ -36,6 +39,7 @@ function normalize(body: AddLeadRequest): NormalizedLead {
   const state = (body.state ?? "").trim();
   const contactName = (body.contactName ?? "").trim();
   const contactEmail = (body.contactEmail ?? "").trim();
+  const phone = (body.phone ?? "").trim();
   const notes = (body.notes ?? "").trim();
 
   return {
@@ -44,6 +48,7 @@ function normalize(body: AddLeadRequest): NormalizedLead {
     state: state || null,
     contactName: contactName || null,
     contactEmail: contactEmail || null,
+    phone: phone || null,
     notes: notes || null,
   };
 }
@@ -70,81 +75,203 @@ async function insertNote(
   throw new Error(lastError ?? "Failed to insert mosque note.");
 }
 
-export async function POST(req: Request) {
-  const body = (await req.json()) as AddLeadRequest;
-  const lead = normalize(body);
-
-  if (!lead.mosqueName) {
-    return NextResponse.json(
-      { error: "Mosque name is required." },
-      { status: 400 }
-    );
-  }
-
-  const supabase = await createClerkSupabaseClient();
-  const mosqueId = crypto.randomUUID();
-  const mosqueSlug = createSlug(lead.mosqueName);
-
-  const { data: mosqueRow, error: mosqueError } = await supabase
-    .from("mosques")
-    .insert({
-      id: mosqueId,
-      slug: mosqueSlug,
-      name: lead.mosqueName,
-      city: lead.city,
-      state: lead.state,
-      onboarding_status: "pipeline",
-    })
-    .select("id, name")
-    .single();
-
-  if (mosqueError || !mosqueRow) {
-    return NextResponse.json(
-      { error: mosqueError?.message ?? "Failed to create mosque." },
-      { status: 500 }
-    );
-  }
-
-  const updatedAt = new Date().toISOString();
-  const { error: stageError } = await supabase.from("pipeline_stages").insert({
-    mosque_id: mosqueRow.id,
-    stage: "lead",
-    contact_name: lead.contactName,
-    updated_at: updatedAt,
-  });
-
-  if (stageError) {
-    return NextResponse.json(
-      { error: `Mosque created, but failed to create pipeline stage: ${stageError.message}` },
-      { status: 500 }
-    );
-  }
-
-  if (lead.notes) {
-    const noteText = lead.contactEmail
-      ? `Contact Email: ${lead.contactEmail}\n${lead.notes}`
-      : lead.notes;
-
+async function createClerkOrganization(
+  client: Awaited<ReturnType<typeof clerkClient>>,
+  name: string,
+  slug: string,
+  createdBy: string
+) {
+  const attempts: Array<{ name: string; slug?: string; createdBy?: string }> = [
+    { name, slug, createdBy },
+    { name, createdBy },
+    { name, slug },
+    { name },
+  ];
+  let lastError: unknown;
+  for (const params of attempts) {
     try {
-      await insertNote(supabase, String(mosqueRow.id), noteText);
-    } catch (error) {
+      return await client.organizations.createOrganization(params);
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError;
+}
+
+function formatApiError(error: unknown): string {
+  if (isClerkAPIResponseError(error)) {
+    const parts =
+      error.errors?.map((e) => e.longMessage ?? e.message).filter(Boolean) ??
+      [];
+    if (parts.length) return parts.join(" ");
+    if (error.message) return error.message;
+  }
+  if (error instanceof Error) return error.message;
+  return "Unexpected server error.";
+}
+
+export async function POST(req: Request) {
+  try {
+    let parsed: AddLeadRequest;
+    try {
+      parsed = (await req.json()) as AddLeadRequest;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    }
+
+    const lead = normalize(parsed);
+
+    if (!lead.mosqueName) {
+      return NextResponse.json(
+        { error: "Mosque name is required." },
+        { status: 400 }
+      );
+    }
+    if (!lead.contactName) {
+      return NextResponse.json(
+        { error: "Contact name is required" },
+        { status: 400 }
+      );
+    }
+    if (!lead.contactEmail) {
+      return NextResponse.json(
+        { error: "Contact email is required" },
+        { status: 400 }
+      );
+    }
+
+    const { userId } = await auth();
+    const actorClerkUserId =
+      process.env.CLERK_CREATE_ORG_USER_ID?.trim() ||
+      process.env.CLERK_SYSTEM_USER_ID?.trim() ||
+      userId ||
+      null;
+    if (!actorClerkUserId) {
       return NextResponse.json(
         {
           error:
-            error instanceof Error
-              ? `Lead created, but failed to save note: ${error.message}`
-              : "Lead created, but failed to save note.",
+            "Sign in to create an account, or set CLERK_SYSTEM_USER_ID in .env.local.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const supabase = await createClerkSupabaseClient();
+    const mosqueSlug = createSlug(lead.mosqueName);
+    const client = await clerkClient();
+
+    // Prefer name + Clerk slug + createdBy (P4). Fall back if slugs are disabled or
+    // the actor lacks create-org permission; Supabase always keeps `mosques.slug`.
+    const org = await createClerkOrganization(
+      client,
+      lead.mosqueName,
+      mosqueSlug,
+      actorClerkUserId
+    );
+    const mosqueId = org.id;
+
+    await client.organizations.createOrganizationInvitation({
+      organizationId: org.id,
+      emailAddress: lead.contactEmail,
+      role: "org:admin",
+      inviterUserId: actorClerkUserId,
+    });
+
+    const { data: mosqueRow, error: mosqueError } = await supabase
+      .from("mosques")
+      .insert({
+        id: mosqueId,
+        slug: mosqueSlug,
+        name: lead.mosqueName,
+        city: lead.city,
+        state: lead.state,
+        onboarding_status: "in_progress",
+      })
+      .select("id, name")
+      .single();
+
+    if (mosqueError || !mosqueRow) {
+      return NextResponse.json(
+        { error: mosqueError?.message ?? "Failed to create mosque." },
+        { status: 500 }
+      );
+    }
+
+    const updatedAt = new Date().toISOString();
+    const { error: stageError } = await supabase
+      .from("pipeline_stages")
+      .insert({
+        mosque_id: mosqueRow.id,
+        stage: "onboarding",
+        contact_name: lead.contactName,
+        updated_at: updatedAt,
+      });
+
+    if (stageError) {
+      return NextResponse.json(
+        {
+          error: `Mosque created, but failed to create pipeline stage: ${stageError.message}`,
         },
         { status: 500 }
       );
     }
+
+    const { error: notifError } = await supabase
+      .from("mosque_notification_config")
+      .insert({
+        mosque_id: mosqueRow.id,
+        prayer_notif_enabled: false,
+        program_notif_enabled: false,
+        event_notif_enabled: false,
+        default_reminder_min: 30,
+      });
+
+    if (notifError) {
+      return NextResponse.json(
+        {
+          error: `Mosque and pipeline created, but failed to create notification config: ${notifError.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    if (lead.notes || lead.phone) {
+      const lines: string[] = [];
+      if (lead.phone) lines.push(`Phone: ${lead.phone}`);
+      if (lead.notes) lines.push(lead.notes);
+      const noteText = lines.join("\n");
+
+      try {
+        await insertNote(supabase, String(mosqueRow.id), noteText);
+      } catch (error) {
+        return NextResponse.json(
+          {
+            error:
+              error instanceof Error
+                ? `Account created, but failed to save note: ${error.message}`
+                : "Account created, but failed to save note.",
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        mosqueName: mosqueRow.name ?? lead.mosqueName,
+        contactName: lead.contactName,
+        contactEmail: lead.contactEmail,
+        orgId: org.id,
+        portalUrl: "crm.sahla.app",
+        inviteStatus: "Invite sent via Clerk",
+        updatedAt,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    const status = isClerkAPIResponseError(error) ? error.status : 500;
+    const message = formatApiError(error);
+    return NextResponse.json({ ok: false, error: message }, { status });
   }
-
-  return NextResponse.json(
-    { ok: true, mosqueName: mosqueRow.name ?? lead.mosqueName, updatedAt },
-    { status: 200 }
-  );
 }
-
-
-
