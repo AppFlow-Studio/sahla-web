@@ -38,7 +38,7 @@ export default async function PipelinePage() {
     return Array.isArray(m) ? (m[0] ?? null) : m;
   }
 
-  const { data } = await supabase
+  const { data, error: pipelineError } = await supabase
     .from("pipeline_stages")
     .select(
       `
@@ -57,6 +57,17 @@ export default async function PipelinePage() {
   `
     )
     .order("updated_at", { ascending: false });
+
+  if (pipelineError) {
+    return (
+      <div>
+        <h1 className="font-display text-3xl text-tan">Pipeline</h1>
+        <p className="mt-4 rounded-lg border border-red-500/30 bg-red-950/40 p-4 text-sm text-red-200">
+          Could not load pipeline data: {pipelineError.message}
+        </p>
+      </div>
+    );
+  }
 
   const cards: KanbanCard[] = ((data ?? []) as PipelineRow[]).map((row) => {
     const mosque = unwrapMosque(row.mosques);

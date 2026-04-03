@@ -16,7 +16,8 @@ import {
 } from "@dnd-kit/core";
 import { defaultColumns, type Column, type KanbanCard, type Stage } from "./types";
 import MasjidCard from "./MasjidCard";
-import Modal from "@/app/components/Modal";
+import AddLeadModal from "@/app/components/AddLeadModal";
+import CreateAccountModal from "@/app/components/Modal";
 
 const VALID_STAGES = new Set<Stage>([
   "lead",
@@ -124,7 +125,8 @@ export default function KanbanBoard({ cards }: Props) {
   const [localCards, setLocalCards] = useState(cards);
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
+  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+  const [isCreateAccountModalOpen, setIsCreateAccountModalOpen] = useState(false);
 
   useEffect(() => {
     setLocalCards(cards);
@@ -262,8 +264,14 @@ export default function KanbanBoard({ cards }: Props) {
     setActiveCard(null);
   }
 
-  function handleAddLeadSuccess(mosqueName: string) {
-    setIsAddLeadOpen(false);
+  function handleLeadSaved(mosqueName: string) {
+    setIsLeadModalOpen(false);
+    pushToast(`${mosqueName} added to pipeline.`, "success");
+    router.refresh();
+  }
+
+  function handleAccountCreated(mosqueName: string) {
+    setIsCreateAccountModalOpen(false);
     pushToast(`${mosqueName} account created.`, "success");
     router.refresh();
   }
@@ -272,19 +280,32 @@ export default function KanbanBoard({ cards }: Props) {
 
   return (
     <div className="pipeline-kanban flex min-h-screen flex-col p-4">
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"
-          onClick={() => setIsAddLeadOpen(true)}
-          className="rounded-lg border border-[#161C22] bg-black px-4 py-2 text-white"
+          onClick={() => setIsLeadModalOpen(true)}
+          className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-tan-light hover:bg-white/10"
         >
-          + Create account
+          + Add lead
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsCreateAccountModalOpen(true)}
+          title="After a lead is confirmed — creates Clerk org and sends invite"
+          className="rounded-lg border border-[#161C22] bg-black px-4 py-2 text-sm text-white"
+        >
+          Create account
         </button>
       </div>
-      <Modal
-        open={isAddLeadOpen}
-        onClose={() => setIsAddLeadOpen(false)}
-        onSuccess={handleAddLeadSuccess}
+      <AddLeadModal
+        open={isLeadModalOpen}
+        onClose={() => setIsLeadModalOpen(false)}
+        onSuccess={handleLeadSaved}
+      />
+      <CreateAccountModal
+        open={isCreateAccountModalOpen}
+        onClose={() => setIsCreateAccountModalOpen(false)}
+        onSuccess={handleAccountCreated}
       />
 
       <div className="mt-4">

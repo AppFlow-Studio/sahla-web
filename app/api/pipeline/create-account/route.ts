@@ -1,8 +1,13 @@
+/**
+ * Confirmed client only: Clerk org + invite, mosque row (id = org id), onboarding pipeline stage.
+ * For internal lead capture without Clerk, use POST /api/pipeline/lead.
+ */
 import { NextResponse } from "next/server";
 import { createClerkSupabaseClient } from "@/lib/supabase/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
-type AddLeadRequest = {
+
+type CreateAccountBody = {
   mosqueName?: string;
   city?: string;
   state?: string;
@@ -12,7 +17,7 @@ type AddLeadRequest = {
   notes?: string;
 };
 
-type NormalizedLead = {
+type Normalized = {
   mosqueName: string;
   city: string | null;
   state: string | null;
@@ -33,7 +38,7 @@ function createSlug(name: string) {
   return `${base}-${suffix}`;
 }
 
-function normalize(body: AddLeadRequest): NormalizedLead {
+function normalize(body: CreateAccountBody): Normalized {
   const mosqueName = (body.mosqueName ?? "").trim();
   const city = (body.city ?? "").trim();
   const state = (body.state ?? "").trim();
@@ -112,9 +117,9 @@ function formatApiError(error: unknown): string {
 
 export async function POST(req: Request) {
   try {
-    let parsed: AddLeadRequest;
+    let parsed: CreateAccountBody;
     try {
-      parsed = (await req.json()) as AddLeadRequest;
+      parsed = (await req.json()) as CreateAccountBody;
     } catch {
       return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
     }
@@ -160,8 +165,6 @@ export async function POST(req: Request) {
     const mosqueSlug = createSlug(lead.mosqueName);
     const client = await clerkClient();
 
-    // Prefer name + Clerk slug + createdBy (P4). Fall back if slugs are disabled or
-    // the actor lacks create-org permission; Supabase always keeps `mosques.slug`.
     const org = await createClerkOrganization(
       client,
       lead.mosqueName,

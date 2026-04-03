@@ -127,7 +127,7 @@ Status: ${COPY_STATUS_LINE}`;
     setErrorMessage(null);
 
     try {
-      const res = await fetch("/api/pipeline/add", {
+      const res = await fetch("/api/pipeline/create-account", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
