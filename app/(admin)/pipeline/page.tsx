@@ -60,9 +60,9 @@ export default async function PipelinePage() {
 
   if (pipelineError) {
     return (
-      <div>
-        <h1 className="font-display text-3xl text-tan">Pipeline</h1>
-        <p className="mt-4 rounded-lg border border-red-500/30 bg-red-950/40 p-4 text-sm text-red-200">
+      <div className="-m-8 min-h-[100dvh] bg-tan p-8 text-green">
+        <h1 className="font-display text-3xl text-green">Pipeline</h1>
+        <p className="mt-4 rounded-xl border border-highlight/40 bg-white p-4 text-sm text-green">
           Could not load pipeline data: {pipelineError.message}
         </p>
       </div>
@@ -90,12 +90,14 @@ export default async function PipelinePage() {
   });
 
   return (
-    <div>
-      <h1 className="font-display text-3xl text-tan">Pipeline</h1>
-      <p className="mt-2 text-highlight">
+    <div className="-m-8 min-h-[100dvh] bg-tan p-8 text-green">
+      <h1 className="font-display text-3xl text-green">Pipeline</h1>
+      <p className="mt-2 max-w-2xl text-sm text-green/75">
         Mosque onboarding pipeline. Track leads and progress here.
       </p>
-      <KanbanBoard cards={cards} />
+      <div className="mt-6">
+        <KanbanBoard cards={cards} />
+      </div>
     </div>
   );
 }

@@ -18,30 +18,21 @@ export default function MasjidCard({ card }: Props) {
   const progress = card.onboardingProgress ?? 0;
 
   return (
-    <article
-      className="kanban-card flex w-full flex-col rounded-lg border p-4 shadow-sm transition-[border-color] hover:border-foreground/25"
-      style={{
-        background: "var(--surface)",
-        borderColor: "var(--border)",
-      }}
-    >
-      <h3 className="text-[12.5px] leading-tight font-bold text-foreground">
+    <article className="flex w-full flex-col rounded-xl border border-green/10 bg-white p-4 shadow-sm transition-[border-color,box-shadow] hover:border-highlight/35 hover:shadow-md">
+      <h3 className="text-[12.5px] leading-tight font-bold text-green">
         {card.mosqueName.trim() || "—"}
       </h3>
-      <p className="mt-0.5 text-[11px] text-tan-muted">
+      <p className="mt-0.5 text-[11px] text-green/60">
         {formatLocation(card.city, card.state)}
       </p>
-      <p className="mt-0.5 text-[11px]" style={{ color: "var(--t2)" }}>
+      <p className="mt-0.5 text-[11px] text-green/80">
         {card.contactName.trim() || "—"}
       </p>
       {showOnboardingBar ? (
         <div className="mt-2">
-          <div
-            className="h-1.5 w-full overflow-hidden rounded-full"
-            style={{ background: "var(--border)" }}
-          >
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-green/10">
             <div
-              className="h-full rounded-full bg-blue-400 transition-[width]"
+              className="h-full rounded-full bg-highlight transition-[width]"
               style={{
                 width: `${Math.min(100, Math.max(0, progress))}%`,
               }}

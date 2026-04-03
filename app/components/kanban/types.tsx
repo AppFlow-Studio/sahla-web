@@ -30,11 +30,12 @@ export type KanbanCard = {
   updatedAt: string;
 };
 
+/** Stage dots use @theme colors from globals.css (green, highlight, white) */
 export const defaultColumns: Column[] = [
-  { id: "lead", title: "Lead", dotClass: "bg-gray-400" },
-  { id: "contacted", title: "Contacted", dotClass: "bg-blue-500" },
-  { id: "demo", title: "Demo", dotClass: "bg-purple-500" },
-  { id: "contract", title: "Contract", dotClass: "bg-amber-500" },
-  { id: "onboarding", title: "Onboarding", dotClass: "bg-green-500" },
-  { id: "live", title: "Live", dotClass: "bg-emerald-500" },
+  { id: "lead", title: "Lead", dotClass: "bg-green/35" },
+  { id: "contacted", title: "Contacted", dotClass: "bg-green/55" },
+  { id: "demo", title: "Demo", dotClass: "bg-highlight/70" },
+  { id: "contract", title: "Contract", dotClass: "bg-highlight" },
+  { id: "onboarding", title: "Onboarding", dotClass: "bg-green" },
+  { id: "live", title: "Live", dotClass: "bg-highlight/90" },
 ];

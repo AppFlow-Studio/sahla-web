@@ -42,13 +42,14 @@ type Toast = {
   tone: "success" | "error";
 };
 
+/** Drop-target ring uses @theme green / highlight from globals.css */
 const STAGE_DROP_BORDER_CLASS: Record<Stage, string> = {
-  lead: "border-gray-400/80",
-  contacted: "border-blue-500/80",
-  demo: "border-purple-500/80",
-  contract: "border-amber-500/80",
-  onboarding: "border-green-500/80",
-  live: "border-emerald-500/80",
+  lead: "border-green/35",
+  contacted: "border-green/50",
+  demo: "border-highlight/45",
+  contract: "border-highlight/70",
+  onboarding: "border-green/65",
+  live: "border-highlight",
 };
 
 function DraggableMasjidCard({ card }: { card: KanbanCard }) {
@@ -83,29 +84,27 @@ function DroppableColumn({
     data: { stage: column.id },
   });
 
-  const laneBg = isOver ? "var(--bg-4, #152018)" : "var(--bg-3)";
   const showDropHere = dragging && columnCards.length === 0;
 
   return (
     <section className="flex min-w-[320px] shrink-0 flex-col">
       <header className="mb-3 flex items-center gap-2">
-        <span className={`h-2 w-2 rounded-full ${column.dotClass}`} aria-hidden />
-        <h2 className="text-sm font-medium text-foreground">{column.title}</h2>
-        <span className="ml-auto rounded-full bg-foreground/10 px-2 py-0.5 text-xs tabular-nums text-tan-muted">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${column.dotClass}`} aria-hidden />
+        <h2 className="text-sm font-semibold text-green">{column.title}</h2>
+        <span className="ml-auto rounded-full bg-green/10 px-2 py-0.5 text-xs tabular-nums text-green/80">
           {columnCards.length}
         </span>
       </header>
       <div
         ref={setNodeRef}
-        className={` rounded-[10px] border p-2 transition-[border-color,background-color] duration-200 ${
+        className={`rounded-xl border p-2 transition-[border-color,box-shadow,background-color] duration-200 ${
           isOver
-            ? `border-dashed border-2 ${STAGE_DROP_BORDER_CLASS[column.id]}`
-            : "border border-white/5"
+            ? `border-dashed border-2 bg-tan/80 ${STAGE_DROP_BORDER_CLASS[column.id]}`
+            : "border border-green/10 bg-white"
         }`}
-        style={{ background: laneBg }}
       >
         {columnCards.length === 0 ? (
-          <div className="flex min-h-[140px] items-center justify-center px-2 py-6 text-sm text-tan-muted">
+          <div className="flex min-h-[140px] items-center justify-center px-2 py-6 text-sm text-green/50">
             {showDropHere ? "Drop here" : "Empty"}
           </div>
         ) : (
@@ -279,12 +278,12 @@ export default function KanbanBoard({ cards }: Props) {
   const dragging = activeCard !== null;
 
   return (
-    <div className="pipeline-kanban flex min-h-screen flex-col p-4">
+    <div className="flex min-h-0 flex-col">
       <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"
           onClick={() => setIsLeadModalOpen(true)}
-          className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm text-tan-light hover:bg-white/10"
+          className="rounded-full border border-green/15 bg-white px-4 py-2 text-sm font-medium text-green shadow-sm transition hover:border-green/25 hover:bg-tan/50"
         >
           + Add lead
         </button>
@@ -292,7 +291,7 @@ export default function KanbanBoard({ cards }: Props) {
           type="button"
           onClick={() => setIsCreateAccountModalOpen(true)}
           title="After a lead is confirmed — creates Clerk org and sends invite"
-          className="rounded-lg border border-[#161C22] bg-black px-4 py-2 text-sm text-white"
+          className="rounded-full bg-green px-4 py-2 text-sm font-medium text-tan shadow-sm transition hover:bg-green/90"
         >
           Create account
         </button>
@@ -337,14 +336,14 @@ export default function KanbanBoard({ cards }: Props) {
         </DndContext>
       </div>
 
-      <div className="pointer-events-none fixed top-4 right-4 z-[60] flex w-[320px] max-w-[90vw] flex-col gap-2">
+      <div className="pointer-events-none fixed top-4 right-4 z-60 flex w-[320px] max-w-[90vw] flex-col gap-2">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`rounded-md border px-3 py-2 text-sm shadow-lg ${
+            className={`pointer-events-auto rounded-xl border px-3 py-2 text-sm shadow-lg ${
               t.tone === "success"
-                ? "border-green-500/35 bg-green-900/80 text-green-100"
-                : "border-red-500/35 bg-red-900/80 text-red-100"
+                ? "border-green/15 bg-white text-green"
+                : "border-highlight/50 bg-white text-green"
             }`}
           >
             {t.message}
