@@ -38,83 +38,131 @@ function StatusBar() {
   );
 }
 
+const prayerIcons: Record<string, string> = {
+  Fajr: "M12 3v1m0 16v1m-8-9H3m18 0h-1m-2.636-5.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707",
+  Dhuhr: "M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41M12 7a5 5 0 100 10 5 5 0 000-10z",
+  Asr: "M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41M12 7a5 5 0 100 10 5 5 0 000-10z",
+  Maghrib: "M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41M12 7a5 5 0 100 10 5 5 0 000-10z",
+  Isha: "M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z",
+};
+
+const mockEvents = [
+  { time: "5:00 PM", name: "MAS SI Soccer Program", tag: "Sports & Youth" },
+  { time: "5:00 PM", name: "MAS SI Soccer Program", tag: "Sports & Youth" },
+  { time: "5:00 PM", name: "MAS SI Soccer Program", tag: "Sports & Youth" },
+];
+
+const quickActions = [
+  { label: "DONATE", icon: "M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" },
+  { label: "VOLUNTEER", icon: "M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" },
+  { label: "ADVERTISE", icon: "M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 008.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 001.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 010 3.46" },
+  { label: "PRAYERS", icon: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" },
+];
+
 function HomeScreen() {
-  const [done, setDone] = useState([true, true, false, false, false]);
-  const toggle = (i: number) =>
-    setDone((d) => d.map((v, j) => (j === i ? !v : v)));
-  const nextIdx = done.findIndex((d) => !d);
-
   return (
-    <div className="flex flex-col px-4 pt-3 pb-2">
-      <div className="mb-1 flex items-center gap-1.5">
-        <span className="text-[10px] text-[#c4a87a]/60">☪</span>
-        <span className="text-[9px] text-[#c4a87a]/40">15 Sha&apos;ban 1447 AH</span>
-      </div>
-      <p className="text-[14px] font-semibold text-[#f0ebe3]">
-        Assalamu Alaikum
-      </p>
-      <p className="text-[9px] text-[#f0ebe3]/30">Welcome back, Ahmad</p>
-
-      {nextIdx >= 0 ? (
-        <div className="mt-3 rounded-xl bg-[#4a8c65]/15 p-3">
-          <p className="text-[8px] font-semibold tracking-widest uppercase text-[#4a8c65]/70">
-            Next Prayer
-          </p>
-          <div className="mt-1 flex items-baseline justify-between">
-            <p className="text-[15px] font-semibold text-[#f0ebe3]">
-              {prayers[nextIdx].name}
-            </p>
-            <p className="text-[13px] font-medium text-[#c4a87a]">
-              {prayers[nextIdx].time}
-            </p>
-          </div>
-          <p className="mt-0.5 text-[9px] text-[#f0ebe3]/25">in 2h 15m</p>
-        </div>
-      ) : (
-        <div className="mt-3 rounded-xl bg-[#4a8c65]/20 p-3 text-center">
-          <p className="text-[11px] font-medium text-[#4a8c65]">
-            ✓ All prayers completed
+    <div className="flex flex-col">
+      {/* ── Dark hero section ── */}
+      <div style={{ background: "linear-gradient(180deg, #0a1a12 0%, #0d1f16 100%)", padding: "0 16px 12px" }}>
+        <p style={{ fontSize: 8, fontWeight: 500, letterSpacing: "0.12em", color: "rgba(196,168,122,0.7)", textTransform: "uppercase", margin: 0 }}>
+          Assalamu Alaikum Di
+        </p>
+        <p style={{ fontSize: 28, fontWeight: 700, color: "#f0ebe3", margin: "2px 0 0", fontFamily: "ui-serif, Georgia, serif", lineHeight: 1.1 }}>
+          4:01 PM
+        </p>
+        <p style={{ fontSize: 10, fontWeight: 600, color: "#f0ebe3", margin: "2px 0 0" }}>
+          Ramadan 13, 1447
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6 }}>
+          <div style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#4a8c65" }} />
+          <p style={{ fontSize: 9, color: "rgba(240,235,227,0.6)", margin: 0 }}>
+            <span style={{ color: "#f0ebe3", fontWeight: 600 }}>Maghrib</span> iqamah in 1h 53m
           </p>
         </div>
-      )}
 
-      <div className="mt-3 flex flex-col gap-1">
-        {prayers.map((p, i) => (
-          <button
-            key={p.name}
-            onClick={() => toggle(i)}
-            className="flex cursor-pointer items-center gap-2 rounded-lg border-0 bg-[#f0ebe3]/[0.03] px-3 py-2 text-left"
-          >
-            <div
-              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                done[i]
-                  ? "border-[#4a8c65] bg-[#4a8c65]"
-                  : "border-[#f0ebe3]/20"
-              }`}
-            >
-              {done[i] && (
-                <svg
-                  className="h-2.5 w-2.5 text-white"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+        {/* Prayer times bar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 16, gap: 4 }}>
+          {prayers.map((p) => {
+            const isActive = p.name === "Maghrib";
+            return (
+              <div key={p.name} style={{
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                padding: "6px 6px 5px", borderRadius: 10, flex: 1,
+                backgroundColor: isActive ? "#0A261E" : "transparent",
+              }}>
+                <p style={{ fontSize: 7, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: isActive ? "#c4a87a" : "rgba(240,235,227,0.35)", margin: 0 }}>
+                  {p.name}
+                </p>
+                <svg style={{ width: 14, height: 14 }} viewBox="0 0 24 24" fill="none" stroke={isActive ? "#c4a87a" : "rgba(240,235,227,0.25)"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <path d={prayerIcons[p.name]} />
                 </svg>
-              )}
+                <p style={{ fontSize: 8, fontWeight: isActive ? 600 : 400, color: isActive ? "#c4a87a" : "rgba(240,235,227,0.35)", margin: 0 }}>
+                  5:14 AM
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Light section ── */}
+      <div style={{ backgroundColor: "#f0ebe3", borderTopLeftRadius: 20, borderTopRightRadius: 20, marginTop: -10, padding: "16px 14px 10px", flex: 1 }}>
+
+        {/* Donate banner */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, backgroundColor: "#0A261E", borderRadius: 14, padding: "12px 14px" }}>
+          <div style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#4a8c65", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg style={{ width: 16, height: 16, color: "#fff" }} viewBox="0 0 24 24" fill="currentColor"><path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "#f0ebe3", margin: 0 }}>Support Your Masjid</p>
+            <p style={{ fontSize: 8, color: "rgba(240,235,227,0.5)", margin: 0 }}>Donate</p>
+          </div>
+          <div style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid rgba(196,168,122,0.5)", backgroundColor: "transparent" }}>
+            <span style={{ fontSize: 8, fontWeight: 600, color: "#c4a87a", letterSpacing: "0.04em" }}>DONATE →</span>
+          </div>
+        </div>
+
+        {/* Today's Events */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, marginBottom: 8 }}>
+          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: "#0A261E", margin: 0 }}>TODAY&apos;S EVENTS</p>
+          <p style={{ fontSize: 8, fontWeight: 500, color: "#c4a87a", margin: 0 }}>MAR 9, 2026</p>
+        </div>
+
+        <div style={{ borderRadius: 12, border: "1px solid rgba(10,38,30,0.08)", overflow: "hidden", backgroundColor: "#fff" }}>
+          {mockEvents.map((ev, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", padding: "10px 12px", borderBottom: i < mockEvents.length - 1 ? "1px solid rgba(10,38,30,0.06)" : "none" }}>
+              <p style={{ fontSize: 9, fontWeight: 600, color: "#0A261E", margin: 0, width: 42, flexShrink: 0 }}>{ev.time}</p>
+              <div style={{ width: 1, height: 24, backgroundColor: "rgba(10,38,30,0.10)", margin: "0 10px", flexShrink: 0 }} />
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#0A261E", margin: 0, flex: 1, lineHeight: 1.3 }}>{ev.name}</p>
+              <span style={{ fontSize: 7, fontWeight: 500, color: "#4a8c65", border: "1px solid rgba(74,140,101,0.35)", borderRadius: 8, padding: "2px 6px", whiteSpace: "nowrap", flexShrink: 0 }}>{ev.tag}</span>
             </div>
-            <span
-              className={`flex-1 text-[11px] ${
-                done[i]
-                  ? "text-[#f0ebe3]/25 line-through"
-                  : "text-[#f0ebe3]/70"
-              }`}
-            >
-              {p.name}
-            </span>
-            <span className="text-[10px] text-[#c4a87a]/30">{p.arabic}</span>
-            <span className="text-[10px] text-[#f0ebe3]/25">{p.time}</span>
-          </button>
-        ))}
+          ))}
+        </div>
+
+        {/* Featured card */}
+        <div style={{ marginTop: 14, borderRadius: 14, background: "linear-gradient(135deg, #d9c4a0 0%, #c4a87a 100%)", padding: "12px 14px", position: "relative", overflow: "hidden" }}>
+          <span style={{ fontSize: 7, fontWeight: 600, color: "#fff", backgroundColor: "#4a8c65", borderRadius: 6, padding: "2px 6px" }}>Featured</span>
+          <p style={{ fontSize: 13, fontWeight: 700, color: "#0A261E", margin: "6px 0 2px" }}>Weekend Islamic School</p>
+          <p style={{ fontSize: 8, color: "rgba(10,38,30,0.55)", margin: 0 }}>Saturdays &amp; Sundays · 10:00 AM – 1:00 PM</p>
+        </div>
+
+        {/* Quick actions */}
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16, gap: 6 }}>
+          {quickActions.map((a) => (
+            <div key={a.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flex: 1 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 12, border: "1px solid rgba(10,38,30,0.10)", backgroundColor: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg style={{ width: 18, height: 18 }} viewBox="0 0 24 24" fill="none" stroke="#0A261E" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d={a.icon} /></svg>
+              </div>
+              <span style={{ fontSize: 6, fontWeight: 600, letterSpacing: "0.06em", color: "rgba(10,38,30,0.5)" }}>{a.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Programs header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, paddingTop: 8, borderTop: "1px solid rgba(10,38,30,0.06)" }}>
+          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: "#0A261E", margin: 0 }}>PROGRAMS</p>
+          <p style={{ fontSize: 8, fontWeight: 500, color: "#c4a87a", margin: 0 }}>SEE ALL</p>
+        </div>
       </div>
     </div>
   );
@@ -665,7 +713,7 @@ export default function PhoneCarousel({ demoMode = false }: PhoneCarouselProps) 
       </div>
       <TabBar
         current={currentIndex}
-        onSelect={demoMode ? handleTabSelect : undefined}
+        onSelect={handleTabSelect}
       />
     </div>
   );
