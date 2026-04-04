@@ -43,3 +43,7 @@ schema_clean.sql
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# clerk configuration (can include secrets)
+/.clerk/
+.env.local

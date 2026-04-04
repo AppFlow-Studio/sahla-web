@@ -28,7 +28,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Webhook } from "https://esm.sh/svix@1.21.0";
-
+import {Deno} from "https://deno.land/x/dotenv/mod.ts";
 // ── Supabase client (service role — bypasses RLS) ──
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -174,7 +174,18 @@ function displayName(first: string | null, last: string | null): string {
   return [first, last].filter(Boolean).join(" ") || "Unknown";
 }
 
+async function fetchTableData(){
+  try {
+    const {data, error} = await supabase.from("sahla_team").select("*");
+    if (error) { throw error;}
+    return data;
+  }
+  catch (error) {
+    console.error("Failed to fetch table data:", error.message);
+    return [];
+  }
 
+}
 // ============================================================================
 // EVENT HANDLERS
 // ============================================================================
