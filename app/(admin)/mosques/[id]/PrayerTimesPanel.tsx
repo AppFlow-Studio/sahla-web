@@ -180,24 +180,24 @@ export default function PrayerTimesPanel({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
         >
-          <div className="rounded-lg border border-highlight/10 bg-green/20 p-5">
+          <div className="rounded-lg border border-edge bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-tan">Prayer Schedule</p>
-                <p className="text-[12px] text-highlight">
+                <p className="text-sm font-medium text-ink">Prayer Schedule</p>
+                <p className="text-[12px] text-subtle">
                   {CALCULATION_METHODS.find((m) => m.value === method)?.label || "ISNA"} · {SCHOOLS.find((s) => s.value === school)?.label || "Shafi"}
                 </p>
               </div>
               <button
                 onClick={() => setStep(1)}
-                className="rounded-lg border border-highlight/20 px-4 py-1.5 text-[12px] text-highlight hover:text-tan"
+                className="rounded-lg border border-edge px-4 py-1.5 text-[12px] text-gold hover:text-ink"
               >
                 Reconfigure
               </button>
             </div>
             {todaysPrayers ? (
               <div className="space-y-2">
-                <div className="flex items-center px-4 py-1 text-[11px] font-medium uppercase tracking-wider text-highlight">
+                <div className="flex items-center px-4 py-1 text-[11px] font-medium uppercase tracking-wider text-subtle">
                   <span className="flex-1">Prayer</span>
                   <span className="w-24 text-center">Athan</span>
                   <span className="w-24 text-center">Iqamah</span>
@@ -205,22 +205,22 @@ export default function PrayerTimesPanel({
                 {todaysPrayers.map((p) => (
                   <div
                     key={p.prayer_name}
-                    className="flex items-center rounded-lg bg-green/40 px-4 py-2.5"
+                    className="flex items-center rounded-lg bg-ink/5 px-4 py-2.5"
                   >
-                    <span className="flex-1 text-[13px] text-tan">
+                    <span className="flex-1 text-[13px] text-ink">
                       {PRAYER_DISPLAY_NAMES[p.prayer_name]}
                     </span>
-                    <span className="w-24 text-center text-[13px] tabular-nums text-highlight">
+                    <span className="w-24 text-center text-[13px] tabular-nums text-subtle">
                       {to12Hour(p.athan_time)}
                     </span>
-                    <span className="w-24 text-center text-[13px] font-medium tabular-nums text-highlight">
+                    <span className="w-24 text-center text-[13px] font-medium tabular-nums text-subtle">
                       {to12Hour(p.iqamah_time)}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-highlight">Loading prayer times...</p>
+              <p className="py-8 text-center text-sm text-subtle">Loading prayer times...</p>
             )}
           </div>
         </motion.div>
@@ -239,19 +239,19 @@ export default function PrayerTimesPanel({
                   isActive
                     ? "bg-highlight text-background"
                     : isDone
-                      ? "bg-highlight/20 text-highlight"
-                      : "bg-green/40 text-highlight"
+                      ? "bg-gold/20 text-subtle"
+                      : "bg-ink/5 text-subtle"
                 }`}
               >
                 {isDone ? "✓" : stepNum}
               </div>
               <span
-                className={`text-[11px] ${isActive ? "text-tan" : "text-highlight"}`}
+                className={`text-[11px] ${isActive ? "text-ink" : "text-subtle"}`}
               >
                 {label}
               </span>
               {i < STEP_LABELS.length - 1 && (
-                <div className="mx-1 h-px w-6 bg-highlight/20" />
+                <div className="mx-1 h-px w-6 bg-gold/20" />
               )}
             </div>
           );
@@ -268,11 +268,11 @@ export default function PrayerTimesPanel({
         {/* Step 1: Address */}
         {step === 1 && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-highlight/10 bg-green/20 p-5">
-              <p className="mb-1 text-sm font-medium text-tan">
+            <div className="rounded-lg border border-edge bg-card p-5">
+              <p className="mb-1 text-sm font-medium text-ink">
                 Mosque Address
               </p>
-              <p className="mb-4 text-[12px] text-highlight">
+              <p className="mb-4 text-[12px] text-subtle">
                 This address is used to calculate accurate prayer times.
               </p>
               <input
@@ -280,13 +280,13 @@ export default function PrayerTimesPanel({
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="e.g., 123 Main St, Staten Island, NY 10301"
-                className="w-full rounded-lg border border-highlight/20 bg-green/30 px-4 py-2.5 text-sm text-tan placeholder:text-highlight/60 focus:border-highlight/40 focus:outline-none"
+                className="w-full rounded-lg border border-edge bg-card px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-edge-bold focus:outline-none"
               />
             </div>
             <div className="flex justify-end">
               <button
                 onClick={() => address.trim() ? setStep(2) : showToast("Address is required", "error")}
-                className="rounded-lg bg-highlight/20 px-5 py-2.5 text-sm font-medium text-highlight hover:bg-highlight/30"
+                className="rounded-lg bg-gold/20 px-5 py-2.5 text-sm font-medium text-gold hover:bg-gold/30"
               >
                 Next
               </button>
@@ -297,17 +297,17 @@ export default function PrayerTimesPanel({
         {/* Step 2: Method + School */}
         {step === 2 && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-highlight/10 bg-green/20 p-5">
-              <p className="mb-1 text-sm font-medium text-tan">
+            <div className="rounded-lg border border-edge bg-card p-5">
+              <p className="mb-1 text-sm font-medium text-ink">
                 Calculation Method
               </p>
-              <p className="mb-4 text-[12px] text-highlight">
+              <p className="mb-4 text-[12px] text-subtle">
                 Most North American mosques use ISNA. This determines Fajr and Isha angles.
               </p>
               <select
                 value={method}
                 onChange={(e) => setMethod(Number(e.target.value))}
-                className="mb-4 w-full rounded-lg border border-highlight/20 bg-green/30 px-4 py-2.5 text-sm text-tan focus:border-highlight/40 focus:outline-none"
+                className="mb-4 w-full rounded-lg border border-edge bg-card px-4 py-2.5 text-sm text-ink focus:border-edge-bold focus:outline-none"
               >
                 {CALCULATION_METHODS.map((m) => (
                   <option key={m.value} value={m.value}>
@@ -316,11 +316,11 @@ export default function PrayerTimesPanel({
                 ))}
               </select>
 
-              <p className="mb-2 text-sm font-medium text-tan">School</p>
+              <p className="mb-2 text-sm font-medium text-ink">School</p>
               <select
                 value={school}
                 onChange={(e) => setSchool(Number(e.target.value))}
-                className="w-full rounded-lg border border-highlight/20 bg-green/30 px-4 py-2.5 text-sm text-tan focus:border-highlight/40 focus:outline-none"
+                className="w-full rounded-lg border border-edge bg-card px-4 py-2.5 text-sm text-ink focus:border-edge-bold focus:outline-none"
               >
                 {SCHOOLS.map((s) => (
                   <option key={s.value} value={s.value}>
@@ -332,14 +332,14 @@ export default function PrayerTimesPanel({
             <div className="flex justify-between">
               <button
                 onClick={() => setStep(1)}
-                className="rounded-lg border border-highlight/20 px-5 py-2.5 text-sm text-highlight hover:text-tan"
+                className="rounded-lg border border-edge px-5 py-2.5 text-sm text-gold hover:text-ink"
               >
                 Back
               </button>
               <button
                 onClick={fetchPreview}
                 disabled={loading}
-                className="rounded-lg bg-highlight/20 px-5 py-2.5 text-sm font-medium text-highlight hover:bg-highlight/30 disabled:opacity-40"
+                className="rounded-lg bg-gold/20 px-5 py-2.5 text-sm font-medium text-gold hover:bg-gold/30 disabled:opacity-40"
               >
                 {loading ? "Fetching..." : "Preview Times"}
               </button>
@@ -350,23 +350,23 @@ export default function PrayerTimesPanel({
         {/* Step 3: Athan Preview */}
         {step === 3 && previewTimings && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-highlight/10 bg-green/20 p-5">
-              <p className="mb-1 text-sm font-medium text-tan">
+            <div className="rounded-lg border border-edge bg-card p-5">
+              <p className="mb-1 text-sm font-medium text-ink">
                 Today&apos;s Athan Times
               </p>
-              <p className="mb-4 text-[12px] text-highlight">
+              <p className="mb-4 text-[12px] text-subtle">
                 Do these times look correct for your mosque?
               </p>
               <div className="space-y-2">
                 {PRAYER_NAMES.map((prayer) => (
                   <div
                     key={prayer}
-                    className="flex items-center justify-between rounded-lg bg-green/40 px-4 py-2.5"
+                    className="flex items-center justify-between rounded-lg bg-ink/5 px-4 py-2.5"
                   >
-                    <span className="text-[13px] text-tan">
+                    <span className="text-[13px] text-ink">
                       {PRAYER_DISPLAY_NAMES[prayer]}
                     </span>
-                    <span className="text-[13px] font-medium tabular-nums text-tan">
+                    <span className="text-[13px] font-medium tabular-nums text-ink">
                       {to12Hour(previewTimings[prayer])}
                     </span>
                   </div>
@@ -376,13 +376,13 @@ export default function PrayerTimesPanel({
             <div className="flex justify-between">
               <button
                 onClick={() => setStep(2)}
-                className="rounded-lg border border-highlight/20 px-5 py-2.5 text-sm text-highlight hover:text-tan"
+                className="rounded-lg border border-edge px-5 py-2.5 text-sm text-gold hover:text-ink"
               >
                 Change Method
               </button>
               <button
                 onClick={() => setStep(4)}
-                className="rounded-lg bg-highlight/20 px-5 py-2.5 text-sm font-medium text-highlight hover:bg-highlight/30"
+                className="rounded-lg bg-gold/20 px-5 py-2.5 text-sm font-medium text-gold hover:bg-gold/30"
               >
                 Looks Good
               </button>
@@ -393,20 +393,20 @@ export default function PrayerTimesPanel({
         {/* Step 4: Iqamah Configuration */}
         {step === 4 && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-highlight/10 bg-green/20 p-5">
-              <p className="mb-1 text-sm font-medium text-tan">
+            <div className="rounded-lg border border-edge bg-card p-5">
+              <p className="mb-1 text-sm font-medium text-ink">
                 Iqamah Times
               </p>
-              <p className="mb-4 text-[12px] text-highlight">
+              <p className="mb-4 text-[12px] text-subtle">
                 Set how each prayer&apos;s congregation time is determined.
               </p>
               <div className="space-y-3">
                 {iqamahRows.map((row, i) => (
                   <div
                     key={row.prayer_name}
-                    className="flex items-center gap-3 rounded-lg bg-green/40 px-4 py-3"
+                    className="flex items-center gap-3 rounded-lg bg-ink/5 px-4 py-3"
                   >
-                    <span className="w-20 text-[13px] text-tan">
+                    <span className="w-20 text-[13px] text-ink">
                       {PRAYER_DISPLAY_NAMES[row.prayer_name]}
                     </span>
                     <select
@@ -414,7 +414,7 @@ export default function PrayerTimesPanel({
                       onChange={(e) =>
                         updateIqamahRow(i, { mode: e.target.value as IqamahMode })
                       }
-                      className="rounded-lg border border-highlight/20 bg-green/30 px-3 py-1.5 text-[12px] text-tan focus:outline-none"
+                      className="rounded-lg border border-edge bg-card px-3 py-1.5 text-[12px] text-ink focus:outline-none"
                     >
                       <option value="fixed">Fixed Time</option>
                       <option value="offset">Offset from Athan</option>
@@ -426,7 +426,7 @@ export default function PrayerTimesPanel({
                         onChange={(e) =>
                           updateIqamahRow(i, { fixed_time: e.target.value })
                         }
-                        className="rounded-lg border border-highlight/20 bg-green/30 px-3 py-1.5 text-[12px] tabular-nums text-tan focus:outline-none"
+                        className="rounded-lg border border-edge bg-card px-3 py-1.5 text-[12px] tabular-nums text-tan focus:outline-none"
                       />
                     )}
                     {row.mode === "offset" && (
@@ -441,9 +441,9 @@ export default function PrayerTimesPanel({
                               offset_minutes: Number(e.target.value),
                             })
                           }
-                          className="w-16 rounded-lg border border-highlight/20 bg-green/30 px-3 py-1.5 text-[12px] tabular-nums text-tan focus:outline-none"
+                          className="w-16 rounded-lg border border-edge bg-card px-3 py-1.5 text-[12px] tabular-nums text-tan focus:outline-none"
                         />
-                        <span className="text-[11px] text-highlight">
+                        <span className="text-[11px] text-subtle">
                           min after athan
                         </span>
                       </div>
@@ -455,13 +455,13 @@ export default function PrayerTimesPanel({
             <div className="flex justify-between">
               <button
                 onClick={() => setStep(3)}
-                className="rounded-lg border border-highlight/20 px-5 py-2.5 text-sm text-highlight hover:text-tan"
+                className="rounded-lg border border-edge px-5 py-2.5 text-sm text-gold hover:text-ink"
               >
                 Back
               </button>
               <button
                 onClick={() => setStep(5)}
-                className="rounded-lg bg-highlight/20 px-5 py-2.5 text-sm font-medium text-highlight hover:bg-highlight/30"
+                className="rounded-lg bg-gold/20 px-5 py-2.5 text-sm font-medium text-gold hover:bg-gold/30"
               >
                 Preview Final Times
               </button>
@@ -472,15 +472,15 @@ export default function PrayerTimesPanel({
         {/* Step 5: Final Preview + Save */}
         {step === 5 && finalPreview && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-highlight/10 bg-green/20 p-5">
-              <p className="mb-1 text-sm font-medium text-tan">
+            <div className="rounded-lg border border-edge bg-card p-5">
+              <p className="mb-1 text-sm font-medium text-ink">
                 Final Prayer Times
               </p>
-              <p className="mb-4 text-[12px] text-highlight">
+              <p className="mb-4 text-[12px] text-subtle">
                 This is what your app users will see.
               </p>
               <div className="space-y-2">
-                <div className="flex items-center px-4 py-1 text-[11px] font-medium uppercase tracking-wider text-highlight">
+                <div className="flex items-center px-4 py-1 text-[11px] font-medium uppercase tracking-wider text-subtle">
                   <span className="flex-1">Prayer</span>
                   <span className="w-20 text-center">Athan</span>
                   <span className="w-20 text-center">Iqamah</span>
@@ -488,15 +488,15 @@ export default function PrayerTimesPanel({
                 {PRAYER_NAMES.map((prayer) => (
                   <div
                     key={prayer}
-                    className="flex items-center rounded-lg bg-green/40 px-4 py-2.5"
+                    className="flex items-center rounded-lg bg-ink/5 px-4 py-2.5"
                   >
-                    <span className="flex-1 text-[13px] text-tan">
+                    <span className="flex-1 text-[13px] text-ink">
                       {PRAYER_DISPLAY_NAMES[prayer]}
                     </span>
-                    <span className="w-24 text-center text-[13px] tabular-nums text-highlight">
+                    <span className="w-24 text-center text-[13px] tabular-nums text-subtle">
                       {to12Hour(finalPreview[prayer].athan)}
                     </span>
-                    <span className="w-24 text-center text-[13px] font-medium tabular-nums text-highlight">
+                    <span className="w-24 text-center text-[13px] font-medium tabular-nums text-subtle">
                       {to12Hour(finalPreview[prayer].iqamah)}
                     </span>
                   </div>
@@ -506,7 +506,7 @@ export default function PrayerTimesPanel({
             <div className="flex items-center justify-between">
               <button
                 onClick={() => setStep(4)}
-                className="rounded-lg border border-highlight/20 px-5 py-2.5 text-sm text-highlight hover:text-tan"
+                className="rounded-lg border border-edge px-5 py-2.5 text-sm text-gold hover:text-ink"
               >
                 Adjust Iqamah
               </button>

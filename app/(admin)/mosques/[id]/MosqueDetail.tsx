@@ -116,7 +116,7 @@ export default function MosqueDetail({
             className={`fixed right-8 top-8 z-50 rounded-lg border px-4 py-2 text-sm shadow-lg ${
               toast.type === "error"
                 ? "border-red-500/20 bg-red-950 text-red-200"
-                : "border-highlight/20 bg-green text-tan"
+                : "border-edge bg-green text-tan"
             }`}
           >
             {toast.message}
@@ -129,7 +129,7 @@ export default function MosqueDetail({
         <div className="flex items-center gap-4">
           <Link
             href="/mosques"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-highlight/20 text-highlight transition-colors hover:border-highlight/40 hover:text-tan"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-edge text-green/40 transition-colors hover:border-edge-bold hover:text-ink"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
@@ -145,8 +145,8 @@ export default function MosqueDetail({
             {mosque.name?.charAt(0).toUpperCase() || "M"}
           </div>
           <div>
-            <h1 className="text-[17px] font-bold text-tan">{mosque.name}</h1>
-            <p className="text-[12px] text-highlight">
+            <h1 className="text-[17px] font-bold text-ink">{mosque.name}</h1>
+            <p className="text-[12px] text-subtle">
               {[
                 mosque.city,
                 pipelineStage?.contact_name,
@@ -161,20 +161,20 @@ export default function MosqueDetail({
       </div>
 
       {/* Tab Bar */}
-      <div className="mb-6 flex gap-6 border-b border-highlight/10">
+      <div className="mb-6 flex gap-6 border-b border-edge">
         {TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`relative pb-3 text-sm font-medium transition-colors ${
-              activeTab === tab ? "text-tan" : "text-highlight hover:text-tan"
+              activeTab === tab ? "text-ink" : "text-green/40 hover:text-ink"
             }`}
           >
             {tab}
             {activeTab === tab && (
               <motion.div
                 layoutId="tab-indicator"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-highlight"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold"
               />
             )}
           </button>
@@ -263,12 +263,12 @@ function OverviewTab({
           ].map((m) => (
             <div
               key={m.label}
-              className="rounded-lg border border-highlight/10 bg-green/20 p-4"
+              className="rounded-lg border border-edge bg-card p-4"
             >
-              <p className="text-[11px] font-medium uppercase tracking-wider text-highlight">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-subtle">
                 {m.label}
               </p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-tan">
+              <p className="mt-1 text-2xl font-bold tabular-nums text-ink">
                 {m.value}
               </p>
             </div>
@@ -278,14 +278,14 @@ function OverviewTab({
 
       {/* Onboarding Progress (onboarding mosques) */}
       {isOnboarding && (
-        <div className="rounded-lg border border-highlight/10 bg-green/20 p-5">
+        <div className="rounded-lg border border-edge bg-card p-5">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-medium text-tan">Onboarding Progress</p>
+            <p className="text-sm font-medium text-ink">Onboarding Progress</p>
             <span className="text-[12px] font-medium tabular-nums text-cyan-300">
               {onboardingStats.pct}%
             </span>
           </div>
-          <div className="mb-4 h-2 overflow-hidden rounded-full bg-green">
+          <div className="mb-4 h-2 overflow-hidden rounded-full bg-ink/10">
             <motion.div
               className="h-full rounded-full bg-cyan-400"
               initial={{ width: 0 }}
@@ -295,18 +295,18 @@ function OverviewTab({
           </div>
           <div className="flex gap-6 text-[12px]">
             <div>
-              <span className="text-highlight">Started: </span>
-              <span className="text-tan">{formatDate(mosque.created_at)}</span>
+              <span className="text-subtle">Started: </span>
+              <span className="text-ink">{formatDate(mosque.created_at)}</span>
             </div>
             <div>
-              <span className="text-highlight">Tasks: </span>
-              <span className="text-tan">
+              <span className="text-subtle">Tasks: </span>
+              <span className="text-ink">$
                 {onboardingStats.completed}/{onboardingStats.total}
               </span>
             </div>
             <div>
-              <span className="text-highlight">Stuck: </span>
-              <span className={stuckDays > 3 ? "font-medium text-red-400" : "text-tan"}>
+              <span className="text-subtle">Stuck: </span>
+              <span className={stuckDays > 3 ? "font-medium text-red-400" : "text-ink"}>
                 {stuckDays} days
               </span>
             </div>
@@ -315,8 +315,8 @@ function OverviewTab({
       )}
 
       {/* Details Card */}
-      <div className="rounded-lg border border-highlight/10 bg-green/20 p-5">
-        <p className="mb-4 text-sm font-medium text-tan">Details</p>
+      <div className="rounded-lg border border-edge bg-card p-5">
+        <p className="mb-4 text-sm font-medium text-ink">Details</p>
         <div className="grid grid-cols-2 gap-y-3 text-[12px]">
           <DetailRow label="Contact" value={pipelineStage?.contact_name} />
           <DetailRow label="Email" value={pipelineStage?.contact_email} />
@@ -347,8 +347,8 @@ function DetailRow({
 }) {
   return (
     <>
-      <span className="text-highlight">{label}</span>
-      <span className={`text-tan ${capitalize ? "capitalize" : ""}`}>
+      <span className="text-subtle">{label}</span>
+      <span className={`text-green ${capitalize ? "capitalize" : ""}`}>
         {value || "—"}
       </span>
     </>
@@ -373,8 +373,8 @@ function TasksTab({
 }) {
   return (
     <div>
-      <p className="mb-4 text-sm text-highlight">
-        <span className="font-medium tabular-nums text-tan">
+      <p className="mb-4 text-sm text-subtle">
+        <span className="font-medium tabular-nums text-ink">
           {onboardingStats.completed}/{onboardingStats.total}
         </span>{" "}
         tasks complete
@@ -388,7 +388,7 @@ function TasksTab({
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.15, delay: Math.min(i * 0.03, 0.3) }}
-              className="flex items-center justify-between rounded-lg border border-highlight/10 bg-green/20 px-4 py-2.5"
+              className="flex items-center justify-between rounded-lg border border-edge bg-card px-4 py-2.5"
             >
               <div className="flex items-center gap-3">
                 {done ? (
@@ -417,17 +417,17 @@ function TasksTab({
                     </svg>
                   </motion.div>
                 ) : (
-                  <div className="h-5 w-5 rounded-full border border-highlight/30" />
+                  <div className="h-5 w-5 rounded-full border border-edge-bold" />
                 )}
                 <span
                   className={`text-[13px] ${
-                    done ? "text-highlight line-through" : "text-tan"
+                    done ? "text-green/40 line-through" : "text-ink"
                   }`}
                 >
                   {task.label}
                 </span>
               </div>
-              <span className="text-[11px] text-highlight">{TASK_CATEGORY_MAP[task.id]}</span>
+              <span className="text-[11px] text-faint">{TASK_CATEGORY_MAP[task.id]}</span>
             </motion.div>
           );
         })}
@@ -483,20 +483,20 @@ function NotesTab({
             if (e.key === "Enter") addNote();
           }}
           placeholder="Add a note..."
-          className="flex-1 rounded-lg border border-highlight/20 bg-green/30 px-4 py-2.5 text-sm text-tan placeholder:text-highlight/60 focus:border-highlight/40 focus:outline-none"
+          className="flex-1 rounded-lg border border-edge bg-card px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-edge-bold focus:outline-none"
           disabled={submitting}
         />
         <button
           onClick={addNote}
           disabled={submitting || !noteInput.trim()}
-          className="rounded-lg bg-highlight/20 px-5 py-2.5 text-sm font-medium text-highlight transition-colors hover:bg-highlight/30 disabled:opacity-40"
+          className="rounded-lg bg-ink/10 px-5 py-2.5 text-sm font-medium text-green transition-colors hover:bg-ink/20 disabled:opacity-40"
         >
           {submitting ? "..." : "Add"}
         </button>
       </div>
 
       {notes.length === 0 ? (
-        <p className="py-12 text-center text-sm text-highlight">
+        <p className="py-12 text-center text-sm text-subtle">
           No notes yet. Add the first one above.
         </p>
       ) : (
@@ -508,10 +508,10 @@ function NotesTab({
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                className="rounded-lg border border-highlight/10 bg-green/20 px-4 py-3"
+                className="rounded-lg border border-edge bg-card px-4 py-3"
               >
-                <p className="text-[13px] text-tan">{note.content}</p>
-                <p className="mt-1.5 text-[11px] text-highlight">
+                <p className="text-[13px] text-ink">{note.content}</p>
+                <p className="mt-1.5 text-[11px] text-faint">
                   {note.author_name || "Admin"} · {formatDate(note.created_at)}
                 </p>
               </motion.div>

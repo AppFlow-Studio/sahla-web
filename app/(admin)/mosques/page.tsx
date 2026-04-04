@@ -24,8 +24,8 @@ export default async function MosquesPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-display text-3xl text-tan">Mosques</h1>
-        <p className="mt-1 text-sm text-highlight">
+        <h1 className="font-display text-3xl text-ink">Mosques</h1>
+        <p className="mt-1 text-sm text-subtle">
           All onboarded mosques. Manage community centers and their apps.
         </p>
       </div>
