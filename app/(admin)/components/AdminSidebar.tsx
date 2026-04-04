@@ -86,6 +86,9 @@ export default function AdminSidebar() {
   const { collapsed, setCollapsed } = useSidebar();
 
   return (
+    <aside className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar-bg">
+      <div className="flex h-16 items-center px-6">
+        <span className="font-display text-xl text-sidebar-text">Sahla HQ</span>
     <motion.aside
       animate={{ width: collapsed ? 64 : 256 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}

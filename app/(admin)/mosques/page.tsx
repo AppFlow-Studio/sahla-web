@@ -1,6 +1,35 @@
-export default function MosquesPage() {
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import MosqueList from "./MosqueList";
+
+export default async function MosquesPage() {
+  const supabase = createAdminSupabaseClient();
+
+  const { data: mosques } = await supabase
+    .from("mosques")
+    .select(
+      `
+      id,
+      name,
+      city,
+      onboarding_status,
+      onboarding_progress,
+      pipeline_stages (
+        stage,
+        contact_name
+      )
+    `
+    )
+    .order("created_at", { ascending: false });
+
   return (
     <div>
+      <div className="mb-6">
+        <h1 className="font-display text-3xl text-ink">Mosques</h1>
+        <p className="mt-1 text-sm text-subtle">
+          All onboarded mosques. Manage community centers and their apps.
+        </p>
+      </div>
+      <MosqueList mosques={mosques ?? []} />
       <h1 className="font-display text-3xl text-[#0A261E]">Mosques</h1>
       <p className="mt-1 text-sm text-[#0A261E]/60">
         All onboarded mosques. Manage community centers and their apps.
