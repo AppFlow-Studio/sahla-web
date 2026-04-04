@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import {
   DndContext,
   DragOverlay,
@@ -83,6 +84,7 @@ function DroppableColumn({
     id: column.id,
     data: { stage: column.id },
   });
+  const [animateRef] = useAutoAnimate({ duration: 200 });
 
   const showDropHere = dragging && columnCards.length === 0;
 
@@ -108,7 +110,7 @@ function DroppableColumn({
             {showDropHere ? "Drop here" : "Empty"}
           </div>
         ) : (
-          <div className="flex w-full flex-col gap-[5px] self-start">
+          <div ref={animateRef} className="flex w-full flex-col gap-[5px] self-start">
             {columnCards.map((card) => (
               <DraggableMasjidCard key={String(card.id)} card={card} />
             ))}

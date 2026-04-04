@@ -25,7 +25,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(10, 38, 30, 0.15);
   border-radius: 9999px;
 }
 
@@ -42,6 +42,17 @@
   --color-up: #16a34a;
   --color-down: #dc2626;
   --color-gold: #B8922A;
+
+  /* Landing page — light theme */
+  --color-night: #fffbf2;
+  --color-cream: #0A261E;
+  --color-accent: #1a6b42;
+  --color-accent-light: #e8f5ee;
+  --color-tan-light: #3d5a4a;
+  --color-tan-gold: #9a7b2e;
+  --color-dark-green: #0A261E;
+  --color-surface: #ffffff;
+  --color-surface-warm: #faf7f2;
 
   --color-sidebar-bg: #0A261E;
   --color-sidebar-text: #fffbf2;

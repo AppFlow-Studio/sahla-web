@@ -231,7 +231,7 @@ export default function PrayerTimesPanel({
         {STEP_LABELS.map((label, i) => {
           const stepNum = (i + 1) as Step;
           const isActive = step === stepNum;
-          const isDone = step > stepNum;
+          const isDone = Number(step) > Number(stepNum);
           return (
             <div key={label} className="flex items-center gap-2">
               <div

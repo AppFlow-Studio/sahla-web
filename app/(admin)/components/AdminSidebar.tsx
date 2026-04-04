@@ -86,9 +86,6 @@ export default function AdminSidebar() {
   const { collapsed, setCollapsed } = useSidebar();
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar-bg">
-      <div className="flex h-16 items-center px-6">
-        <span className="font-display text-xl text-sidebar-text">Sahla HQ</span>
     <motion.aside
       animate={{ width: collapsed ? 64 : 256 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -98,16 +95,17 @@ export default function AdminSidebar() {
       <div className="flex h-16 items-center justify-between px-4">
         <AnimatePresence mode="wait">
           {!collapsed && (
-            <motion.span
+            <motion.a
+              href="/"
               key="title"
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
               transition={{ duration: 0.15 }}
-              className="font-display text-xl text-[#E8D5B0] whitespace-nowrap"
+              className="font-display text-xl text-[#E8D5B0] whitespace-nowrap hover:opacity-80 transition-opacity"
             >
               Sahla HQ
-            </motion.span>
+            </motion.a>
           )}
         </AnimatePresence>
         <button

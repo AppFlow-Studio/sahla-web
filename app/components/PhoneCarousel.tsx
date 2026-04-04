@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { motion, useAnimation, AnimatePresence } from "framer-motion";
 import IPhoneFrame from "./IPhoneFrame";
 
@@ -520,8 +520,8 @@ function TabBar({
   const tabs = [
     { label: "Home", d: "M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" },
     { label: "Times", d: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" },
-    { label: "Qibla", d: "M15 10.5a3 3 0 11-6 0 3 3 0 016 0zM19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" },
-    { label: "Quran", d: "M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" },
+    { label: "Discover", d: "M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" },
+    { label: "Library", d: "M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" },
     { label: "Settings", d: "M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" },
   ];
 
@@ -557,11 +557,16 @@ function TabBar({
   );
 }
 
-const screenConfigs = [
-  { title: "Home", gradient: "from-[#0a1a12] to-[#060d09]", Component: HomeScreen },
-  { title: "Prayer Times", gradient: "from-[#0c1c14] to-[#060d09]", Component: PrayerTimesScreen },
-  { title: "Qibla", gradient: "from-[#0a1a15] to-[#060d09]", Component: QiblaScreen },
-  { title: "Quran", gradient: "from-[#0d1810] to-[#060d09]", Component: QuranScreen },
+const screenConfigs: {
+  title: string;
+  gradient: string;
+  Component?: () => React.JSX.Element;
+  image?: string;
+}[] = [
+  { title: "Home", gradient: "from-[#0a1a12] to-[#060d09]", image: "/screens/home.png" },
+  { title: "Prayer Times", gradient: "from-[#0c1c14] to-[#060d09]", image: "/screens/prayer-times.png" },
+  { title: "Discover", gradient: "from-[#0a1a15] to-[#060d09]", image: "/screens/discover.png" },
+  { title: "Library", gradient: "from-[#0d1810] to-[#060d09]", image: "/screens/library.png" },
   { title: "Settings", gradient: "from-[#0a1510] to-[#060d09]", Component: SettingsScreen },
 ];
 
@@ -686,28 +691,40 @@ export default function PhoneCarousel({ demoMode = false }: PhoneCarouselProps) 
   );
 
   const config = screenConfigs[currentIndex];
+  const isImageScreen = !!config.image;
   const ScreenComponent = config.Component;
 
+  const screenContent = isImageScreen ? (
+    <img
+      src={config.image}
+      alt={config.title}
+      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
+      draggable={false}
+    />
+  ) : ScreenComponent ? (
+    <ScreenComponent />
+  ) : null;
+
   const phoneInternals = (
-    <div className={`flex h-full flex-col bg-gradient-to-b ${config.gradient}`}>
-      <StatusBar />
+    <div className={`flex h-full flex-col ${isImageScreen ? "bg-[#060d09]" : `bg-gradient-to-b ${config.gradient}`}`}>
+      {!isImageScreen && <StatusBar />}
       <div className="relative flex-1 overflow-hidden">
         {demoMode ? (
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={currentIndex}
-              className="absolute inset-0 overflow-y-auto"
+              className={`absolute inset-0 ${isImageScreen ? "" : "overflow-y-auto"}`}
               initial={{ x: slideDirection * 280, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: slideDirection * -280, opacity: 0 }}
               transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              <ScreenComponent />
+              {screenContent}
             </motion.div>
           </AnimatePresence>
         ) : (
-          <div className="h-full overflow-y-auto">
-            <ScreenComponent />
+          <div className={`h-full ${isImageScreen ? "" : "overflow-y-auto"}`}>
+            {screenContent}
           </div>
         )}
       </div>
@@ -753,7 +770,7 @@ export default function PhoneCarousel({ demoMode = false }: PhoneCarouselProps) 
       <AnimatePresence mode="wait">
         <motion.p
           key={config.title}
-          className="text-center text-sm tracking-[0.15em] uppercase text-[#c4a87a]/60"
+          className="text-center text-sm tracking-[0.15em] uppercase text-tan-gold/70"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
