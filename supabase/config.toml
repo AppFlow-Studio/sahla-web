@@ -5,6 +5,12 @@ verify_jwt = true
 import_map = "./functions/sync-prayer-times/deno.json"
 entrypoint = "./functions/sync-prayer-times/index.ts"
 
+[functions.stripe-webhooks]
+enabled = true
+verify_jwt = false
+import_map = "./functions/stripe-webhooks/deno.json"
+entrypoint = "./functions/stripe-webhooks/index.ts"
+
 [functions.clerk-webhooks]
 enabled = true
 verify_jwt = true

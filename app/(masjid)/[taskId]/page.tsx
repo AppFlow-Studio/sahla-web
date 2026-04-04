@@ -10,11 +10,15 @@ import JummahSetupPanel from "./panels/JummahSetupPanel";
 import SpeakersPanel from "./panels/SpeakersPanel";
 import ProgramsPanel from "./panels/ProgramsPanel";
 import EventsPanel from "./panels/EventsPanel";
+import StripeConnectPanel from "./panels/StripeConnectPanel";
+import { createStripeClient } from "@/lib/stripe";
 
 export default async function TaskPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ taskId: string }>;
+  searchParams: Promise<{ stripe?: string }>;
 }) {
   const { taskId } = await params;
   const task = ALL_TASKS.find((t) => t.id === taskId);
@@ -78,6 +82,35 @@ export default async function TaskPage({
     else eventsData = contentRes.data ?? [];
   }
 
+  let stripeStatus = null;
+  if (taskId === "stripe_connect") {
+    const stripeAccountId = (mosque as Record<string, unknown>).stripe_account_id as string | null;
+
+    if (stripeAccountId) {
+      try {
+        const stripe = createStripeClient();
+        const account = await stripe.accounts.retrieve(stripeAccountId);
+        stripeStatus = {
+          status: (account.charges_enabled ? "connected" :
+            account.requirements?.past_due?.length ? "issues" : "pending") as "connected" | "pending" | "issues",
+          charges_enabled: account.charges_enabled,
+          payouts_enabled: account.payouts_enabled,
+          requirements: {
+            currently_due: account.requirements?.currently_due ?? [],
+            past_due: account.requirements?.past_due ?? [],
+          },
+          business_profile: { name: account.business_profile?.name ?? null },
+        };
+      } catch {
+        stripeStatus = { status: "not_connected" as const };
+      }
+    } else {
+      stripeStatus = { status: "not_connected" as const };
+    }
+  }
+
+  const resolvedSearchParams = await searchParams;
+
   return (
     <div className="mx-auto max-w-2xl py-8">
       <div className="mb-2 flex items-center gap-2">
@@ -123,7 +156,14 @@ export default async function TaskPage({
         {taskId === "events" && (
           <EventsPanel mosqueId={mosque.id} initialEvents={eventsData ?? []} speakers={speakersData ?? []} />
         )}
-        {!["mosque_profile", "app_branding", "prayer_times", "jummah_setup", "speakers", "programs", "events"].includes(taskId) && (
+        {taskId === "stripe_connect" && stripeStatus && (
+          <StripeConnectPanel
+            mosqueId={mosque.id}
+            initialStatus={stripeStatus}
+            stripeReturn={resolvedSearchParams.stripe}
+          />
+        )}
+        {!["mosque_profile", "app_branding", "prayer_times", "jummah_setup", "speakers", "programs", "events", "stripe_connect"].includes(taskId) && (
           <div className="rounded-xl border-2 border-dashed border-stone-200 bg-white p-12 text-center">
             <p className="text-[14px] text-stone-400">Task panel coming soon</p>
             <p className="mt-1 text-[12px] text-stone-300">This form will be built in a follow-up ticket</p>
