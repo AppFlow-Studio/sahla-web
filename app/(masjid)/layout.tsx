@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import OnboardingSidebar from "./components/OnboardingSidebar";
+import ToastProvider from "./components/ToastProvider";
 import { getMosqueOnboardingData } from "./data";
 
 export default async function MasjidLayout({
@@ -23,7 +24,9 @@ export default async function MasjidLayout({
   return (
     <div className="flex h-screen bg-[#F5F4F0]">
       <OnboardingSidebar mosqueName={mosqueName} progress={progress} />
-      <main className="flex-1 overflow-y-auto p-8">{children}</main>
+      <main className="flex-1 overflow-y-auto p-8">
+        <ToastProvider>{children}</ToastProvider>
+      </main>
     </div>
   );
 }
