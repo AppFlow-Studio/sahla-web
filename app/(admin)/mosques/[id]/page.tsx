@@ -10,7 +10,7 @@ export default async function MosqueDetailPage({
   const { id } = await params;
   const supabase = createAdminSupabaseClient();
 
-  const [mosqueResult, notesResult, stagesResult] = await Promise.all([
+  const [mosqueResult, notesResult, stagesResult, iqamahResult] = await Promise.all([
     supabase
       .from("mosques")
       .select("*")
@@ -26,6 +26,10 @@ export default async function MosqueDetailPage({
       .select("*")
       .eq("mosque_id", id)
       .single(),
+    supabase
+      .from("iqamah_config")
+      .select("*")
+      .eq("mosque_id", id),
   ]);
 
   if (!mosqueResult.data) {
@@ -37,6 +41,7 @@ export default async function MosqueDetailPage({
       mosque={mosqueResult.data}
       notes={notesResult.data ?? []}
       pipelineStage={stagesResult.data}
+      iqamahConfig={iqamahResult.data ?? []}
     />
   );
 }

@@ -4,6 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { StatusBadge } from "../../components/StatusBadge";
+import PrayerTimesPanel from "./PrayerTimesPanel";
+import type { IqamahConfig } from "@/lib/prayer/types";
+import { ONBOARDING_CATEGORIES, ALL_TASKS } from "@/app/(masjid)/components/onboarding-tasks";
 
 type Note = {
   id: string;
@@ -38,35 +41,20 @@ type Mosque = {
   created_at: string;
   updated_at: string;
   brand_color: string | null;
+  calculation_method: number | null;
+  school: number | null;
 };
 
-const TABS = ["Overview", "Tasks", "Notes"] as const;
+const TABS = ["Overview", "Tasks", "Notes", "Prayer Times"] as const;
 type Tab = (typeof TABS)[number];
 
-const ONBOARDING_TASKS: { key: string; label: string; category: string }[] = [
-  { key: "mosque_profile", label: "Mosque Profile", category: "Foundation" },
-  { key: "app_branding", label: "App Branding", category: "Foundation" },
-  { key: "prayer_times", label: "Prayer Times", category: "Prayer" },
-  { key: "jummah_setup", label: "Jummah Setup", category: "Prayer" },
-  { key: "speakers", label: "Speakers", category: "Content" },
-  { key: "programs", label: "Programs", category: "Content" },
-  { key: "events", label: "Events", category: "Content" },
-  { key: "lectures", label: "Lectures", category: "Content" },
-  { key: "donations", label: "Donations", category: "Business" },
-  { key: "ads_config", label: "Ads Configuration", category: "Business" },
-  { key: "notifications", label: "Notifications", category: "Setup" },
-  { key: "tv_display", label: "TV Display", category: "Setup" },
-  { key: "app_store_listing", label: "App Store Listing", category: "Launch" },
-  { key: "go_live", label: "Go Live", category: "Launch" },
-];
-
 function getOnboardingStats(progress: Record<string, boolean> | null) {
-  if (!progress) return { completed: 0, total: ONBOARDING_TASKS.length, pct: 0 };
-  const completed = ONBOARDING_TASKS.filter((t) => progress[t.key] === true).length;
+  if (!progress) return { completed: 0, total: ALL_TASKS.length, pct: 0 };
+  const completed = ALL_TASKS.filter((t) => progress[t.id] === true).length;
   return {
     completed,
-    total: ONBOARDING_TASKS.length,
-    pct: Math.round((completed / ONBOARDING_TASKS.length) * 100),
+    total: ALL_TASKS.length,
+    pct: Math.round((completed / ALL_TASKS.length) * 100),
   };
 }
 
@@ -88,10 +76,12 @@ export default function MosqueDetail({
   mosque,
   notes: initialNotes,
   pipelineStage,
+  iqamahConfig,
 }: {
   mosque: Mosque;
   notes: Note[];
   pipelineStage: PipelineStage | null;
+  iqamahConfig: IqamahConfig[];
 }) {
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -220,6 +210,18 @@ export default function MosqueDetail({
             <NotesTab
               mosqueId={mosque.id}
               initialNotes={initialNotes}
+              showToast={showToast}
+            />
+          )}
+          {activeTab === "Prayer Times" && (
+            <PrayerTimesPanel
+              mosque={{
+                id: mosque.id,
+                address: mosque.address,
+                calculation_method: mosque.calculation_method,
+                school: mosque.school,
+              }}
+              existingConfig={iqamahConfig}
               showToast={showToast}
             />
           )}
@@ -355,6 +357,13 @@ function DetailRow({
 
 /* ─── Tasks Tab ─── */
 
+const TASK_CATEGORY_MAP: Record<string, string> = {};
+for (const cat of ONBOARDING_CATEGORIES) {
+  for (const task of cat.tasks) {
+    TASK_CATEGORY_MAP[task.id] = cat.label;
+  }
+}
+
 function TasksTab({
   progress,
   onboardingStats,
@@ -371,11 +380,11 @@ function TasksTab({
         tasks complete
       </p>
       <div className="space-y-1">
-        {ONBOARDING_TASKS.map((task, i) => {
-          const done = progress?.[task.key] === true;
+        {ALL_TASKS.map((task, i) => {
+          const done = progress?.[task.id] === true;
           return (
             <motion.div
-              key={task.key}
+              key={task.id}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.15, delay: Math.min(i * 0.03, 0.3) }}
@@ -418,7 +427,7 @@ function TasksTab({
                   {task.label}
                 </span>
               </div>
-              <span className="text-[11px] text-tan-muted">{task.category}</span>
+              <span className="text-[11px] text-tan-muted">{TASK_CATEGORY_MAP[task.id]}</span>
             </motion.div>
           );
         })}
