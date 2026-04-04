@@ -105,9 +105,9 @@ export default function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-green-accent/10 bg-background">
+    <aside className="flex h-full w-64 flex-col border-r border-highlight/10 bg-background">
       <div className="flex h-16 items-center px-6">
-        <span className="font-display text-xl text-tan-light">Sahla HQ</span>
+        <span className="font-display text-xl text-tan">Sahla HQ</span>
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
@@ -119,8 +119,8 @@ export default function AdminSidebar() {
               href={item.href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
-                  ? "bg-green-deep text-tan-light"
-                  : "text-tan-muted hover:bg-green-deep/50 hover:text-tan-light"
+                  ? "bg-green text-tan"
+                  : "text-highlight hover:bg-green/50 hover:text-tan"
               }`}
             >
               {item.icon}
