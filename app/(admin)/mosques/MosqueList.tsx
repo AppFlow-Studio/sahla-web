@@ -72,7 +72,7 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
       <div className="mb-6 flex gap-3">
         <div className="relative flex-1">
           <svg
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tan-muted"
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-highlight"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={1.5}
@@ -89,7 +89,7 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search by name, city, or contact..."
-            className="w-full rounded-lg border border-green-accent/20 bg-green-deep/30 py-2.5 pl-10 pr-10 text-sm text-tan-light placeholder:text-tan-muted/60 focus:border-green-accent/40 focus:outline-none"
+            className="w-full rounded-lg border border-highlight/20 bg-green/30 py-2.5 pl-10 pr-10 text-sm text-tan placeholder:text-highlight/60 focus:border-highlight/40 focus:outline-none"
           />
           {search && (
             <button
@@ -98,7 +98,7 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
                 setDebouncedSearch("");
                 if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-tan-muted hover:text-tan-light"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-highlight hover:text-tan"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -109,7 +109,7 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-green-accent/20 bg-green-deep/30 px-4 py-2.5 text-sm text-tan-light focus:border-green-accent/40 focus:outline-none"
+          className="rounded-lg border border-highlight/20 bg-green/30 px-4 py-2.5 text-sm text-tan focus:border-highlight/40 focus:outline-none"
         >
           <option value="all">All Statuses</option>
           {STAGES.map((s) => (
@@ -125,13 +125,13 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           {mosques.length === 0 ? (
             <>
-              <p className="text-lg font-medium text-tan-light">Add your first mosque</p>
-              <p className="mt-1 text-sm text-tan-muted">
+              <p className="text-lg font-medium text-tan">Add your first mosque</p>
+              <p className="mt-1 text-sm text-highlight">
                 Get started by adding a mosque to your pipeline.
               </p>
             </>
           ) : (
-            <p className="text-sm text-tan-muted">No mosques match your search</p>
+            <p className="text-sm text-highlight">No mosques match your search</p>
           )}
         </div>
       ) : (
@@ -156,13 +156,13 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
                 >
                   <Link
                     href={`/mosques/${mosque.id}`}
-                    className={`flex items-center justify-between rounded-lg border border-green-accent/10 border-l-[3px] ${borderColor} bg-green-deep/20 px-4 py-3 transition-colors duration-150 hover:border-green-accent/30`}
+                    className={`flex items-center justify-between rounded-lg border border-highlight/10 border-l-[3px] ${borderColor} bg-green/20 px-4 py-3 transition-colors duration-150 hover:border-highlight/30`}
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-tan-light">
+                      <p className="text-[13px] font-semibold text-tan">
                         {mosque.name}
                       </p>
-                      <p className="text-[11.5px] text-tan-muted">
+                      <p className="text-[11.5px] text-highlight">
                         {[mosque.city, mosque.pipeline_stages?.[0]?.contact_name]
                           .filter(Boolean)
                           .join(" · ") || "—"}
@@ -171,7 +171,7 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
                     <div className="flex items-center gap-4">
                       {isOnboarding && (
                         <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-green-deep">
+                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-green">
                             <div
                               className="h-full rounded-full bg-cyan-400 transition-all"
                               style={{ width: `${onboardingPct}%` }}
