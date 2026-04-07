@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 type Version = {
   version: string;
@@ -57,9 +57,8 @@ function AppCard({ app, isSelected, onSelect }: { app: App; isSelected: boolean;
   return (
     <motion.button
       onClick={onSelect}
-      initial={{ opacity: 0, y: 6 }}
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -6 }}
       transition={{ duration: 0.15 }}
       whileTap={{ scale: 0.98 }}
       className={`group w-full rounded-2xl p-4 text-left transition-all duration-200 ${
@@ -121,9 +120,9 @@ function AppCard({ app, isSelected, onSelect }: { app: App; isSelected: boolean;
 function VersionRow({ v, isLatest, index }: { v: Version; isLatest: boolean; index: number }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: -12 }}
+      initial={false}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.25, delay: index * 0.05 }}
+      transition={{ duration: 0.15 }}
       className="relative flex gap-4 pb-7 last:pb-0"
     >
       {/* Timeline connector */}
@@ -282,16 +281,14 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
 
           {/* Cards */}
           <div className="space-y-2">
-            <AnimatePresence mode="sync">
-              {filtered.map((app) => (
-                <AppCard
-                  key={app.id}
-                  app={app}
-                  isSelected={selectedId === app.id}
-                  onSelect={() => setSelectedId(app.id)}
-                />
-              ))}
-            </AnimatePresence>
+            {filtered.map((app) => (
+              <AppCard
+                key={app.id}
+                app={app}
+                isSelected={selectedId === app.id}
+                onSelect={() => setSelectedId(app.id)}
+              />
+            ))}
             {filtered.length === 0 && (
               <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-edge-bold bg-white py-16 text-center">
                 <svg className="h-8 w-8 text-edge-bold" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
@@ -305,14 +302,9 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
 
         {/* Right: Detail panel */}
         <div className="min-w-0 flex-1">
-          <AnimatePresence mode="wait">
             {selected ? (
-              <motion.div
+              <div
                 key={selected.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
                 className="overflow-hidden rounded-2xl border border-edge bg-white shadow-sm"
               >
                 {/* Hero header */}
@@ -390,11 +382,9 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
                     ))}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+              <div
                 className="flex h-full min-h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed border-edge-bold bg-white"
               >
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-ink/5">
@@ -404,9 +394,8 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
                 </div>
                 <p className="mt-4 text-sm font-medium text-subtle">Select an app to view build details</p>
                 <p className="mt-1 text-xs text-faint">Choose from the list on the left</p>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
         </div>
       </div>
     </div>
