@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock } from "lucide-react";
+import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock, Trash2 } from "lucide-react";
+import * as Tooltip from "@radix-ui/react-tooltip";
 import { StatusBadge } from "../../components/StatusBadge";
 import PrayerTimesPanel from "./PrayerTimesPanel";
 import type { IqamahConfig } from "@/lib/prayer/types";
@@ -49,7 +50,7 @@ export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStag
           <Link href="/mosques" className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600">
             <ArrowLeft size={18} />
           </Link>
-          <div className="flex h-12 w-12 items-center justify-center rounded-full text-[18px] font-bold ring-2 ring-stone-100" style={{ backgroundColor: `${color}18`, color }}>
+          <div className="flex h-12 w-12 items-center justify-center rounded-full text-[18px] font-bold ring-2 ring-white shadow-sm" style={{ backgroundColor: `${color}18`, color }}>
             {mosque.name?.charAt(0).toUpperCase() || "M"}
           </div>
           <div>
@@ -150,7 +151,7 @@ function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: strin
         </div>
       )}
 
-      <div className="rounded-xl border border-stone-200 bg-white p-6">
+      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
         <p className="mb-5 text-[14px] font-semibold text-stone-900">Details</p>
         <div className="grid grid-cols-2 gap-x-8">
           {[
@@ -213,7 +214,7 @@ function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
           const dotColor = CAT_COLORS[cat.label] || "bg-stone-400";
           const done = cat.tasks.filter((t) => progress?.[t.id] === true).length;
           return (
-            <div key={cat.id} className="mb-5">
+            <div key={cat.id} className="mb-7">
               <div className="mb-2 flex items-center gap-2">
                 <span className={cn("h-2 w-2 rounded-full", dotColor)} />
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">{cat.label}</span>
@@ -239,13 +240,28 @@ function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
                             <Check size={12} className="text-white" strokeWidth={3} />
                           </motion.div>
                         ) : (
-                          <div className="h-5 w-5 rounded-md border-2 border-stone-200" />
+                          <div className="h-5 w-5 rounded-md border-2 border-stone-300 transition-colors hover:border-stone-400" />
                         )}
                         <span className={cn("text-[13px] font-medium", isDone ? "text-stone-400 line-through" : "text-stone-800")}>{task.label}</span>
                       </div>
-                      <span className={cn("rounded-full px-2 py-0.5 text-[9px] font-bold",
-                        task.badge === "REQ" ? "bg-red-50 text-red-600" : "bg-stone-100 text-stone-500"
-                      )}>{task.badge}</span>
+                      <Tooltip.Provider delayDuration={200}>
+                        <Tooltip.Root>
+                          <Tooltip.Trigger asChild>
+                            <span className={cn("cursor-default rounded-full px-2 py-0.5 text-[9px] font-bold",
+                              task.badge === "REQ" ? "bg-red-50 text-red-600" : "bg-stone-100 text-stone-500"
+                            )}>{task.badge}</span>
+                          </Tooltip.Trigger>
+                          <Tooltip.Portal>
+                            <Tooltip.Content
+                              className="rounded-lg bg-stone-900 px-3 py-1.5 text-xs text-white shadow-lg"
+                              sideOffset={5}
+                            >
+                              {task.badge === "REQ" ? "Required for launch" : "Recommended but optional"}
+                              <Tooltip.Arrow className="fill-stone-900" />
+                            </Tooltip.Content>
+                          </Tooltip.Portal>
+                        </Tooltip.Root>
+                      </Tooltip.Provider>
                     </motion.div>
                   );
                 })}
@@ -311,7 +327,10 @@ function NotesTab({ mosqueId, initial }: { mosqueId: string; initial: Note[] }) 
           <AnimatePresence initial={false}>
             {notes.map((n) => (
               <motion.div key={n.id} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
-                className="rounded-xl border border-stone-200 bg-white px-5 py-4">
+                className="group relative rounded-xl border border-stone-200 bg-white px-5 py-4 transition-colors hover:bg-stone-50">
+                <button className="absolute right-3 top-3 rounded-md p-1 text-stone-300 opacity-0 transition-all hover:bg-stone-200 hover:text-stone-600 group-hover:opacity-100">
+                  <Trash2 size={14} />
+                </button>
                 <p className="text-[14px] leading-relaxed text-stone-800">{n.content}</p>
                 <div className="mt-3 flex items-center justify-between">
                   <span className="inline-flex items-center rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-semibold text-stone-600">

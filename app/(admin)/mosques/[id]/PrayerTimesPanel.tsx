@@ -21,6 +21,17 @@ import {
   PRAYER_DISPLAY_NAMES,
 } from "@/lib/prayer/constants";
 import { computeIqamahTime, to12Hour } from "@/lib/prayer/utils";
+import { cn } from "@/lib/utils";
+
+function getNextPrayerIndex(prayers: { prayer_name: string; athan_time: string }[]): number {
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  for (let i = 0; i < prayers.length; i++) {
+    const [h, m] = prayers[i].athan_time.split(":").map(Number);
+    if (h * 60 + m > nowMins) return i;
+  }
+  return 0; // All passed — highlight Fajr as next
+}
 import type { PrayerName, IqamahConfig, IqamahMode, TodaysPrayer } from "@/lib/prayer/types";
 
 type Step = "view" | 1 | 2 | 3 | 4 | 5;
@@ -214,13 +225,22 @@ export default function PrayerTimesPanel({
                   <span className="w-24 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Athan</span>
                   <span className="w-24 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Iqamah</span>
                 </div>
-                {todaysPrayers.map((p, i) => (
-                  <div key={p.prayer_name} className={`flex items-center px-4 py-2.5 ${i % 2 === 0 ? "bg-stone-50/40" : "bg-white"}`}>
-                    <span className="flex-1 text-[14px] font-medium text-stone-800">{PRAYER_DISPLAY_NAMES[p.prayer_name]}</span>
-                    <span className="w-24 text-right font-mono text-[13px] text-stone-500">{to12Hour(p.athan_time)}</span>
-                    <span className="w-24 text-right font-mono text-[13px] font-semibold text-stone-900">{to12Hour(p.iqamah_time)}</span>
-                  </div>
-                ))}
+                {(() => {
+                  const nextIdx = getNextPrayerIndex(todaysPrayers);
+                  return todaysPrayers.map((p, i) => {
+                    const isNext = i === nextIdx;
+                    return (
+                      <div key={p.prayer_name} className={cn(
+                        "flex items-center px-4 py-2.5",
+                        isNext ? "border-l-[3px] border-l-teal-400 bg-teal-50/30" : i % 2 === 0 ? "bg-stone-50/40" : "bg-white"
+                      )}>
+                        <span className={cn("flex-1 text-[14px] font-medium", isNext ? "text-teal-800" : "text-stone-800")}>{PRAYER_DISPLAY_NAMES[p.prayer_name]}</span>
+                        <span className="w-24 text-right font-mono text-[13px] text-stone-500">{to12Hour(p.athan_time)}</span>
+                        <span className={cn("w-24 text-right font-mono text-[13px] font-semibold", isNext ? "text-teal-900" : "text-stone-900")}>{to12Hour(p.iqamah_time)}</span>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             ) : (
               <div className="space-y-1.5 py-4">

@@ -65,7 +65,7 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
   return (
     <div>
       {/* ── Filter bar ── */}
-      <div className="mb-4 flex items-center gap-2 rounded-xl bg-stone-50 p-1.5">
+      <div className="mb-4 flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-1.5">
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
           <input
