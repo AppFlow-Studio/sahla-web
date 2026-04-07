@@ -1,21 +1,35 @@
+import { cn } from "@/lib/utils";
+
 export const STAGE_COLORS: Record<
   string,
-  { bg: string; text: string; border: string }
+  { bg: string; text: string; dot: string; border: string }
 > = {
-  lead: { bg: "bg-zinc-800", text: "text-zinc-300", border: "border-l-zinc-500" },
-  contacted: { bg: "bg-blue-950", text: "text-blue-300", border: "border-l-blue-500" },
-  demo: { bg: "bg-purple-950", text: "text-purple-300", border: "border-l-purple-500" },
-  contract: { bg: "bg-amber-950", text: "text-amber-300", border: "border-l-amber-500" },
-  onboarding: { bg: "bg-cyan-950", text: "text-cyan-300", border: "border-l-cyan-500" },
-  live: { bg: "bg-emerald-950", text: "text-emerald-300", border: "border-l-emerald-500" },
+  lead:       { bg: "bg-stone-100",   text: "text-stone-600",   dot: "bg-stone-400",   border: "border-l-stone-400" },
+  contacted:  { bg: "bg-blue-50",     text: "text-blue-700",    dot: "bg-blue-500",    border: "border-l-blue-500" },
+  demo:       { bg: "bg-amber-50",    text: "text-amber-700",   dot: "bg-amber-500",   border: "border-l-amber-500" },
+  contract:   { bg: "bg-violet-50",   text: "text-violet-700",  dot: "bg-violet-500",  border: "border-l-violet-500" },
+  onboarding: { bg: "bg-teal-50",     text: "text-teal-700",    dot: "bg-teal-500",    border: "border-l-teal-500" },
+  live:       { bg: "bg-emerald-50",  text: "text-emerald-700", dot: "bg-emerald-500", border: "border-l-emerald-500" },
 };
 
-export function StatusBadge({ stage }: { stage: string }) {
+export function StatusBadge({
+  stage,
+  size = "sm",
+}: {
+  stage: string;
+  size?: "sm" | "md";
+}) {
   const colors = STAGE_COLORS[stage] || STAGE_COLORS.lead;
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize ${colors.bg} ${colors.text}`}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full font-medium capitalize",
+        colors.bg,
+        colors.text,
+        size === "md" ? "px-3 py-1 text-xs" : "px-2.5 py-0.5 text-[11px]"
+      )}
     >
+      <span className={cn("h-1.5 w-1.5 rounded-full", colors.dot)} />
       {stage}
     </span>
   );

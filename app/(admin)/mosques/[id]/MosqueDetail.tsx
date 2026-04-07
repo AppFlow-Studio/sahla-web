@@ -1,229 +1,94 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock } from "lucide-react";
 import { StatusBadge } from "../../components/StatusBadge";
 import PrayerTimesPanel from "./PrayerTimesPanel";
 import type { IqamahConfig } from "@/lib/prayer/types";
 import { ONBOARDING_CATEGORIES, ALL_TASKS } from "@/app/(masjid)/components/onboarding-tasks";
+import { cn } from "@/lib/utils";
 
-type Note = {
-  id: string;
-  mosque_id: string;
-  author_id: string | null;
-  author_name: string | null;
-  content: string;
-  created_at: string;
-};
-
-type PipelineStage = {
-  id: string;
-  mosque_id: string;
-  stage: string;
-  contact_name: string | null;
-  contact_email: string | null;
-  contact_phone: string | null;
-  notes: unknown;
-  updated_at: string;
-};
-
+type Note = { id: string; mosque_id: string; author_id: string | null; author_name: string | null; content: string; created_at: string };
+type PipelineStage = { id: string; mosque_id: string; stage: string; contact_name: string | null; contact_email: string | null; contact_phone: string | null; notes: unknown; updated_at: string };
 type Mosque = {
-  id: string;
-  name: string;
-  city: string | null;
-  state: string | null;
-  address: string | null;
-  subscription_status: string | null;
-  onboarding_status: string | null;
-  onboarding_progress: Record<string, boolean> | null;
-  launched_at: string | null;
-  created_at: string;
-  updated_at: string;
-  brand_color: string | null;
-  calculation_method: number | null;
-  school: number | null;
+  id: string; name: string; city: string | null; state: string | null; address: string | null;
+  subscription_status: string | null; onboarding_status: string | null; onboarding_progress: Record<string, boolean> | null;
+  launched_at: string | null; created_at: string; updated_at: string; brand_color: string | null;
+  calculation_method: number | null; school: number | null;
 };
 
 const TABS = ["Overview", "Tasks", "Notes", "Prayer Times"] as const;
 type Tab = (typeof TABS)[number];
 
-function getOnboardingStats(progress: Record<string, boolean> | null) {
+const AVATAR_PALETTE = ["#64748b", "#6366f1", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed", "#0d9488"];
+function nameToColor(name: string) { let h = 0; for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h); return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length]; }
+
+function getStats(progress: Record<string, boolean> | null) {
   if (!progress) return { completed: 0, total: ALL_TASKS.length, pct: 0 };
-  const completed = ALL_TASKS.filter((t) => progress[t.id] === true).length;
-  return {
-    completed,
-    total: ALL_TASKS.length,
-    pct: Math.round((completed / ALL_TASKS.length) * 100),
-  };
+  const c = ALL_TASKS.filter((t) => progress[t.id] === true).length;
+  return { completed: c, total: ALL_TASKS.length, pct: Math.round((c / ALL_TASKS.length) * 100) };
 }
+function fmtDate(d: string | null) { return d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null; }
+function timeAgo(d: string) { const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000); if (s < 60) return "just now"; if (s < 3600) return `${Math.floor(s / 60)}m ago`; if (s < 86400) return `${Math.floor(s / 3600)}h ago`; if (s < 604800) return `${Math.floor(s / 86400)}d ago`; return fmtDate(d) || "—"; }
+function daysSince(d: string) { return Math.floor((Date.now() - new Date(d).getTime()) / 86400000); }
+function showToast(msg: string, type: "success" | "error") { type === "success" ? toast.success(msg) : toast.error(msg); }
 
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function daysSince(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
-}
-
-export default function MosqueDetail({
-  mosque,
-  notes: initialNotes,
-  pipelineStage,
-  iqamahConfig,
-}: {
-  mosque: Mosque;
-  notes: Note[];
-  pipelineStage: PipelineStage | null;
-  iqamahConfig: IqamahConfig[];
-}) {
+export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStage, iqamahConfig }: { mosque: Mosque; notes: Note[]; pipelineStage: PipelineStage | null; iqamahConfig: IqamahConfig[] }) {
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    };
-  }, []);
-
-  function showToast(message: string, type: "success" | "error") {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    setToast({ message, type });
-    toastTimeoutRef.current = setTimeout(() => setToast(null), 2500);
-  }
-
   const stage = pipelineStage?.stage || "lead";
-  const isLive = stage === "live";
-  const isOnboarding = stage === "onboarding";
-  const onboardingStats = getOnboardingStats(mosque.onboarding_progress);
+  const color = mosque.brand_color || nameToColor(mosque.name || "M");
 
   return (
-    <div className="relative">
-      {/* Toast */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            className={`fixed right-8 top-8 z-50 rounded-lg border px-4 py-2 text-sm shadow-lg ${
-              toast.type === "error"
-                ? "border-red-500/20 bg-red-950 text-red-200"
-                : "border-edge bg-green text-tan"
-            }`}
-          >
-            {toast.message}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
+    <div>
+      {/* ── Header ── */}
+      <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link
-            href="/mosques"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-edge text-green/40 transition-colors hover:border-edge-bold hover:text-ink"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-            </svg>
+          <Link href="/mosques" className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600">
+            <ArrowLeft size={18} />
           </Link>
-          <div
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold"
-            style={{
-              background: `${mosque.brand_color || "#4a8c65"}22`,
-              color: mosque.brand_color || "#4a8c65",
-            }}
-          >
+          <div className="flex h-12 w-12 items-center justify-center rounded-full text-[18px] font-bold ring-2 ring-stone-100" style={{ backgroundColor: `${color}18`, color }}>
             {mosque.name?.charAt(0).toUpperCase() || "M"}
           </div>
           <div>
-            <h1 className="text-[17px] font-bold text-ink">{mosque.name}</h1>
-            <p className="text-[12px] text-subtle">
-              {[
-                mosque.city,
-                pipelineStage?.contact_name,
-                pipelineStage?.contact_email,
-              ]
-                .filter(Boolean)
-                .join(" · ") || "—"}
+            <h1 className="text-xl font-bold text-stone-900 leading-tight">{mosque.name}</h1>
+            <p className="mt-0.5 text-[13px] text-stone-500">
+              {[mosque.city, pipelineStage?.contact_name, pipelineStage?.contact_email].filter(Boolean).join(" · ") || "—"}
             </p>
           </div>
         </div>
-        <StatusBadge stage={stage} />
+        <StatusBadge stage={stage} size="md" />
       </div>
 
-      {/* Tab Bar */}
-      <div className="mb-6 flex gap-6 border-b border-edge">
+      {/* ── Tabs ── */}
+      <div className="relative mb-6 flex gap-1 border-b border-stone-200">
         {TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`relative pb-3 text-sm font-medium transition-colors ${
-              activeTab === tab ? "text-ink" : "text-green/40 hover:text-ink"
-            }`}
+            className={cn(
+              "relative px-4 pb-3 pt-1 text-[13px] font-medium transition-colors",
+              activeTab === tab ? "text-stone-900" : "text-stone-400 hover:text-stone-600"
+            )}
           >
             {tab}
             {activeTab === tab && (
-              <motion.div
-                layoutId="tab-indicator"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold"
-              />
+              <motion.div layoutId="tab-underline" className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-gold" transition={{ type: "spring", stiffness: 400, damping: 30 }} />
             )}
           </button>
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* ── Content ── */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
-        >
-          {activeTab === "Overview" && (
-            <OverviewTab
-              mosque={mosque}
-              stage={stage}
-              pipelineStage={pipelineStage}
-              isLive={isLive}
-              isOnboarding={isOnboarding}
-              onboardingStats={onboardingStats}
-            />
-          )}
-          {activeTab === "Tasks" && (
-            <TasksTab
-              progress={mosque.onboarding_progress}
-              onboardingStats={onboardingStats}
-            />
-          )}
-          {activeTab === "Notes" && (
-            <NotesTab
-              mosqueId={mosque.id}
-              initialNotes={initialNotes}
-              showToast={showToast}
-            />
-          )}
+        <motion.div key={activeTab} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+          {activeTab === "Overview" && <OverviewTab mosque={mosque} stage={stage} pipeline={pipelineStage} />}
+          {activeTab === "Tasks" && <TasksTab progress={mosque.onboarding_progress} />}
+          {activeTab === "Notes" && <NotesTab mosqueId={mosque.id} initial={initialNotes} />}
           {activeTab === "Prayer Times" && (
-            <PrayerTimesPanel
-              mosque={{
-                id: mosque.id,
-                address: mosque.address,
-                calculation_method: mosque.calculation_method,
-                school: mosque.school,
-              }}
-              existingConfig={iqamahConfig}
-              showToast={showToast}
-            />
+            <PrayerTimesPanel mosque={{ id: mosque.id, address: mosque.address, calculation_method: mosque.calculation_method, school: mosque.school }} existingConfig={iqamahConfig} showToast={showToast} />
           )}
         </motion.div>
       </AnimatePresence>
@@ -231,289 +96,231 @@ export default function MosqueDetail({
   );
 }
 
-/* ─── Overview Tab ─── */
+/* ════════════════════════════ OVERVIEW ════════════════════════════ */
 
-function OverviewTab({
-  mosque,
-  stage,
-  pipelineStage,
-  isLive,
-  isOnboarding,
-  onboardingStats,
-}: {
-  mosque: Mosque;
-  stage: string;
-  pipelineStage: PipelineStage | null;
-  isLive: boolean;
-  isOnboarding: boolean;
-  onboardingStats: { completed: number; total: number; pct: number };
-}) {
-  const stuckDays = isOnboarding ? daysSince(mosque.updated_at) : 0;
+function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: string; pipeline: PipelineStage | null }) {
+  const isLive = stage === "live";
+  const isOnboarding = stage === "onboarding";
+  const stats = getStats(mosque.onboarding_progress);
+  const stuck = isOnboarding ? daysSince(mosque.updated_at) : 0;
 
   return (
-    <div className="space-y-6">
-      {/* Metric Cards (live mosques) */}
+    <div className="space-y-5">
       {isLive && (
         <div className="grid grid-cols-4 gap-4">
-          {[
-            { label: "Users", value: "—" },
-            { label: "WAU", value: "—" },
-            { label: "Programs", value: "—" },
-            { label: "Events", value: "—" },
-          ].map((m) => (
-            <div
-              key={m.label}
-              className="rounded-lg border border-edge bg-card p-4"
-            >
-              <p className="text-[11px] font-medium uppercase tracking-wider text-subtle">
-                {m.label}
-              </p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-ink">
-                {m.value}
-              </p>
+          {[{ l: "Users", v: "—" }, { l: "WAU", v: "—" }, { l: "Programs", v: "—" }, { l: "Events", v: "—" }].map((m) => (
+            <div key={m.l} className="rounded-xl border border-stone-200 bg-white p-5">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{m.l}</p>
+              <p className="mt-1.5 text-2xl font-bold tabular-nums text-stone-900">{m.v}</p>
             </div>
           ))}
         </div>
       )}
 
-      {/* Onboarding Progress (onboarding mosques) */}
       {isOnboarding && (
-        <div className="rounded-lg border border-edge bg-card p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-medium text-ink">Onboarding Progress</p>
-            <span className="text-[12px] font-medium tabular-nums text-cyan-300">
-              {onboardingStats.pct}%
-            </span>
+        <div className="rounded-xl border border-stone-200 bg-white p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-[14px] font-semibold text-stone-900">Onboarding Progress</p>
+            <span className="text-[13px] font-bold tabular-nums text-teal-600">{stats.pct}%</span>
           </div>
-          <div className="mb-4 h-2 overflow-hidden rounded-full bg-ink/10">
-            <motion.div
-              className="h-full rounded-full bg-cyan-400"
-              initial={{ width: 0 }}
-              animate={{ width: `${onboardingStats.pct}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
+          <div className="mb-5 h-2 overflow-hidden rounded-full bg-stone-100">
+            <motion.div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400" initial={{ width: 0 }} animate={{ width: `${stats.pct}%` }} transition={{ duration: 0.8, ease: "easeOut" }} />
           </div>
-          <div className="flex gap-6 text-[12px]">
+          <div className="flex gap-6">
+            {[
+              { l: "Started", v: fmtDate(mosque.created_at) || "—" },
+              { l: "Tasks", v: `${stats.completed}/${stats.total}` },
+            ].map((s) => (
+              <div key={s.l}>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{s.l}</p>
+                <p className="mt-0.5 text-[13px] font-semibold text-stone-900">{s.v}</p>
+              </div>
+            ))}
             <div>
-              <span className="text-subtle">Started: </span>
-              <span className="text-ink">{formatDate(mosque.created_at)}</span>
-            </div>
-            <div>
-              <span className="text-subtle">Tasks: </span>
-              <span className="text-ink">$
-                {onboardingStats.completed}/{onboardingStats.total}
-              </span>
-            </div>
-            <div>
-              <span className="text-subtle">Stuck: </span>
-              <span className={stuckDays > 3 ? "font-medium text-red-400" : "text-ink"}>
-                {stuckDays} days
-              </span>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Stuck</p>
+              {stuck > 3 ? (
+                <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                  <AlertTriangle size={11} /> {stuck}d
+                </span>
+              ) : (
+                <p className="mt-0.5 text-[13px] font-semibold text-stone-900">{stuck}d</p>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Details Card */}
-      <div className="rounded-lg border border-edge bg-card p-5">
-        <p className="mb-4 text-sm font-medium text-ink">Details</p>
-        <div className="grid grid-cols-2 gap-y-3 text-[12px]">
-          <DetailRow label="Contact" value={pipelineStage?.contact_name} />
-          <DetailRow label="Email" value={pipelineStage?.contact_email} />
-          <DetailRow label="Phone" value={pipelineStage?.contact_phone} />
-          <DetailRow label="City" value={mosque.city} />
-          <DetailRow label="Stage" value={stage} capitalize />
-          <DetailRow label="Status" value={mosque.subscription_status} capitalize />
-          {isLive && (
-            <>
-              <DetailRow label="Launched" value={formatDate(mosque.launched_at)} />
-              <DetailRow label="Last Activity" value={formatDate(mosque.updated_at)} />
-            </>
-          )}
+      <div className="rounded-xl border border-stone-200 bg-white p-6">
+        <p className="mb-5 text-[14px] font-semibold text-stone-900">Details</p>
+        <div className="grid grid-cols-2 gap-x-8">
+          {[
+            { l: "Contact", v: pipeline?.contact_name },
+            { l: "Email", v: pipeline?.contact_email },
+            { l: "Phone", v: pipeline?.contact_phone },
+            { l: "City", v: mosque.city },
+            { l: "Stage", v: stage, cap: true },
+            { l: "Status", v: mosque.subscription_status, cap: true },
+            ...(isLive ? [{ l: "Launched", v: fmtDate(mosque.launched_at) }, { l: "Last Activity", v: fmtDate(mosque.updated_at) }] : []),
+          ].map((r) => (
+            <div key={r.l} className="border-b border-stone-100 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{r.l}</p>
+              <p className={cn("mt-0.5 text-[13px]", r.v ? "font-medium text-stone-900" : "italic text-stone-300", r.cap && "capitalize")}>
+                {r.v || "Not provided"}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-function DetailRow({
-  label,
-  value,
-  capitalize,
-}: {
-  label: string;
-  value: string | null | undefined;
-  capitalize?: boolean;
-}) {
-  return (
-    <>
-      <span className="text-subtle">{label}</span>
-      <span className={`text-green ${capitalize ? "capitalize" : ""}`}>
-        {value || "—"}
-      </span>
-    </>
-  );
-}
+/* ════════════════════════════ TASKS ════════════════════════════ */
 
-/* ─── Tasks Tab ─── */
+const CAT_COLORS: Record<string, string> = {
+  Foundation: "bg-blue-500", "Prayer & Worship": "bg-emerald-500", Content: "bg-violet-500",
+  Revenue: "bg-amber-500", Team: "bg-cyan-500", Launch: "bg-rose-500",
+};
 
-const TASK_CATEGORY_MAP: Record<string, string> = {};
-for (const cat of ONBOARDING_CATEGORIES) {
-  for (const task of cat.tasks) {
-    TASK_CATEGORY_MAP[task.id] = cat.label;
-  }
-}
+function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
+  const stats = getStats(progress);
+  const circumference = 2 * Math.PI * 18;
+  const offset = circumference - (stats.pct / 100) * circumference;
 
-function TasksTab({
-  progress,
-  onboardingStats,
-}: {
-  progress: Record<string, boolean> | null;
-  onboardingStats: { completed: number; total: number; pct: number };
-}) {
   return (
     <div>
-      <p className="mb-4 text-sm text-subtle">
-        <span className="font-medium tabular-nums text-ink">
-          {onboardingStats.completed}/{onboardingStats.total}
-        </span>{" "}
-        tasks complete
-      </p>
-      <div className="space-y-1">
-        {ALL_TASKS.map((task, i) => {
-          const done = progress?.[task.id] === true;
+      {/* Summary */}
+      <div className="mb-6 flex items-center gap-5 rounded-xl border border-stone-200 bg-white p-5">
+        <svg width={48} height={48} className="-rotate-90">
+          <circle cx={24} cy={24} r={18} fill="none" stroke="#f1f0ee" strokeWidth={4} />
+          <motion.circle
+            cx={24} cy={24} r={18} fill="none" stroke="#0891b2" strokeWidth={4} strokeLinecap="round"
+            initial={{ strokeDashoffset: circumference }}
+            animate={{ strokeDashoffset: offset }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            strokeDasharray={circumference}
+          />
+        </svg>
+        <div>
+          <p className="text-xl font-bold tabular-nums text-stone-900">{stats.completed}/{stats.total}</p>
+          <p className="text-[12px] text-stone-500">tasks complete</p>
+        </div>
+      </div>
+
+      {/* Categories */}
+      <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.04 } } }}>
+        {ONBOARDING_CATEGORIES.map((cat) => {
+          const dotColor = CAT_COLORS[cat.label] || "bg-stone-400";
+          const done = cat.tasks.filter((t) => progress?.[t.id] === true).length;
           return (
-            <motion.div
-              key={task.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.15, delay: Math.min(i * 0.03, 0.3) }}
-              className="flex items-center justify-between rounded-lg border border-edge bg-card px-4 py-2.5"
-            >
-              <div className="flex items-center gap-3">
-                {done ? (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 15,
-                    }}
-                    className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/20"
-                  >
-                    <svg
-                      className="h-3 w-3 text-emerald-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2.5}
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="m4.5 12.75 6 6 9-13.5"
-                      />
-                    </svg>
-                  </motion.div>
-                ) : (
-                  <div className="h-5 w-5 rounded-full border border-edge-bold" />
-                )}
-                <span
-                  className={`text-[13px] ${
-                    done ? "text-green/40 line-through" : "text-ink"
-                  }`}
-                >
-                  {task.label}
-                </span>
+            <div key={cat.id} className="mb-5">
+              <div className="mb-2 flex items-center gap-2">
+                <span className={cn("h-2 w-2 rounded-full", dotColor)} />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">{cat.label}</span>
+                <span className="text-[10px] font-semibold tabular-nums text-stone-300">{done}/{cat.tasks.length}</span>
               </div>
-              <span className="text-[11px] text-faint">{TASK_CATEGORY_MAP[task.id]}</span>
-            </motion.div>
+              <div className="overflow-hidden rounded-xl border border-stone-200 bg-white">
+                {cat.tasks.map((task, i) => {
+                  const isDone = progress?.[task.id] === true;
+                  return (
+                    <motion.div
+                      key={task.id}
+                      variants={{ hidden: { opacity: 0, y: 6 }, visible: { opacity: 1, y: 0 } }}
+                      className={cn(
+                        "flex items-center justify-between px-4 py-3 transition-colors hover:bg-stone-50",
+                        i < cat.tasks.length - 1 && "border-b border-stone-100",
+                        isDone && "opacity-60"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        {isDone ? (
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                            className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-500">
+                            <Check size={12} className="text-white" strokeWidth={3} />
+                          </motion.div>
+                        ) : (
+                          <div className="h-5 w-5 rounded-md border-2 border-stone-200" />
+                        )}
+                        <span className={cn("text-[13px] font-medium", isDone ? "text-stone-400 line-through" : "text-stone-800")}>{task.label}</span>
+                      </div>
+                      <span className={cn("rounded-full px-2 py-0.5 text-[9px] font-bold",
+                        task.badge === "REQ" ? "bg-red-50 text-red-600" : "bg-stone-100 text-stone-500"
+                      )}>{task.badge}</span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 }
 
-/* ─── Notes Tab ─── */
+/* ════════════════════════════ NOTES ════════════════════════════ */
 
-function NotesTab({
-  mosqueId,
-  initialNotes,
-  showToast,
-}: {
-  mosqueId: string;
-  initialNotes: Note[];
-  showToast: (message: string, type: "success" | "error") => void;
-}) {
-  const [notes, setNotes] = useState(initialNotes);
-  const [noteInput, setNoteInput] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+function NotesTab({ mosqueId, initial }: { mosqueId: string; initial: Note[] }) {
+  const [notes, setNotes] = useState(initial);
+  const [input, setInput] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  async function addNote() {
-    if (!noteInput.trim() || submitting) return;
-    setSubmitting(true);
+  async function add() {
+    if (!input.trim() || saving) return;
+    setSaving(true);
     try {
-      const res = await fetch(`/api/mosques/${mosqueId}/notes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: noteInput, authorName: "Admin" }),
-      });
-      if (!res.ok) throw new Error("Failed to add note");
-      const newNote = await res.json();
-      setNotes((prev) => [newNote, ...prev]);
-      setNoteInput("");
-      showToast("Note added", "success");
-    } catch {
-      showToast("Failed to add note", "error");
-    } finally {
-      setSubmitting(false);
-    }
+      const res = await fetch(`/api/mosques/${mosqueId}/notes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: input, authorName: "Admin" }) });
+      if (!res.ok) throw new Error();
+      const note = await res.json();
+      setNotes((p) => [note, ...p]);
+      setInput("");
+      toast.success("Note added");
+    } catch { toast.error("Failed to add note"); }
+    finally { setSaving(false); }
   }
 
   return (
     <div>
-      <div className="mb-6 flex gap-3">
-        <input
-          type="text"
-          value={noteInput}
-          onChange={(e) => setNoteInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") addNote();
-          }}
-          placeholder="Add a note..."
-          className="flex-1 rounded-lg border border-edge bg-card px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-edge-bold focus:outline-none"
-          disabled={submitting}
+      {/* Input */}
+      <div className="mb-6">
+        <textarea
+          value={input} onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); add(); } }}
+          placeholder="Write a note..." rows={3} disabled={saving}
+          className="w-full resize-none rounded-xl border border-stone-200 bg-white px-4 py-3 text-[14px] text-stone-900 shadow-sm outline-none transition-all placeholder:text-stone-400 focus:border-stone-300 focus:ring-2 focus:ring-stone-200"
         />
-        <button
-          onClick={addNote}
-          disabled={submitting || !noteInput.trim()}
-          className="rounded-lg bg-ink/10 px-5 py-2.5 text-sm font-medium text-green transition-colors hover:bg-ink/20 disabled:opacity-40"
-        >
-          {submitting ? "..." : "Add"}
-        </button>
+        <div className="mt-2 flex justify-end">
+          <button onClick={add} disabled={saving || !input.trim()}
+            className={cn("rounded-lg px-5 py-2 text-[13px] font-semibold transition-all",
+              input.trim() ? "bg-ink text-sand shadow-sm hover:shadow-md active:scale-[0.98]" : "bg-stone-100 text-stone-400 cursor-not-allowed"
+            )}>
+            {saving ? "Adding..." : "Add Note"}
+          </button>
+        </div>
       </div>
 
+      {/* Notes */}
       {notes.length === 0 ? (
-        <p className="py-12 text-center text-sm text-subtle">
-          No notes yet. Add the first one above.
-        </p>
+        <div className="flex flex-col items-center py-16">
+          <MessageSquare size={48} className="mb-4 text-stone-200" strokeWidth={1} />
+          <p className="text-[15px] font-medium text-stone-500">No notes yet</p>
+          <p className="mt-1 text-[13px] text-stone-400">Add the first note above</p>
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <AnimatePresence initial={false}>
-            {notes.map((note) => (
-              <motion.div
-                key={note.id}
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className="rounded-lg border border-edge bg-card px-4 py-3"
-              >
-                <p className="text-[13px] text-ink">{note.content}</p>
-                <p className="mt-1.5 text-[11px] text-faint">
-                  {note.author_name || "Admin"} · {formatDate(note.created_at)}
-                </p>
+            {notes.map((n) => (
+              <motion.div key={n.id} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
+                className="rounded-xl border border-stone-200 bg-white px-5 py-4">
+                <p className="text-[14px] leading-relaxed text-stone-800">{n.content}</p>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="inline-flex items-center rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-semibold text-stone-600">
+                    {n.author_name || "Admin"}
+                  </span>
+                  <span className="flex items-center gap-1 text-[11px] text-stone-400">
+                    <Clock size={11} /> {timeAgo(n.created_at)}
+                  </span>
+                </div>
               </motion.div>
             ))}
           </AnimatePresence>

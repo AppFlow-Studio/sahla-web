@@ -11,6 +11,7 @@ export default async function MosquesPage() {
       id,
       name,
       city,
+      brand_color,
       onboarding_status,
       onboarding_progress,
       pipeline_stages (
@@ -23,17 +24,18 @@ export default async function MosquesPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-display text-3xl text-ink">Mosques</h1>
-        <p className="mt-1 text-sm text-subtle">
-          All onboarded mosques. Manage community centers and their apps.
-        </p>
+      <div className="mb-7 flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-[28px] font-bold text-ink leading-tight">Mosques</h1>
+          <p className="mt-1 text-[13px] text-subtle">
+            All onboarded mosques. Manage community centers and their apps.
+          </p>
+        </div>
+        <button className="rounded-xl bg-ink px-5 py-2.5 text-[13px] font-semibold text-sand shadow-sm transition-all hover:shadow-md hover:brightness-110 active:scale-[0.98]">
+          + Add Mosque
+        </button>
       </div>
       <MosqueList mosques={mosques ?? []} />
-      <h1 className="font-display text-3xl text-[#0A261E]">Mosques</h1>
-      <p className="mt-1 text-sm text-[#0A261E]/60">
-        All onboarded mosques. Manage community centers and their apps.
-      </p>
     </div>
   );
 }

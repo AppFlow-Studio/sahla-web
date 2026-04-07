@@ -2,6 +2,18 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Settings } from "lucide-react";
+
+const G = "#0A261E";
+const G60 = "rgba(10,38,30,0.6)";
+const G35 = "rgba(10,38,30,0.35)";
+const G08 = "rgba(10,38,30,0.08)";
+const G15 = "rgba(10,38,30,0.15)";
+const G04 = "rgba(10,38,30,0.04)";
+const CARD: React.CSSProperties = { borderRadius: 12, border: `1px solid ${G08}`, backgroundColor: "#fff", padding: 24 };
+const INPUT: React.CSSProperties = { borderRadius: 10, border: `1px solid ${G08}`, backgroundColor: "#fff", padding: "10px 16px", fontSize: 14, color: G, outline: "none" };
+const BTN_PRIMARY: React.CSSProperties = { backgroundColor: G, color: "#fffbf2", borderRadius: 10, padding: "10px 20px", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer" };
+const BTN_SECONDARY: React.CSSProperties = { backgroundColor: "transparent", border: `1px solid ${G08}`, borderRadius: 10, padding: "10px 20px", fontSize: 13, fontWeight: 500, color: G60, cursor: "pointer" };
 import {
   CALCULATION_METHODS,
   SCHOOLS,
@@ -180,47 +192,42 @@ export default function PrayerTimesPanel({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
         >
-          <div className="rounded-lg border border-edge bg-card p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-ink">Prayer Schedule</p>
-                <p className="text-[12px] text-subtle">
+          <div className="rounded-xl border border-stone-200 bg-white p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <p className="text-[15px] font-semibold text-stone-900">Prayer Schedule</p>
+                <span className="rounded-full bg-stone-100 px-3 py-0.5 text-[11px] font-medium text-stone-500">
                   {CALCULATION_METHODS.find((m) => m.value === method)?.label || "ISNA"} · {SCHOOLS.find((s) => s.value === school)?.label || "Shafi"}
-                </p>
+                </span>
               </div>
               <button
                 onClick={() => setStep(1)}
-                className="rounded-lg border border-edge px-4 py-1.5 text-[12px] text-gold hover:text-ink"
+                className="flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-[12px] font-medium text-stone-500 transition-colors hover:bg-stone-50 hover:text-stone-700"
               >
-                Reconfigure
+                <Settings size={13} /> Reconfigure
               </button>
             </div>
             {todaysPrayers ? (
-              <div className="space-y-2">
-                <div className="flex items-center px-4 py-1 text-[11px] font-medium uppercase tracking-wider text-subtle">
-                  <span className="flex-1">Prayer</span>
-                  <span className="w-24 text-center">Athan</span>
-                  <span className="w-24 text-center">Iqamah</span>
+              <div className="overflow-hidden rounded-lg border border-stone-100">
+                <div className="flex bg-stone-50 px-4 py-2">
+                  <span className="flex-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Prayer</span>
+                  <span className="w-24 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Athan</span>
+                  <span className="w-24 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Iqamah</span>
                 </div>
-                {todaysPrayers.map((p) => (
-                  <div
-                    key={p.prayer_name}
-                    className="flex items-center rounded-lg bg-ink/5 px-4 py-2.5"
-                  >
-                    <span className="flex-1 text-[13px] text-ink">
-                      {PRAYER_DISPLAY_NAMES[p.prayer_name]}
-                    </span>
-                    <span className="w-24 text-center text-[13px] tabular-nums text-subtle">
-                      {to12Hour(p.athan_time)}
-                    </span>
-                    <span className="w-24 text-center text-[13px] font-medium tabular-nums text-subtle">
-                      {to12Hour(p.iqamah_time)}
-                    </span>
+                {todaysPrayers.map((p, i) => (
+                  <div key={p.prayer_name} className={`flex items-center px-4 py-2.5 ${i % 2 === 0 ? "bg-stone-50/40" : "bg-white"}`}>
+                    <span className="flex-1 text-[14px] font-medium text-stone-800">{PRAYER_DISPLAY_NAMES[p.prayer_name]}</span>
+                    <span className="w-24 text-right font-mono text-[13px] text-stone-500">{to12Hour(p.athan_time)}</span>
+                    <span className="w-24 text-right font-mono text-[13px] font-semibold text-stone-900">{to12Hour(p.iqamah_time)}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-subtle">Loading prayer times...</p>
+              <div className="space-y-1.5 py-4">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <div key={n} className="h-10 animate-pulse rounded-lg bg-stone-100" />
+                ))}
+              </div>
             )}
           </div>
         </motion.div>

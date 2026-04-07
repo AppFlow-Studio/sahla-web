@@ -3,12 +3,15 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { StatusBadge, STAGE_COLORS } from "../components/StatusBadge";
+import { Search, ChevronRight, Building2, X } from "lucide-react";
+import { StatusBadge } from "../components/StatusBadge";
+import { cn } from "@/lib/utils";
 
 type Mosque = {
   id: string;
   name: string;
   city: string | null;
+  brand_color: string | null;
   onboarding_status: string | null;
   onboarding_progress: Record<string, unknown> | null;
   pipeline_stages: {
@@ -17,101 +20,76 @@ type Mosque = {
   }[] | null;
 };
 
-const STAGES = [
-  "lead",
-  "contacted",
-  "demo",
-  "contract",
-  "onboarding",
-  "live",
-] as const;
+const STAGES = ["lead", "contacted", "demo", "contract", "onboarding", "live"] as const;
 
-function getOnboardingPercentage(progress: Record<string, unknown> | null): number {
-  if (!progress || typeof progress !== "object") return 0;
-  const values = Object.values(progress);
-  if (values.length === 0) return 0;
-  const completed = values.filter((v) => v === true).length;
-  return Math.round((completed / values.length) * 100);
+const AVATAR_PALETTE = ["#64748b", "#6366f1", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed", "#0d9488"];
+function nameToColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+}
+
+function getOnboardingPct(progress: Record<string, unknown> | null): number {
+  if (!progress) return 0;
+  const vals = Object.values(progress);
+  if (!vals.length) return 0;
+  return Math.round((vals.filter((v) => v === true).length / vals.length) * 100);
 }
 
 export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    };
-  }, []);
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
-  function handleSearchChange(value: string) {
-    setSearch(value);
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => setDebouncedSearch(value), 200);
+  function onSearch(v: string) {
+    setSearch(v);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setDebouncedSearch(v), 200);
   }
 
-  const displayList = useMemo(() => {
+  const list = useMemo(() => {
     const q = debouncedSearch.toLowerCase().trim();
     return mosques.filter((m) => {
       const stage = m.pipeline_stages?.[0]?.stage || "lead";
       if (statusFilter !== "all" && stage !== statusFilter) return false;
       if (!q) return true;
-      const name = (m.name || "").toLowerCase();
-      const city = (m.city || "").toLowerCase();
-      const contact = (m.pipeline_stages?.[0]?.contact_name || "").toLowerCase();
-      return name.includes(q) || city.includes(q) || contact.includes(q);
+      return [m.name, m.city, m.pipeline_stages?.[0]?.contact_name]
+        .filter(Boolean)
+        .some((s) => s!.toLowerCase().includes(q));
     });
   }, [mosques, debouncedSearch, statusFilter]);
 
   return (
     <div>
-      {/* Search + Filter Bar */}
-      <div className="mb-6 flex gap-3">
+      {/* ── Filter bar ── */}
+      <div className="mb-4 flex items-center gap-2 rounded-xl bg-stone-50 p-1.5">
         <div className="relative flex-1">
-          <svg
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-            />
-          </svg>
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
           <input
             type="text"
             value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search by name, city, or contact..."
-            className="w-full rounded-lg border border-edge bg-card py-2.5 pl-10 pr-10 text-sm text-ink placeholder:text-faint focus:border-edge-bold focus:outline-none"
+            onChange={(e) => onSearch(e.target.value)}
+            placeholder="Search mosques..."
+            className="w-full rounded-lg border border-transparent bg-white py-2 pl-9 pr-8 text-[13px] text-ink shadow-sm outline-none transition-all placeholder:text-stone-400 focus:border-stone-300 focus:ring-2 focus:ring-stone-200"
           />
           {search && (
             <button
-              onClick={() => {
-                setSearch("");
-                setDebouncedSearch("");
-                if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gold hover:text-ink"
+              onClick={() => { setSearch(""); setDebouncedSearch(""); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-              </svg>
+              <X size={14} />
             </button>
           )}
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-edge bg-card px-4 py-2.5 text-sm text-ink focus:border-edge-bold focus:outline-none"
+          className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] text-ink shadow-sm outline-none transition-colors focus:border-stone-300 focus:ring-2 focus:ring-stone-200"
         >
-          <option value="all">All Statuses</option>
+          <option value="all">All stages</option>
           {STAGES.map((s) => (
             <option key={s} value={s} className="capitalize">
               {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -120,80 +98,86 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
         </select>
       </div>
 
-      {/* Mosque List */}
-      {displayList.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
+      {/* ── Count ── */}
+      <p className="mb-3 text-[12px] text-subtle">
+        Showing <span className="font-semibold text-ink">{list.length}</span> mosque{list.length !== 1 ? "s" : ""}
+      </p>
+
+      {/* ── List ── */}
+      {list.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20">
           {mosques.length === 0 ? (
             <>
-              <p className="text-lg font-medium text-ink">Add your first mosque</p>
-              <p className="mt-1 text-sm text-faint">
-                Get started by adding a mosque to your pipeline.
-              </p>
+              <Building2 size={48} className="mb-4 text-stone-300" strokeWidth={1} />
+              <p className="text-[15px] font-medium text-stone-600">Add your first mosque</p>
+              <p className="mt-1 text-[13px] text-stone-400">Get started by adding a mosque to your pipeline.</p>
             </>
           ) : (
-            <p className="text-sm text-faint">No mosques match your search</p>
+            <>
+              <Search size={40} className="mb-4 text-stone-300" strokeWidth={1} />
+              <p className="text-[14px] text-stone-500">No mosques match your filters</p>
+            </>
           )}
         </div>
       ) : (
-        <div className="space-y-2">
-          <AnimatePresence mode="popLayout">
-            {displayList.map((mosque, i) => {
-              const stage = mosque.pipeline_stages?.[0]?.stage || "lead";
-              const borderColor = STAGE_COLORS[stage]?.border || "border-l-zinc-500";
-              const isOnboarding = stage === "onboarding";
-              const isLive = stage === "live";
-              const onboardingPct = isOnboarding
-                ? getOnboardingPercentage(mosque.onboarding_progress)
-                : 0;
+        <div className="overflow-hidden rounded-xl border border-edge bg-white">
+          {list.map((mosque, i) => {
+            const stage = mosque.pipeline_stages?.[0]?.stage || "lead";
+            const isOnboarding = stage === "onboarding";
+            const pct = isOnboarding ? getOnboardingPct(mosque.onboarding_progress) : 0;
+            const color = mosque.brand_color || nameToColor(mosque.name || "M");
 
-              return (
-                <motion.div
-                  key={mosque.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2, delay: Math.min(i * 0.03, 0.3) }}
+            return (
+              <motion.div
+                key={mosque.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.15, delay: Math.min(i * 0.02, 0.2) }}
+              >
+                <Link
+                  href={`/mosques/${mosque.id}`}
+                  className={cn(
+                    "group flex items-center gap-3.5 px-5 py-3.5 transition-colors duration-150 hover:bg-stone-50/80",
+                    i < list.length - 1 && "border-b border-stone-100"
+                  )}
                 >
-                  <Link
-                    href={`/mosques/${mosque.id}`}
-                    className={`flex items-center justify-between rounded-lg border border-edge border-l-[3px] ${borderColor} bg-card px-4 py-3 transition-colors duration-150 hover:border-edge-bold`}
+                  {/* Avatar */}
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white"
+                    style={{ backgroundColor: `${color}20`, color }}
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-ink">
-                        {mosque.name}
-                      </p>
-                      <p className="text-[11.5px] text-subtle">
-                        {[mosque.city, mosque.pipeline_stages?.[0]?.contact_name]
-                          .filter(Boolean)
-                          .join(" · ") || "—"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {isOnboarding && (
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-ink/10">
-                            <div
-                              className="h-full rounded-full bg-cyan-400 transition-all"
-                              style={{ width: `${onboardingPct}%` }}
-                            />
-                          </div>
-                          <span className="text-[11px] font-medium tabular-nums text-cyan-300">
-                            {onboardingPct}%
-                          </span>
-                        </div>
+                    {mosque.name?.charAt(0).toUpperCase() || "M"}
+                  </div>
+
+                  {/* Name + city */}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[14px] font-medium text-stone-900">{mosque.name}</p>
+                    <p className="truncate text-[12px] text-stone-500">
+                      {[mosque.city, mosque.pipeline_stages?.[0]?.contact_name].filter(Boolean).join(" · ") || (
+                        <span className="italic text-stone-300">No city</span>
                       )}
-                      {isLive && (
-                        <span className="text-[11px] font-medium tabular-nums text-emerald-300">
-                          — users
-                        </span>
-                      )}
-                      <StatusBadge stage={stage} />
+                    </p>
+                  </div>
+
+                  {/* Onboarding mini bar */}
+                  {isOnboarding && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="h-1 w-12 overflow-hidden rounded-full bg-stone-200">
+                        <div className="h-full rounded-full bg-teal-500 transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-[11px] font-medium tabular-nums text-teal-600">{pct}%</span>
                     </div>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                  )}
+
+                  {/* Badge */}
+                  <StatusBadge stage={stage} />
+
+                  {/* Chevron */}
+                  <ChevronRight size={16} className="shrink-0 text-stone-300 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-stone-500" />
+                </Link>
+              </motion.div>
+            );
+          })}
         </div>
       )}
     </div>
