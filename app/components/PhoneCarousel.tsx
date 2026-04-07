@@ -522,7 +522,7 @@ function TabBar({
     { label: "Times", d: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" },
     { label: "Discover", d: "M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" },
     { label: "Library", d: "M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" },
-    { label: "Settings", d: "M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" },
+    { label: "Profile", d: "M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" },
   ];
 
   return (
@@ -562,12 +562,13 @@ const screenConfigs: {
   gradient: string;
   Component?: () => React.JSX.Element;
   image?: string;
+  imageOffset?: string;
 }[] = [
   { title: "Home", gradient: "from-[#0a1a12] to-[#060d09]", image: "/screens/home.png" },
   { title: "Prayer Times", gradient: "from-[#0c1c14] to-[#060d09]", image: "/screens/prayer-times.png" },
   { title: "Discover", gradient: "from-[#0a1a15] to-[#060d09]", image: "/screens/discover.png" },
   { title: "Library", gradient: "from-[#0d1810] to-[#060d09]", image: "/screens/library.png" },
-  { title: "Settings", gradient: "from-[#0a1510] to-[#060d09]", Component: SettingsScreen },
+  { title: "Profile", gradient: "from-[#0a1a12] to-[#060d09]", image: "/screens/profile.png", imageOffset: "center 12%" },
 ];
 
 interface PhoneCarouselProps {
@@ -698,7 +699,7 @@ export default function PhoneCarousel({ demoMode = false }: PhoneCarouselProps) 
     <img
       src={config.image}
       alt={config.title}
-      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
+      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: config.imageOffset || "top", display: "block" }}
       draggable={false}
     />
   ) : ScreenComponent ? (
