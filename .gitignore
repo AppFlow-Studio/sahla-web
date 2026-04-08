@@ -36,6 +36,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# schema dumps
+schema_dump.sql
+schema_clean.sql
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

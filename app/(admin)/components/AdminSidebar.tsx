@@ -95,16 +95,17 @@ export default function AdminSidebar() {
       <div className="flex h-16 items-center justify-between px-4">
         <AnimatePresence mode="wait">
           {!collapsed && (
-            <motion.span
+            <motion.a
+              href="/"
               key="title"
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
               transition={{ duration: 0.15 }}
-              className="font-display text-xl text-[#E8D5B0] whitespace-nowrap"
+              className="font-display text-xl text-[#E8D5B0] whitespace-nowrap hover:opacity-80 transition-opacity"
             >
               Sahla HQ
-            </motion.span>
+            </motion.a>
           )}
         </AnimatePresence>
         <button
