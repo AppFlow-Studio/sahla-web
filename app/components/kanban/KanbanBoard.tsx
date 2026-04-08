@@ -171,6 +171,17 @@ export default function KanbanBoard({ cards }: Props) {
     return result;
   }, [localCards, searchQuery, stateFilter]);
 
+  const stats = useMemo(() => {
+    const total = filteredCards.length;
+    const live = filteredCards.filter((c) => c.stage === "live").length;
+    const value = live * 300;
+    return {
+      totalMosques: total,
+      liveMosques: live,
+      pipelineValue: value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }),
+    };
+  }, [filteredCards]);
+
   function pushToast(message: string, tone: Toast["tone"]) {
     const id = Date.now() + Math.floor(Math.random() * 1000);
     setToasts((prev) => [...prev, { id, message, tone }]);
@@ -415,6 +426,22 @@ export default function KanbanBoard({ cards }: Props) {
         onClose={() => setIsCreateAccountModalOpen(false)}
         onSuccess={handleAccountCreated}
       />
+
+      {/* Stats bar */}
+      <div className="mt-2 mb-5 grid grid-cols-3 gap-4">
+        <div className="rounded-xl border border-green/10 bg-white px-5 py-4">
+          <p className="text-xs font-medium text-green/50">Total Mosques</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-green">{stats.totalMosques}</p>
+        </div>
+        <div className="rounded-xl border border-green/10 bg-white px-5 py-4">
+          <p className="text-xs font-medium text-green/50">Pipeline Value</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-green">{stats.pipelineValue}/mo</p>
+        </div>
+        <div className="rounded-xl border border-green/10 bg-white px-5 py-4">
+          <p className="text-xs font-medium text-green/50">Live Mosques</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-green">{stats.liveMosques}</p>
+        </div>
+      </div>
 
       {/* Search & state filter */}
       <div className="mt-4 mb-5 flex flex-wrap items-center gap-3">
