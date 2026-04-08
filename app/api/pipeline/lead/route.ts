@@ -96,6 +96,7 @@ export async function POST(req: Request) {
     mosque_id: mosqueRow.id,
     stage: "lead",
     contact_name: contactName,
+    contact_email: contactEmail,
     updated_at: updatedAt,
   });
 

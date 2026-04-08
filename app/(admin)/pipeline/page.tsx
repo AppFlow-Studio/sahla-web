@@ -29,6 +29,7 @@ export default async function PipelinePage() {
     mosque_id: string | null;
     stage: string | null;
     contact_name: string | null;
+    contact_email: string | null;
     updated_at: string | null;
     mosques: MosqueEmbed | MosqueEmbed[] | null;
   };
@@ -46,6 +47,7 @@ export default async function PipelinePage() {
     mosque_id,
     stage,
     contact_name,
+    contact_email,
     updated_at,
     mosques (
       id,
@@ -76,10 +78,11 @@ export default async function PipelinePage() {
     return {
       id: mosqueId || row.id,
       mosqueId,
-      mosqueName: mosque?.name ?? "Unknown mosque",
-      city: mosque?.city ?? "",
-      state: mosque?.state ?? null,
-      contactName: row.contact_name ?? "—",
+      mosqueName: (mosque?.name ?? "").trim(),
+      city: (mosque?.city ?? "").trim(),
+      state: mosque?.state?.trim() ?? null,
+      contactName: (row.contact_name ?? "").trim(),
+      contactEmail: (row.contact_email ?? "").trim() || null,
       stage: normalizeStage(row.stage),
       onboardingProgress:
         typeof mosque?.onboarding_progress === "number"

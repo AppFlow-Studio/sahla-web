@@ -24,6 +24,12 @@ export type KanbanCard = {
   /** e.g. "NY" — optional; shown as "City, ST" when set */
   state?: string | null;
   contactName: string;
+  /** Shown under contact name; omit row when empty */
+  contactEmail?: string | null;
+  /** e.g. chapter / affiliate; omit row when empty */
+  organization?: string | null;
+  /** Footer left line; omit when empty */
+  referredBy?: string | null;
   stage: Stage;
   /** 0–100 for onboarding progress bar; omit or null when not onboarding */
   onboardingProgress?: number | null;
