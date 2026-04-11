@@ -230,10 +230,17 @@ export default function PrayerTimesPanel({
                   return todaysPrayers.map((p, i) => {
                     const isNext = i === nextIdx;
                     return (
-                      <div key={p.prayer_name} className={cn(
-                        "flex items-center px-4 py-2.5",
-                        isNext ? "border-l-[3px] border-l-teal-400 bg-teal-50/30" : i % 2 === 0 ? "bg-white" : "bg-stone-50/50"
-                      )}>
+                      <div
+                        key={p.prayer_name}
+                        className={cn("flex items-center px-4 py-2.5", isNext && "border-l-[3px] border-l-teal-400")}
+                        style={{
+                          backgroundColor: isNext
+                            ? "rgba(240,253,250,0.6)"
+                            : i % 2 === 1
+                            ? "rgba(250,250,249,0.6)"
+                            : "#ffffff",
+                        }}
+                      >
                         <span className={cn("flex-1 text-[14px] font-medium", isNext ? "text-teal-800" : "text-stone-800")}>{PRAYER_DISPLAY_NAMES[p.prayer_name]}</span>
                         <span className="w-24 text-right font-mono text-[13px] text-stone-500">{to12Hour(p.athan_time)}</span>
                         <span className={cn("w-24 text-right font-mono text-[13px] font-semibold", isNext ? "text-teal-900" : "text-stone-900")}>{to12Hour(p.iqamah_time)}</span>

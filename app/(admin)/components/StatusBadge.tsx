@@ -1,33 +1,15 @@
-import { cn } from "@/lib/utils";
+type StageStyle = { bg: string; color: string; dot: string; border: string };
 
-// Static class strings so Tailwind's JIT compiler can detect them at build time.
-// Using dynamic string interpolation or variable lookups in `bg-${x}` breaks detection.
-const BADGE_CLASSES: Record<string, string> = {
-  lead: "bg-stone-100 text-stone-600",
-  contacted: "bg-blue-50 text-blue-700",
-  demo: "bg-amber-50 text-amber-700",
-  contract: "bg-violet-50 text-violet-700",
-  onboarding: "bg-teal-50 text-teal-700",
-  live: "bg-emerald-50 text-emerald-700",
+const STAGE_STYLES: Record<string, StageStyle> = {
+  lead:       { bg: "#f5f5f4", color: "#57534e", dot: "#a8a29e", border: "#a8a29e" },
+  contacted:  { bg: "#eff6ff", color: "#1d4ed8", dot: "#3b82f6", border: "#3b82f6" },
+  demo:       { bg: "#fffbeb", color: "#b45309", dot: "#f59e0b", border: "#f59e0b" },
+  contract:   { bg: "#f5f3ff", color: "#6d28d9", dot: "#8b5cf6", border: "#8b5cf6" },
+  onboarding: { bg: "#f0fdfa", color: "#0f766e", dot: "#14b8a6", border: "#14b8a6" },
+  live:       { bg: "#ecfdf5", color: "#047857", dot: "#10b981", border: "#10b981" },
 };
 
-const DOT_CLASSES: Record<string, string> = {
-  lead: "bg-stone-400",
-  contacted: "bg-blue-500",
-  demo: "bg-amber-500",
-  contract: "bg-violet-500",
-  onboarding: "bg-teal-500",
-  live: "bg-emerald-500",
-};
-
-export const STAGE_COLORS: Record<string, { border: string }> = {
-  lead: { border: "border-l-stone-400" },
-  contacted: { border: "border-l-blue-500" },
-  demo: { border: "border-l-amber-500" },
-  contract: { border: "border-l-violet-500" },
-  onboarding: { border: "border-l-teal-500" },
-  live: { border: "border-l-emerald-500" },
-};
+export const STAGE_COLORS = STAGE_STYLES;
 
 export function StatusBadge({
   stage,
@@ -36,18 +18,15 @@ export function StatusBadge({
   stage: string;
   size?: "sm" | "md";
 }) {
-  const badgeClass = BADGE_CLASSES[stage] || BADGE_CLASSES.lead;
-  const dotClass = DOT_CLASSES[stage] || DOT_CLASSES.lead;
+  const s = STAGE_STYLES[stage] || STAGE_STYLES.lead;
+  const sizeClass = size === "md" ? "px-3 py-1 text-xs" : "px-2.5 py-0.5 text-[11px]";
 
   return (
     <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full font-medium capitalize",
-        badgeClass,
-        size === "md" ? "px-3 py-1 text-xs" : "px-2.5 py-0.5 text-[11px]"
-      )}
+      className={`inline-flex items-center gap-1.5 rounded-full font-medium capitalize ${sizeClass}`}
+      style={{ backgroundColor: s.bg, color: s.color }}
     >
-      <span className={cn("h-1.5 w-1.5 rounded-full", dotClass)} />
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: s.dot }} />
       {stage}
     </span>
   );
