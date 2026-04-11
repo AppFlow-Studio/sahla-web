@@ -26,7 +26,7 @@ export default async function MosquesPage() {
     <div>
       <div className="mb-7 flex items-center justify-between">
         <div>
-          <h1 className="font-display text-[28px] font-bold text-ink leading-tight">Mosques</h1>
+          <h1 className="font-display text-[28px] font-semibold text-ink leading-tight">Mosques</h1>
           <p className="mt-1 text-[13px] text-subtle">
             All onboarded mosques. Manage community centers and their apps.
           </p>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock, Trash2 } from "lucide-react";
+import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock, MoreHorizontal } from "lucide-react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { StatusBadge } from "../../components/StatusBadge";
 import PrayerTimesPanel from "./PrayerTimesPanel";
@@ -50,11 +50,11 @@ export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStag
           <Link href="/mosques" className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600">
             <ArrowLeft size={18} />
           </Link>
-          <div className="flex h-12 w-12 items-center justify-center rounded-full text-[18px] font-bold ring-2 ring-white shadow-sm" style={{ backgroundColor: `${color}18`, color }}>
+          <div className="flex h-12 w-12 items-center justify-center rounded-full text-[18px] font-semibold ring-2 ring-white shadow-sm" style={{ backgroundColor: `${color}18`, color }}>
             {mosque.name?.charAt(0).toUpperCase() || "M"}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-stone-900 leading-tight">{mosque.name}</h1>
+            <h1 className="text-xl font-semibold text-stone-900 leading-tight">{mosque.name}</h1>
             <p className="mt-0.5 text-[13px] text-stone-500">
               {[mosque.city, pipelineStage?.contact_name, pipelineStage?.contact_email].filter(Boolean).join(" · ") || "—"}
             </p>
@@ -112,7 +112,7 @@ function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: strin
           {[{ l: "Users", v: "—" }, { l: "WAU", v: "—" }, { l: "Programs", v: "—" }, { l: "Events", v: "—" }].map((m) => (
             <div key={m.l} className="rounded-xl border border-stone-200 bg-white p-5">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{m.l}</p>
-              <p className="mt-1.5 text-2xl font-bold tabular-nums text-stone-900">{m.v}</p>
+              <p className="mt-1.5 text-2xl font-semibold tabular-nums text-stone-900">{m.v}</p>
             </div>
           ))}
         </div>
@@ -122,7 +122,7 @@ function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: strin
         <div className="rounded-xl border border-stone-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <p className="text-[14px] font-semibold text-stone-900">Onboarding Progress</p>
-            <span className="text-[13px] font-bold tabular-nums text-teal-600">{stats.pct}%</span>
+            <span className="text-[13px] font-semibold tabular-nums text-teal-600">{stats.pct}%</span>
           </div>
           <div className="mb-5 h-2 overflow-hidden rounded-full bg-stone-100">
             <motion.div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400" initial={{ width: 0 }} animate={{ width: `${stats.pct}%` }} transition={{ duration: 0.8, ease: "easeOut" }} />
@@ -151,25 +151,32 @@ function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: strin
         </div>
       )}
 
-      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+      <div className="max-w-3xl rounded-xl border border-stone-200 border-l-[3px] border-l-teal-500 bg-white p-6 shadow-sm">
         <p className="mb-5 text-[14px] font-semibold text-stone-900">Details</p>
         <div className="grid grid-cols-2 gap-x-8">
-          {[
-            { l: "Contact", v: pipeline?.contact_name },
-            { l: "Email", v: pipeline?.contact_email },
-            { l: "Phone", v: pipeline?.contact_phone },
-            { l: "City", v: mosque.city },
-            { l: "Stage", v: stage, cap: true },
-            { l: "Status", v: mosque.subscription_status, cap: true },
-            ...(isLive ? [{ l: "Launched", v: fmtDate(mosque.launched_at) }, { l: "Last Activity", v: fmtDate(mosque.updated_at) }] : []),
-          ].map((r) => (
-            <div key={r.l} className="border-b border-stone-100 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{r.l}</p>
-              <p className={cn("mt-0.5 text-[13px]", r.v ? "font-medium text-stone-900" : "italic text-stone-300", r.cap && "capitalize")}>
-                {r.v || "Not provided"}
-              </p>
-            </div>
-          ))}
+          {(() => {
+            const rows = [
+              { l: "Contact", v: pipeline?.contact_name },
+              { l: "Email", v: pipeline?.contact_email },
+              { l: "Phone", v: pipeline?.contact_phone },
+              { l: "City", v: mosque.city },
+              { l: "Stage", v: stage, cap: true },
+              { l: "Status", v: mosque.subscription_status, cap: true },
+              ...(isLive ? [{ l: "Launched", v: fmtDate(mosque.launched_at) }, { l: "Last Activity", v: fmtDate(mosque.updated_at) }] : []),
+            ];
+            // Last two rows get no bottom border (they're on the last row of the grid)
+            return rows.map((r, i) => {
+              const isLastRow = i >= rows.length - 2;
+              return (
+                <div key={r.l} className={cn("py-3", !isLastRow && "border-b border-stone-100")}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{r.l}</p>
+                  <p className={cn("mt-0.5 text-[13px]", r.v ? "font-medium text-stone-900" : "italic text-stone-300", r.cap && "capitalize")}>
+                    {r.v || "Not provided"}
+                  </p>
+                </div>
+              );
+            });
+          })()}
         </div>
       </div>
     </div>
@@ -177,11 +184,6 @@ function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: strin
 }
 
 /* ════════════════════════════ TASKS ════════════════════════════ */
-
-const CAT_COLORS: Record<string, string> = {
-  Foundation: "bg-blue-500", "Prayer & Worship": "bg-emerald-500", Content: "bg-violet-500",
-  Revenue: "bg-amber-500", Team: "bg-cyan-500", Launch: "bg-rose-500",
-};
 
 function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
   const stats = getStats(progress);
@@ -203,7 +205,7 @@ function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
           />
         </svg>
         <div>
-          <p className="text-xl font-bold tabular-nums text-stone-900">{stats.completed}/{stats.total}</p>
+          <p className="text-xl font-semibold tabular-nums text-stone-900">{stats.completed}/{stats.total}</p>
           <p className="text-[12px] text-stone-500">tasks complete</p>
         </div>
       </div>
@@ -211,12 +213,10 @@ function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
       {/* Categories */}
       <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.04 } } }}>
         {ONBOARDING_CATEGORIES.map((cat) => {
-          const dotColor = CAT_COLORS[cat.label] || "bg-stone-400";
           const done = cat.tasks.filter((t) => progress?.[t.id] === true).length;
           return (
             <div key={cat.id} className="mb-7">
               <div className="mb-2 flex items-center gap-2">
-                <span className={cn("h-2 w-2 rounded-full", dotColor)} />
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">{cat.label}</span>
                 <span className="text-[10px] font-semibold tabular-nums text-stone-300">{done}/{cat.tasks.length}</span>
               </div>
@@ -247,7 +247,7 @@ function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
                       <Tooltip.Provider delayDuration={200}>
                         <Tooltip.Root>
                           <Tooltip.Trigger asChild>
-                            <span className={cn("cursor-default rounded-full px-2 py-0.5 text-[9px] font-bold",
+                            <span className={cn("cursor-default rounded-full px-2 py-0.5 text-[9px] font-semibold",
                               task.badge === "REQ" ? "bg-red-50 text-red-600" : "bg-stone-100 text-stone-500"
                             )}>{task.badge}</span>
                           </Tooltip.Trigger>
@@ -298,7 +298,7 @@ function NotesTab({ mosqueId, initial }: { mosqueId: string; initial: Note[] }) 
   return (
     <div>
       {/* Input */}
-      <div className="mb-6">
+      <div>
         <textarea
           value={input} onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); add(); } }}
@@ -307,17 +307,27 @@ function NotesTab({ mosqueId, initial }: { mosqueId: string; initial: Note[] }) 
         />
         <div className="mt-2 flex justify-end">
           <button onClick={add} disabled={saving || !input.trim()}
-            className={cn("rounded-lg px-5 py-2 text-[13px] font-semibold transition-all",
-              input.trim() ? "bg-ink text-sand shadow-sm hover:shadow-md active:scale-[0.98]" : "bg-stone-100 text-stone-400 cursor-not-allowed"
+            className={cn("rounded-lg px-5 py-2 text-[13px] font-semibold transition-all duration-200",
+              input.trim()
+                ? "bg-stone-900 text-white shadow-sm cursor-pointer hover:bg-stone-800 active:scale-[0.98]"
+                : "bg-stone-100 text-stone-400 cursor-not-allowed"
             )}>
             {saving ? "Adding..." : "Add Note"}
           </button>
         </div>
       </div>
 
+      {/* Section divider */}
+      {notes.length > 0 && (
+        <div className="mb-4 mt-6 flex items-center gap-3">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-stone-400">Previous Notes</span>
+          <div className="h-px flex-1 bg-stone-100" />
+        </div>
+      )}
+
       {/* Notes */}
       {notes.length === 0 ? (
-        <div className="flex flex-col items-center py-16">
+        <div className="mt-6 flex flex-col items-center py-16">
           <MessageSquare size={48} className="mb-4 text-stone-200" strokeWidth={1} />
           <p className="text-[15px] font-medium text-stone-500">No notes yet</p>
           <p className="mt-1 text-[13px] text-stone-400">Add the first note above</p>
@@ -328,8 +338,8 @@ function NotesTab({ mosqueId, initial }: { mosqueId: string; initial: Note[] }) 
             {notes.map((n) => (
               <motion.div key={n.id} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
                 className="group relative rounded-xl border border-stone-200 bg-white px-5 py-4 transition-colors hover:bg-stone-50">
-                <button className="absolute right-3 top-3 rounded-md p-1 text-stone-300 opacity-0 transition-all hover:bg-stone-200 hover:text-stone-600 group-hover:opacity-100">
-                  <Trash2 size={14} />
+                <button className="absolute right-3 top-3 rounded-md p-1 text-stone-400 opacity-0 transition-all hover:bg-stone-200 hover:text-stone-600 group-hover:opacity-100">
+                  <MoreHorizontal size={15} />
                 </button>
                 <p className="text-[14px] leading-relaxed text-stone-800">{n.content}</p>
                 <div className="mt-3 flex items-center justify-between">

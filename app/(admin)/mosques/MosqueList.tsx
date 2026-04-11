@@ -64,30 +64,31 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
 
   return (
     <div>
-      {/* ── Filter bar ── */}
-      <div className="mb-4 flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-1.5">
+      {/* ── Unified filter bar ── */}
+      <div className="mb-4 flex items-center rounded-xl border border-stone-200 bg-stone-50 p-1.5">
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             placeholder="Search mosques..."
-            className="w-full rounded-lg border border-transparent bg-white py-2 pl-9 pr-8 text-[13px] text-ink shadow-sm outline-none transition-all placeholder:text-stone-400 focus:border-stone-300 focus:ring-2 focus:ring-stone-200"
+            className="w-full border-none bg-transparent py-2 pl-9 pr-8 text-[13px] text-stone-900 outline-none placeholder:text-stone-400"
           />
           {search && (
             <button
               onClick={() => { setSearch(""); setDebouncedSearch(""); }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-600"
             >
               <X size={14} />
             </button>
           )}
         </div>
+        <div className="h-6 w-px bg-stone-200" />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] text-ink shadow-sm outline-none transition-colors focus:border-stone-300 focus:ring-2 focus:ring-stone-200"
+          className="cursor-pointer border-none bg-transparent px-3 py-2 text-[13px] font-medium text-stone-700 outline-none"
         >
           <option value="all">All stages</option>
           {STAGES.map((s) => (

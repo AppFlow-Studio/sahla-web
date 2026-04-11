@@ -219,7 +219,7 @@ export default function PrayerTimesPanel({
               </button>
             </div>
             {todaysPrayers ? (
-              <div className="overflow-hidden rounded-lg border border-stone-100">
+              <div className="overflow-hidden rounded-xl border border-stone-200">
                 <div className="flex bg-stone-50 px-4 py-2">
                   <span className="flex-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Prayer</span>
                   <span className="w-24 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Athan</span>
@@ -295,7 +295,7 @@ export default function PrayerTimesPanel({
         {/* Step 1: Address */}
         {step === 1 && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-edge bg-card p-5">
+            <div className="rounded-xl border border-stone-200 bg-white p-5">
               <p className="mb-1 text-sm font-medium text-ink">
                 Mosque Address
               </p>
@@ -324,7 +324,7 @@ export default function PrayerTimesPanel({
         {/* Step 2: Method + School */}
         {step === 2 && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-edge bg-card p-5">
+            <div className="rounded-xl border border-stone-200 bg-white p-5">
               <p className="mb-1 text-sm font-medium text-ink">
                 Calculation Method
               </p>
@@ -377,7 +377,7 @@ export default function PrayerTimesPanel({
         {/* Step 3: Athan Preview */}
         {step === 3 && previewTimings && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-edge bg-card p-5">
+            <div className="rounded-xl border border-stone-200 bg-white p-5">
               <p className="mb-1 text-sm font-medium text-ink">
                 Today&apos;s Athan Times
               </p>
@@ -420,7 +420,7 @@ export default function PrayerTimesPanel({
         {/* Step 4: Iqamah Configuration */}
         {step === 4 && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-edge bg-card p-5">
+            <div className="rounded-xl border border-stone-200 bg-white p-5">
               <p className="mb-1 text-sm font-medium text-ink">
                 Iqamah Times
               </p>
@@ -499,7 +499,7 @@ export default function PrayerTimesPanel({
         {/* Step 5: Final Preview + Save */}
         {step === 5 && finalPreview && (
           <div className="space-y-4">
-            <div className="rounded-lg border border-edge bg-card p-5">
+            <div className="rounded-xl border border-stone-200 bg-white p-5">
               <p className="mb-1 text-sm font-medium text-ink">
                 Final Prayer Times
               </p>
