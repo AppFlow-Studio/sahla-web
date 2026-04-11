@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { ArrowLeft, Check, LogOut } from "lucide-react";
+import { useClerk } from "@clerk/nextjs";
 import { ONBOARDING_CATEGORIES } from "./onboarding-tasks";
+import { cn } from "@/lib/utils";
 
 export default function OnboardingSidebar({
   mosqueName,
@@ -14,34 +16,36 @@ export default function OnboardingSidebar({
   progress: Record<string, boolean>;
 }) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const { signOut } = useClerk();
 
-  function toggleCategory(id: string) {
-    setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
-  }
-
-  const totalTasks = ONBOARDING_CATEGORIES.flatMap((c) => c.tasks).length;
-  const completedTasks = ONBOARDING_CATEGORIES.flatMap((c) => c.tasks).filter(
-    (t) => progress[t.id] === true
-  ).length;
+  const allTasks = ONBOARDING_CATEGORIES.flatMap((c) => c.tasks);
+  const totalTasks = allTasks.length;
+  const completedTasks = allTasks.filter((t) => progress[t.id] === true).length;
   const overallPct = Math.round((completedTasks / totalTasks) * 100);
 
   return (
-    <aside className="flex h-full w-80 flex-col border-r border-stone-200 bg-white">
+    <aside className="flex h-full w-80 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar-bg">
       {/* Header */}
-      <div className="border-b border-stone-200 px-5 py-4">
-        <p className="text-[15px] font-bold text-stone-900">{mosqueName}</p>
-        <p className="mt-0.5 text-[12px] text-stone-500">App Onboarding</p>
-        <div className="mt-3 flex items-center gap-3">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-100">
+      <div className="border-b border-sidebar-border px-5 py-5">
+        <Link
+          href="/"
+          className="mb-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-sidebar-text-muted transition-colors hover:text-sidebar-text"
+        >
+          <ArrowLeft size={12} />
+          Back to Sahla
+        </Link>
+        <p className="font-display text-xl text-[#E8D5B0]">{mosqueName}</p>
+        <p className="mt-0.5 text-[12px] text-sidebar-text-muted">App Onboarding</p>
+        <div className="mt-4 flex items-center gap-3">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-sidebar-active-bg">
             <motion.div
-              className="h-full rounded-full bg-emerald-500"
+              className="h-full rounded-full bg-emerald-400"
               initial={{ width: 0 }}
               animate={{ width: `${overallPct}%` }}
               transition={{ duration: 0.5, ease: "easeOut" }}
             />
           </div>
-          <span className="text-[11px] font-medium tabular-nums text-stone-500">
+          <span className="text-[11px] font-medium tabular-nums text-sidebar-text-muted">
             {completedTasks}/{totalTasks}
           </span>
         </div>
@@ -50,114 +54,84 @@ export default function OnboardingSidebar({
       {/* Task List */}
       <nav className="flex-1 overflow-y-auto px-3 py-3">
         {ONBOARDING_CATEGORIES.map((category) => {
-          const isCollapsed = collapsed[category.id] === true;
           const catCompleted = category.tasks.filter(
             (t) => progress[t.id] === true
           ).length;
           const catTotal = category.tasks.length;
 
           return (
-            <div key={category.id} className="mb-1">
-              <button
-                onClick={() => toggleCategory(category.id)}
-                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-stone-50"
-              >
-                <div className="flex items-center gap-2">
-                  <motion.svg
-                    className="h-3.5 w-3.5 text-stone-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                    animate={{ rotate: isCollapsed ? -90 : 0 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                  </motion.svg>
-                  <span className="text-[12px] font-semibold uppercase tracking-wider text-stone-500">
-                    {category.label}
-                  </span>
-                </div>
-                <span className="text-[10px] tabular-nums text-stone-400">
+            <div key={category.id} className="mb-3">
+              {/* Category header: label ──── x/y */}
+              <div className="mb-1 flex items-center gap-3 px-3 py-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-text-muted">
+                  {category.label}
+                </span>
+                <div className="h-px flex-1 bg-sidebar-border" />
+                <span className="text-[10px] tabular-nums text-sidebar-text-muted">
                   {catCompleted}/{catTotal}
                 </span>
-              </button>
+              </div>
 
-              <AnimatePresence initial={false}>
-                {!isCollapsed && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
+              {category.tasks.map((task) => {
+                const isDone = progress[task.id] === true;
+                const isActive = pathname === `/${task.id}`;
+
+                return (
+                  <Link
+                    key={task.id}
+                    href={`/${task.id}`}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 transition-colors",
+                      isActive
+                        ? "bg-sidebar-active-bg"
+                        : "hover:bg-sidebar-hover-bg"
+                    )}
                   >
-                    {category.tasks.map((task) => {
-                      const isDone = progress[task.id] === true;
-                      const isActive = pathname === `/${task.id}`;
+                    {/* Checkmark slot (reserves width to keep labels aligned) */}
+                    <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center">
+                      {isDone && (
+                        <div className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-emerald-400">
+                          <Check size={11} className="text-sidebar-bg" strokeWidth={3.5} />
+                        </div>
+                      )}
+                    </div>
 
-                      return (
-                        <Link
-                          key={task.id}
-                          href={`/${task.id}`}
-                          className={`flex items-start gap-3 rounded-lg px-3 py-2 ml-2 transition-colors ${
-                            isActive
-                              ? "bg-emerald-50"
-                              : "hover:bg-stone-50"
-                          }`}
-                        >
-                          {/* Checkbox */}
-                          <div className="mt-0.5">
-                            {isDone ? (
-                              <div className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-emerald-500">
-                                <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                                </svg>
-                              </div>
-                            ) : (
-                              <div className="h-4.5 w-4.5 rounded-full border-2 border-stone-300" />
-                            )}
-                          </div>
+                    {/* Label */}
+                    <span
+                      className={cn(
+                        "flex-1 text-[13px] font-medium",
+                        isDone
+                          ? "text-sidebar-text-muted line-through"
+                          : isActive
+                          ? "text-sidebar-active-text"
+                          : "text-sidebar-text"
+                      )}
+                    >
+                      {task.label}
+                    </span>
 
-                          {/* Label + Description */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`text-[13px] font-medium ${
-                                  isDone ? "text-stone-400 line-through" : isActive ? "text-emerald-700" : "text-stone-700"
-                                }`}
-                              >
-                                {task.label}
-                              </span>
-                              <span
-                                className={`text-[9px] font-bold rounded px-1.5 py-0.5 ${
-                                  task.badge === "REQ"
-                                    ? "bg-amber-100 text-amber-700"
-                                    : "bg-stone-100 text-stone-500"
-                                }`}
-                              >
-                                {task.badge}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-stone-400 leading-tight mt-0.5">
-                              {task.description}
-                            </p>
-                          </div>
-
-                          {/* Time Estimate */}
-                          <span className="text-[10px] text-stone-400 mt-0.5 shrink-0">
-                            {task.timeEstimate}
-                          </span>
-                        </Link>
-                      );
-                    })}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    {/* Time Estimate */}
+                    <span className="shrink-0 text-[10px] text-sidebar-text-muted">
+                      {task.timeEstimate}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
           );
         })}
       </nav>
+
+      {/* Footer */}
+      <div className="border-t border-sidebar-border px-3 py-3">
+        <button
+          onClick={() => signOut({ redirectUrl: "/" })}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-text-muted transition-colors hover:bg-sidebar-hover-bg hover:text-sidebar-text"
+        >
+          <LogOut size={14} />
+          Sign out
+        </button>
+      </div>
     </aside>
   );
 }

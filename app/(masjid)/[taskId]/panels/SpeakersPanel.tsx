@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { Mic2, Plus, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
+import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY_SM, BTN_GHOST_SM } from "@/lib/ui-classes";
 
 type Speaker = {
   speaker_id: string;
@@ -25,7 +27,6 @@ export default function SpeakersPanel({
   const [speakers, setSpeakers] = useState(initialSpeakers);
   const [saving, setSaving] = useState(false);
 
-  // New speaker form
   const [name, setName] = useState("");
   const [creds, setCreds] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -75,12 +76,13 @@ export default function SpeakersPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Speaker List */}
       {speakers.length === 0 && !showForm ? (
-        <div className="rounded-xl border-2 border-dashed border-stone-200 bg-white p-12 text-center">
-          <p className="text-[14px] text-stone-500">No speakers added yet</p>
-          <p className="mt-1 text-[12px] text-stone-400">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-stone-200 bg-white px-6 py-16 shadow-sm">
+          <Mic2 size={48} className="mb-4 text-stone-200" strokeWidth={1} />
+          <p className="text-[15px] font-medium text-stone-500">No speakers added yet</p>
+          <p className="mt-1 text-[13px] text-stone-400">
             Add your imams and speakers so they can be linked to programs and jummah
           </p>
         </div>
@@ -90,29 +92,28 @@ export default function SpeakersPanel({
             {speakers.map((speaker) => (
               <motion.div
                 key={speaker.speaker_id}
-                initial={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, height: 0 }}
-                className="flex items-center gap-4 rounded-xl border border-stone-200 bg-white px-5 py-4"
+                transition={{ duration: 0.2 }}
+                className="group flex items-center gap-4 rounded-xl border border-stone-200 bg-white px-5 py-4 shadow-sm transition-colors hover:bg-stone-50/60"
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700">
                   {speaker.speaker_name.charAt(0).toUpperCase()}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold text-stone-900">{speaker.speaker_name}</p>
                   {speaker.speaker_creds?.length > 0 && (
-                    <p className="text-[11px] text-stone-400 truncate">
+                    <p className="truncate text-[11px] text-stone-500">
                       {speaker.speaker_creds.join(" · ")}
                     </p>
                   )}
                 </div>
                 <button
                   onClick={() => deleteSpeaker(speaker.speaker_id)}
-                  className="text-stone-300 hover:text-red-500 transition-colors"
+                  className="rounded-md p-1.5 text-stone-300 opacity-0 transition-all hover:bg-stone-100 hover:text-red-500 group-hover:opacity-100"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                  </svg>
+                  <Trash2 size={15} />
                 </button>
               </motion.div>
             ))}
@@ -127,44 +128,38 @@ export default function SpeakersPanel({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
-            className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5"
+            className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm"
           >
-            <p className="mb-3 text-[13px] font-semibold text-stone-900">New Speaker</p>
-            <div className="space-y-3">
+            <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+              <p className="text-[14px] font-semibold text-stone-900">New Speaker</p>
+            </div>
+            <div className="space-y-4 px-6 py-5">
               <div>
-                <label className="mb-1 block text-[12px] font-medium text-stone-600">Name</label>
+                <label className={LABEL_CLASS}>Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Imam Ahmad"
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+                  className={INPUT_CLASS}
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[12px] font-medium text-stone-600">
-                  Credentials (comma-separated)
-                </label>
+                <label className={LABEL_CLASS}>Credentials (comma-separated)</label>
                 <input
                   type="text"
                   value={creds}
                   onChange={(e) => setCreds(e.target.value)}
                   placeholder="e.g., PhD Islamic Studies, Hafiz"
-                  className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+                  className={INPUT_CLASS}
                 />
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={addSpeaker}
-                  disabled={saving}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-[12px] font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
-                >
+              <div className="flex items-center gap-2">
+                <button onClick={addSpeaker} disabled={saving} className={BTN_PRIMARY_SM}>
+                  {saving && <Loader2 size={13} className="animate-spin" />}
                   {saving ? "Adding..." : "Add Speaker"}
                 </button>
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="rounded-lg border border-stone-300 px-4 py-2 text-[12px] text-stone-600 hover:bg-stone-50"
-                >
+                <button onClick={() => setShowForm(false)} className={BTN_GHOST_SM}>
                   Cancel
                 </button>
               </div>
@@ -176,11 +171,9 @@ export default function SpeakersPanel({
       {!showForm && (
         <button
           onClick={() => setShowForm(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 bg-white py-3 text-[13px] font-medium text-stone-600 hover:border-emerald-400 hover:text-emerald-600 transition-colors"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 bg-white py-3.5 text-[13px] font-medium text-stone-600 transition-all hover:border-stone-400 hover:bg-stone-50"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
+          <Plus size={15} />
           Add Speaker
         </button>
       )}

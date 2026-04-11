@@ -22,7 +22,7 @@ export default async function MasjidLayout({
   const progress = (mosque?.onboarding_progress as Record<string, boolean>) || {};
 
   return (
-    <div className="flex h-screen bg-[#F5F4F0]">
+    <div className="flex h-screen bg-[#fffbf2]">
       <OnboardingSidebar mosqueName={mosqueName} progress={progress} />
       <main className="flex-1 overflow-y-auto p-8">
         <ToastProvider>{children}</ToastProvider>

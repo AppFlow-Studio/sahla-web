@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check, Loader2, Upload, X } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
+import { cn } from "@/lib/utils";
+import { INPUT_CLASS, BTN_PRIMARY, BTN_PRIMARY_DISABLED, BTN_GHOST } from "@/lib/ui-classes";
 
 const COLOR_PRESETS = [
   "#0D7C5F", "#10B981", "#3B82F6", "#6366F1",
@@ -85,48 +88,56 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
   }
 
   const displayLetter = mosque.name?.charAt(0).toUpperCase() || "M";
+  const canComplete = appName.trim().length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* App Name */}
-      <div className="rounded-xl border border-stone-200 bg-white p-6">
-        <label className="mb-1 block text-[13px] font-semibold text-stone-800">App Name</label>
-        <p className="mb-3 text-[12px] text-stone-400">
-          Displayed under the app icon. Keep it short — iOS truncates after ~10 characters.
-        </p>
-        <div className="relative">
-          <input
-            type="text"
-            value={appName}
-            onChange={(e) => setAppName(e.target.value.slice(0, 10))}
-            placeholder="e.g., ICB App"
-            className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
-          />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] tabular-nums text-stone-400">
-            {appName.length}/10
-          </span>
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+          <p className="text-[14px] font-semibold text-stone-900">App Name</p>
+          <p className="mt-0.5 text-[12px] text-stone-500">
+            Displayed under the app icon. Keep it short — iOS truncates after ~10 characters.
+          </p>
+        </div>
+        <div className="px-6 py-5">
+          <div className="relative">
+            <input
+              type="text"
+              value={appName}
+              onChange={(e) => setAppName(e.target.value.slice(0, 10))}
+              placeholder="e.g., ICB App"
+              className={cn(INPUT_CLASS, "pr-14")}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] tabular-nums text-stone-400">
+              {appName.length}/10
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Logo Upload */}
-      <div className="rounded-xl border border-stone-200 bg-white p-6">
-        <label className="mb-1 block text-[13px] font-semibold text-stone-800">App Logo</label>
-        <p className="mb-3 text-[12px] text-stone-400">
-          Square image, at least 512x512px. PNG or JPG.
-        </p>
-        <div className="flex items-center gap-4">
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+          <p className="text-[14px] font-semibold text-stone-900">App Logo</p>
+          <p className="mt-0.5 text-[12px] text-stone-500">
+            Square image, at least 512×512px. PNG or JPG.
+          </p>
+        </div>
+        <div className="flex items-center gap-5 px-6 py-5">
           <div
-            className="flex h-16 w-16 items-center justify-center rounded-2xl text-lg font-bold"
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold shadow-sm ring-2 ring-white"
             style={{
-              background: logoUrl ? `url(${logoUrl}) center/cover` : `${brandColor}22`,
+              background: logoUrl ? `url(${logoUrl}) center/cover` : `${brandColor}1f`,
               color: brandColor,
             }}
           >
             {!logoUrl && displayLetter}
           </div>
-          <div>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-stone-300 px-4 py-2 text-[12px] font-medium text-stone-700 hover:bg-stone-50">
-              {uploading ? "Uploading..." : "Choose File"}
+          <div className="flex items-center gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-[13px] font-medium text-stone-700 shadow-sm transition-colors hover:bg-stone-50">
+              <Upload size={14} className="text-stone-400" />
+              {uploading ? "Uploading..." : logoUrl ? "Replace" : "Choose File"}
               <input
                 type="file"
                 accept="image/*"
@@ -138,9 +149,9 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
             {logoUrl && (
               <button
                 onClick={() => setLogoUrl("")}
-                className="ml-2 text-[11px] text-stone-400 hover:text-red-500"
+                className="rounded-lg p-2 text-stone-400 transition-colors hover:bg-stone-50 hover:text-red-500"
               >
-                Remove
+                <X size={16} />
               </button>
             )}
           </div>
@@ -148,69 +159,70 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
       </div>
 
       {/* Brand Color */}
-      <div className="rounded-xl border border-stone-200 bg-white p-6">
-        <label className="mb-1 block text-[13px] font-semibold text-stone-800">Brand Color</label>
-        <p className="mb-3 text-[12px] text-stone-400">
-          Used for buttons, headers, and accents in the app.
-        </p>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {COLOR_PRESETS.map((color) => (
-            <button
-              key={color}
-              onClick={() => setBrandColor(color)}
-              className="relative h-8 w-8 rounded-full border-2 transition-all"
-              style={{
-                backgroundColor: color,
-                borderColor: brandColor === color ? color : "transparent",
-                boxShadow: brandColor === color ? `0 0 0 2px white, 0 0 0 4px ${color}` : "none",
-              }}
-            >
-              {brandColor === color && (
-                <svg className="absolute inset-0 m-auto h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-              )}
-            </button>
-          ))}
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+          <p className="text-[14px] font-semibold text-stone-900">Brand Color</p>
+          <p className="mt-0.5 text-[12px] text-stone-500">
+            Used for buttons, headers, and accents in the app.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] text-stone-500">Custom:</span>
-          <input
-            type="text"
-            value={brandColor}
-            onChange={(e) => setBrandColor(e.target.value)}
-            placeholder="#0D7C5F"
-            className="w-24 rounded-lg border border-stone-300 bg-stone-50 px-2 py-1.5 text-[12px] font-mono text-stone-900 focus:border-emerald-500 focus:outline-none"
-          />
-          <div
-            className="h-6 w-6 rounded-full border border-stone-200"
-            style={{ backgroundColor: brandColor }}
-          />
+        <div className="px-6 py-5">
+          <div className="mb-4 flex flex-wrap gap-2.5">
+            {COLOR_PRESETS.map((color) => {
+              const isSelected = brandColor === color;
+              return (
+                <button
+                  key={color}
+                  onClick={() => setBrandColor(color)}
+                  className="relative h-9 w-9 rounded-lg transition-transform hover:scale-105"
+                  style={{ backgroundColor: color }}
+                >
+                  {isSelected && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <Check size={16} className="text-white drop-shadow-sm" strokeWidth={3} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] font-medium text-stone-500">Custom:</span>
+            <input
+              type="text"
+              value={brandColor}
+              onChange={(e) => setBrandColor(e.target.value)}
+              placeholder="#0D7C5F"
+              className="h-9 w-28 rounded-lg border border-stone-200 bg-white px-3 font-mono text-[12px] text-stone-900 shadow-sm outline-none transition-colors hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
+            />
+            <div
+              className="h-9 w-9 rounded-lg border border-stone-200"
+              style={{ backgroundColor: brandColor }}
+            />
+          </div>
         </div>
       </div>
 
       {/* Live Preview */}
-      <div className="rounded-xl border border-stone-200 bg-white p-6">
-        <label className="mb-3 block text-[13px] font-semibold text-stone-800">Preview</label>
-        <div className="flex gap-6">
-          {/* App Icon */}
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+          <p className="text-[14px] font-semibold text-stone-900">Preview</p>
+        </div>
+        <div className="flex gap-6 px-6 py-5">
           <div className="text-center">
             <div
-              className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-lg font-bold text-white shadow-md"
-              style={{
-                background: logoUrl ? `url(${logoUrl}) center/cover` : brandColor,
-              }}
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-lg font-semibold text-white shadow-md"
+              style={{ background: logoUrl ? `url(${logoUrl}) center/cover` : brandColor }}
             >
               {!logoUrl && displayLetter}
             </div>
-            <p className="mt-1.5 text-[10px] text-stone-500">{appName || "App Name"}</p>
+            <p className="mt-2 text-[11px] text-stone-500">{appName || "App Name"}</p>
           </div>
 
-          {/* Notification Preview */}
           <div className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
             <div className="flex items-center gap-2">
               <div
-                className="flex h-6 w-6 items-center justify-center rounded-md text-[9px] font-bold text-white"
+                className="flex h-6 w-6 items-center justify-center rounded-md text-[9px] font-semibold text-white"
                 style={{ backgroundColor: brandColor }}
               >
                 {displayLetter}
@@ -231,16 +243,17 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
       <div className="flex items-center justify-between">
         <button
           onClick={() => handleSave(false)}
-          disabled={saving}
-          className="rounded-lg border border-stone-300 px-5 py-2.5 text-[13px] font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-40"
+          disabled={saving || !canComplete}
+          className={BTN_GHOST}
         >
           {saving ? "Saving..." : "Save Draft"}
         </button>
         <button
           onClick={() => handleSave(true)}
-          disabled={saving || !appName.trim()}
-          className="rounded-lg bg-emerald-600 px-5 py-2.5 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
+          disabled={saving || !canComplete}
+          className={canComplete && !saving ? BTN_PRIMARY : BTN_PRIMARY_DISABLED}
         >
+          {saving && <Loader2 size={14} className="animate-spin" />}
           Mark Complete
         </button>
       </div>

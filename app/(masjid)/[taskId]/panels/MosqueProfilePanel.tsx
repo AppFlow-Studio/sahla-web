@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
+import { Dropdown } from "@/app/(admin)/components/Dropdown";
+import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY, BTN_PRIMARY_DISABLED, BTN_GHOST } from "@/lib/ui-classes";
 
 const US_TIMEZONES = [
   { value: "America/New_York", label: "Eastern (ET)" },
@@ -44,6 +47,7 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
   }
 
   const filledCount = FIELDS.filter((f) => form[f].trim() !== "").length;
+  const canComplete = filledCount >= 4;
 
   async function handleSave(markComplete = false) {
     setSaving(true);
@@ -72,106 +76,102 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
       <div className="flex items-center gap-3">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-100">
           <div
-            className="h-full rounded-full bg-emerald-500 transition-all"
+            className="h-full rounded-full bg-emerald-500 transition-all duration-500"
             style={{ width: `${Math.round((filledCount / FIELDS.length) * 100)}%` }}
           />
         </div>
-        <span className="text-[12px] font-medium tabular-nums text-stone-500">
+        <span className="text-[11px] font-medium tabular-nums text-stone-500">
           {filledCount}/{FIELDS.length} fields
         </span>
       </div>
 
       {/* Form */}
-      <div className="rounded-xl border border-stone-200 bg-white p-6">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+          <p className="text-[14px] font-semibold text-stone-900">Mosque Details</p>
+        </div>
+        <div className="grid grid-cols-2 gap-4 px-6 py-6">
           <div className="col-span-2">
-            <label className="mb-1 block text-[12px] font-medium text-stone-600">
-              Mosque Name
-            </label>
+            <label className={LABEL_CLASS}>Mosque Name</label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => updateField("name", e.target.value)}
               placeholder="e.g., Islamic Center of Brooklyn"
-              className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+              className={INPUT_CLASS}
             />
           </div>
 
           <div className="col-span-2">
-            <label className="mb-1 block text-[12px] font-medium text-stone-600">
-              Street Address
-            </label>
+            <label className={LABEL_CLASS}>Street Address</label>
             <input
               type="text"
               value={form.address}
               onChange={(e) => updateField("address", e.target.value)}
               placeholder="e.g., 123 Main Street"
-              className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+              className={INPUT_CLASS}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-[12px] font-medium text-stone-600">City</label>
+            <label className={LABEL_CLASS}>City</label>
             <input
               type="text"
               value={form.city}
               onChange={(e) => updateField("city", e.target.value)}
               placeholder="Brooklyn"
-              className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+              className={INPUT_CLASS}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-[12px] font-medium text-stone-600">State</label>
+            <label className={LABEL_CLASS}>State</label>
             <input
               type="text"
               value={form.state}
               onChange={(e) => updateField("state", e.target.value)}
               placeholder="NY"
-              className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+              className={INPUT_CLASS}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-[12px] font-medium text-stone-600">Phone</label>
+            <label className={LABEL_CLASS}>Phone</label>
             <input
               type="tel"
               value={form.phone}
               onChange={(e) => updateField("phone", e.target.value)}
               placeholder="(718) 555-0100"
-              className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+              className={INPUT_CLASS}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-[12px] font-medium text-stone-600">Email</label>
+            <label className={LABEL_CLASS}>Email</label>
             <input
               type="email"
               value={form.email}
               onChange={(e) => updateField("email", e.target.value)}
               placeholder="info@masjid.org"
-              className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+              className={INPUT_CLASS}
             />
           </div>
 
           <div className="col-span-2">
-            <label className="mb-1 block text-[12px] font-medium text-stone-600">Timezone</label>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 mb-2">
-              <p className="text-[11px] text-amber-700">
+            <label className={LABEL_CLASS}>Timezone</label>
+            <div className="mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+              <AlertTriangle size={13} className="mt-0.5 shrink-0 text-amber-600" />
+              <p className="text-[12px] text-amber-800">
                 Your prayer notification system depends on this setting.
               </p>
             </div>
-            <select
+            <Dropdown
               value={form.timezone}
-              onChange={(e) => updateField("timezone", e.target.value)}
-              className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-[13px] text-stone-900 focus:border-emerald-500 focus:outline-none"
-            >
-              {US_TIMEZONES.map((tz) => (
-                <option key={tz.value} value={tz.value}>
-                  {tz.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => updateField("timezone", String(v))}
+              options={US_TIMEZONES}
+              className="w-full"
+              minWidth={0}
+            />
           </div>
         </div>
       </div>
@@ -181,15 +181,16 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
         <button
           onClick={() => handleSave(false)}
           disabled={saving}
-          className="rounded-lg border border-stone-300 px-5 py-2.5 text-[13px] font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-40"
+          className={BTN_GHOST}
         >
           {saving ? "Saving..." : "Save Draft"}
         </button>
         <button
           onClick={() => handleSave(true)}
-          disabled={saving || filledCount < 4}
-          className="rounded-lg bg-emerald-600 px-5 py-2.5 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
+          disabled={saving || !canComplete}
+          className={canComplete && !saving ? BTN_PRIMARY : BTN_PRIMARY_DISABLED}
         >
+          {saving && <Loader2 size={14} className="animate-spin" />}
           Mark Complete
         </button>
       </div>

@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { BookOpen, Plus, Upload, Trash2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import CSVImport from "../../components/CSVImport";
+import { Dropdown } from "@/app/(admin)/components/Dropdown";
+import { cn } from "@/lib/utils";
+import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY_SM, BTN_GHOST_SM } from "@/lib/ui-classes";
 
 type ContentItem = {
   id: number;
@@ -19,10 +23,7 @@ type ContentItem = {
   price: number;
 };
 
-type Speaker = {
-  speaker_id: string;
-  speaker_name: string;
-};
+type Speaker = { speaker_id: string; speaker_name: string };
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -36,6 +37,12 @@ const CSV_FIELDS = [
   { key: "is_kids", label: "Kids Program" },
   { key: "is_paid", label: "Paid" },
   { key: "price", label: "Price" },
+];
+
+const GENDER_OPTIONS = [
+  { value: "All", label: "All Genders" },
+  { value: "Brothers", label: "Brothers" },
+  { value: "Sisters", label: "Sisters" },
 ];
 
 export default function ProgramsPanel({
@@ -53,7 +60,6 @@ export default function ProgramsPanel({
   const [showForm, setShowForm] = useState(false);
   const [showCSV, setShowCSV] = useState(false);
 
-  // Form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedSpeaker, setSelectedSpeaker] = useState("");
@@ -63,6 +69,14 @@ export default function ProgramsPanel({
   const [isKids, setIsKids] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [price, setPrice] = useState("");
+
+  const speakerOptions = useMemo(
+    () => [
+      { value: "", label: "None" },
+      ...speakers.map((s) => ({ value: s.speaker_name, label: s.speaker_name })),
+    ],
+    [speakers]
+  );
 
   function resetForm() {
     setName(""); setDescription(""); setSelectedSpeaker(""); setSelectedDays([]);
@@ -115,59 +129,98 @@ export default function ProgramsPanel({
     } catch { showToast("Failed to remove", "error"); }
   }
 
+  const thresholdMet = programs.length >= 3;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Threshold Callout */}
-      <div className={`rounded-lg px-4 py-3 text-[12px] ${
-        programs.length >= 3
-          ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-          : "border border-amber-200 bg-amber-50 text-amber-700"
-      }`}>
-        {programs.length >= 3
-          ? `${programs.length} programs added — your Discover tab will look great!`
-          : `Add at least 3 programs (${programs.length}/3) — users need content to explore`}
+      <div
+        className={cn(
+          "flex items-start gap-2.5 rounded-lg border px-4 py-3",
+          thresholdMet
+            ? "border-emerald-200 bg-emerald-50"
+            : "border-amber-200 bg-amber-50"
+        )}
+      >
+        {thresholdMet ? (
+          <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" />
+        ) : (
+          <AlertCircle size={16} className="mt-0.5 shrink-0 text-amber-600" />
+        )}
+        <p className={cn(
+          "text-[12px]",
+          thresholdMet ? "text-emerald-800" : "text-amber-800"
+        )}>
+          {thresholdMet
+            ? `${programs.length} programs added — your Discover tab will look great!`
+            : `Add at least 3 programs (${programs.length}/3) — users need content to explore`}
+        </p>
       </div>
 
       {/* Program List */}
-      <div className="space-y-2">
-        <AnimatePresence initial={false}>
-          {programs.map((prog) => (
-            <motion.div
-              key={prog.content_id}
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex items-start gap-4 rounded-xl border border-stone-200 bg-white px-5 py-4"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-stone-900">{prog.name}</p>
-                {prog.description && (
-                  <p className="mt-0.5 text-[11px] text-stone-400 line-clamp-1">{prog.description}</p>
-                )}
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {prog.days?.map((d) => (
-                    <span key={d} className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500">{d}</span>
-                  ))}
-                  {prog.start_time && (
-                    <span className="text-[10px] text-stone-400">{prog.start_time}</span>
+      {programs.length > 0 && (
+        <div className="space-y-2">
+          <AnimatePresence initial={false}>
+            {programs.map((prog) => (
+              <motion.div
+                key={prog.content_id}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="group flex items-start gap-4 rounded-xl border border-stone-200 bg-white px-5 py-4 shadow-sm transition-colors hover:bg-stone-50/60"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-semibold text-stone-900">{prog.name}</p>
+                  {prog.description && (
+                    <p className="mt-0.5 line-clamp-1 text-[11px] text-stone-500">{prog.description}</p>
                   )}
-                  {prog.gender !== "All" && (
-                    <span className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] text-purple-600">{prog.gender}</span>
-                  )}
-                  {prog.is_kids && (
-                    <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-600">Kids</span>
-                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {prog.days?.map((d) => (
+                      <span key={d} className="rounded-md border border-stone-200 bg-stone-50 px-1.5 py-0.5 text-[10px] font-medium text-stone-600">
+                        {d}
+                      </span>
+                    ))}
+                    {prog.start_time && (
+                      <span className="text-[10px] text-stone-400">{prog.start_time}</span>
+                    )}
+                    {prog.gender !== "All" && (
+                      <span className="rounded-md border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">
+                        {prog.gender}
+                      </span>
+                    )}
+                    {prog.is_kids && (
+                      <span className="rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
+                        Kids
+                      </span>
+                    )}
+                    {prog.is_paid && (
+                      <span className="rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                        ${prog.price}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <button onClick={() => deleteProgram(prog.content_id)} className="text-stone-300 hover:text-red-500">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                </svg>
-              </button>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+                <button
+                  onClick={() => deleteProgram(prog.content_id)}
+                  className="rounded-md p-1.5 text-stone-300 opacity-0 transition-all hover:bg-stone-100 hover:text-red-500 group-hover:opacity-100"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {programs.length === 0 && !showForm && (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-stone-200 bg-white px-6 py-16 shadow-sm">
+          <BookOpen size={48} className="mb-4 text-stone-200" strokeWidth={1} />
+          <p className="text-[15px] font-medium text-stone-500">No programs yet</p>
+          <p className="mt-1 text-[13px] text-stone-400">Add recurring classes, halaqas, and study circles</p>
+        </div>
+      )}
 
       {/* Add Program Form */}
       <AnimatePresence>
@@ -176,66 +229,123 @@ export default function ProgramsPanel({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5"
+            className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm"
           >
-            <p className="mb-3 text-[13px] font-semibold text-stone-900">New Program</p>
-            <div className="space-y-3">
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Program name"
-                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none" />
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" rows={2}
-                className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none resize-none" />
+            <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+              <p className="text-[14px] font-semibold text-stone-900">New Program</p>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <div>
+                <label className={LABEL_CLASS}>Program Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Weekly Tafsir Class"
+                  className={INPUT_CLASS}
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>Description</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Brief description (optional)"
+                  rows={2}
+                  className="w-full resize-none rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none transition-colors placeholder:text-stone-400 hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-[12px] font-medium text-stone-600">Speaker</label>
-                  <select value={selectedSpeaker} onChange={(e) => setSelectedSpeaker(e.target.value)}
-                    className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-[12px] text-stone-700 focus:outline-none">
-                    <option value="">None</option>
-                    {speakers.map((s) => <option key={s.speaker_id} value={s.speaker_name}>{s.speaker_name}</option>)}
-                  </select>
+                  <label className={LABEL_CLASS}>Speaker</label>
+                  <Dropdown
+                    value={selectedSpeaker}
+                    onChange={(v) => setSelectedSpeaker(String(v))}
+                    options={speakerOptions}
+                    className="w-full"
+                    minWidth={0}
+                  />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[12px] font-medium text-stone-600">Time</label>
-                  <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-[12px] tabular-nums text-stone-700 focus:outline-none" />
+                  <label className={LABEL_CLASS}>Start Time</label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className={cn(INPUT_CLASS, "tabular-nums")}
+                  />
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-[12px] font-medium text-stone-600">Days</label>
-                <div className="flex gap-1.5">
-                  {DAYS.map((d) => (
-                    <button key={d} onClick={() => toggleDay(d)}
-                      className={`rounded-lg px-3 py-1.5 text-[11px] font-medium transition-colors ${
-                        selectedDays.includes(d) ? "bg-emerald-600 text-white" : "border border-stone-300 text-stone-600 hover:bg-stone-50"
-                      }`}>
-                      {d}
-                    </button>
-                  ))}
+                <label className={LABEL_CLASS}>Days</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DAYS.map((d) => {
+                    const isSelected = selectedDays.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        onClick={() => toggleDay(d)}
+                        className={cn(
+                          "h-8 rounded-md border px-3 text-[11px] font-medium transition-all",
+                          isSelected
+                            ? "border-stone-900 bg-stone-900 text-white"
+                            : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:bg-stone-50"
+                        )}
+                      >
+                        {d}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="flex gap-4">
-                <select value={gender} onChange={(e) => setGender(e.target.value)}
-                  className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-[12px] text-stone-700 focus:outline-none">
-                  <option value="All">All Genders</option>
-                  <option value="Brothers">Brothers</option>
-                  <option value="Sisters">Sisters</option>
-                </select>
-                <label className="flex items-center gap-2 text-[12px] text-stone-600">
-                  <input type="checkbox" checked={isKids} onChange={(e) => setIsKids(e.target.checked)} className="rounded" /> Kids
+              <div className="flex flex-wrap items-center gap-3">
+                <div>
+                  <label className={LABEL_CLASS}>Gender</label>
+                  <Dropdown
+                    value={gender}
+                    onChange={(v) => setGender(String(v))}
+                    options={GENDER_OPTIONS}
+                    minWidth={140}
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-[12px] text-stone-600 mt-5">
+                  <input
+                    type="checkbox"
+                    checked={isKids}
+                    onChange={(e) => setIsKids(e.target.checked)}
+                    className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400"
+                  />
+                  Kids program
                 </label>
-                <label className="flex items-center gap-2 text-[12px] text-stone-600">
-                  <input type="checkbox" checked={isPaid} onChange={(e) => setIsPaid(e.target.checked)} className="rounded" /> Paid
+                <label className="flex items-center gap-2 text-[12px] text-stone-600 mt-5">
+                  <input
+                    type="checkbox"
+                    checked={isPaid}
+                    onChange={(e) => setIsPaid(e.target.checked)}
+                    className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400"
+                  />
+                  Paid
                 </label>
                 {isPaid && (
-                  <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="$0.00" min="0" step="0.01"
-                    className="w-24 rounded-lg border border-stone-300 bg-white px-3 py-2 text-[12px] tabular-nums text-stone-700 focus:outline-none" />
+                  <input
+                    type="number"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="$0.00"
+                    min="0"
+                    step="0.01"
+                    className="mt-5 h-10 w-24 rounded-lg border border-stone-200 bg-white px-3 text-[12px] tabular-nums text-stone-900 shadow-sm outline-none transition-colors hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
+                  />
                 )}
               </div>
-              <div className="flex gap-2">
-                <button onClick={addProgram} disabled={saving}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-[12px] font-medium text-white hover:bg-emerald-700 disabled:opacity-40">
+              <div className="flex items-center gap-2">
+                <button onClick={addProgram} disabled={saving} className={BTN_PRIMARY_SM}>
+                  {saving && <Loader2 size={13} className="animate-spin" />}
                   {saving ? "Adding..." : "Add Program"}
                 </button>
-                <button onClick={resetForm} className="rounded-lg border border-stone-300 px-4 py-2 text-[12px] text-stone-600 hover:bg-stone-50">Cancel</button>
+                <button onClick={resetForm} className={BTN_GHOST_SM}>
+                  Cancel
+                </button>
               </div>
             </div>
           </motion.div>
@@ -244,25 +354,24 @@ export default function ProgramsPanel({
 
       {/* Action Buttons */}
       {!showForm && (
-        <div className="flex gap-3">
-          <button onClick={() => setShowForm(true)}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 bg-white py-3 text-[13px] font-medium text-stone-600 hover:border-emerald-400 hover:text-emerald-600 transition-colors">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
+        <div className="flex gap-2.5">
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 bg-white py-3.5 text-[13px] font-medium text-stone-600 transition-all hover:border-stone-400 hover:bg-stone-50"
+          >
+            <Plus size={15} />
             Add Program
           </button>
-          <button onClick={() => setShowCSV(true)}
-            className="flex items-center gap-2 rounded-xl border border-stone-300 bg-white px-5 py-3 text-[13px] font-medium text-stone-600 hover:bg-stone-50 transition-colors">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-            </svg>
+          <button
+            onClick={() => setShowCSV(true)}
+            className="flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-5 py-3.5 text-[13px] font-medium text-stone-600 shadow-sm transition-all hover:bg-stone-50 hover:text-stone-900"
+          >
+            <Upload size={14} />
             Import CSV
           </button>
         </div>
       )}
 
-      {/* CSV Import Modal */}
       {showCSV && (
         <CSVImport
           type="program"

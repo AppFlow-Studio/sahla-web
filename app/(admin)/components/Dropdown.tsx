@@ -39,6 +39,7 @@ export function Dropdown({
   renderTrigger,
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<"bottom" | "top">("bottom");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,6 +57,22 @@ export function Dropdown({
     };
   }, []);
 
+  function handleToggle() {
+    setOpen((wasOpen) => {
+      if (!wasOpen && ref.current) {
+        // Decide placement based on available space below trigger.
+        const rect = ref.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const estimatedPanelHeight = Math.min(options.length * 36 + 16, 300);
+        setPlacement(
+          spaceBelow < estimatedPanelHeight && spaceAbove > spaceBelow ? "top" : "bottom"
+        );
+      }
+      return !wasOpen;
+    });
+  }
+
   const selected = options.find((o) => o.value === value);
   const triggerPadding = size === "sm" ? "px-3 py-1.5 text-[12px]" : "px-3.5 py-2 text-[13px]";
 
@@ -64,7 +81,7 @@ export function Dropdown({
       {renderTrigger ? (
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          onClick={handleToggle}
           className="outline-none"
         >
           {renderTrigger(selected)}
@@ -72,7 +89,7 @@ export function Dropdown({
       ) : (
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          onClick={handleToggle}
           className={cn(
             "flex items-center gap-2 rounded-lg border border-stone-200 bg-white font-medium text-stone-800 shadow-sm outline-none transition-all hover:border-stone-300 focus-visible:ring-2 focus-visible:ring-stone-200",
             triggerPadding,
@@ -99,7 +116,8 @@ export function Dropdown({
       {open && (
         <div
           className={cn(
-            "absolute top-full z-30 mt-1.5 overflow-hidden rounded-[14px] border border-stone-200 bg-white",
+            "absolute z-30 overflow-hidden rounded-[14px] border border-stone-200 bg-white",
+            placement === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5",
             align === "right" ? "right-0" : "left-0",
             className?.includes("w-full") && "w-full"
           )}
