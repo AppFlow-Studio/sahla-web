@@ -3,8 +3,9 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronRight, Building2, X } from "lucide-react";
+import { Search, ChevronRight, Building2, X, ChevronDown } from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
+import { Dropdown } from "../components/Dropdown";
 import { cn } from "@/lib/utils";
 
 type Mosque = {
@@ -85,18 +86,22 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
           )}
         </div>
         <div className="h-6 w-px bg-stone-200" />
-        <select
+        <Dropdown
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="cursor-pointer border-none bg-transparent px-3 py-2 text-[13px] font-medium text-stone-700 outline-none"
-        >
-          <option value="all">All stages</option>
-          {STAGES.map((s) => (
-            <option key={s} value={s} className="capitalize">
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setStatusFilter(String(v))}
+          options={[
+            { value: "all", label: "All stages" },
+            ...STAGES.map((s) => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) })),
+          ]}
+          minWidth={160}
+          align="right"
+          renderTrigger={(selected) => (
+            <div className="flex cursor-pointer items-center gap-2 px-3 py-2 text-[13px] font-medium text-stone-700 transition-colors hover:text-stone-900">
+              <span>{selected?.label || "All stages"}</span>
+              <ChevronDown size={14} className="text-stone-400" />
+            </div>
+          )}
+        />
       </div>
 
       {/* ── Count ── */}

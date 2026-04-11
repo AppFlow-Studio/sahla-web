@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, MapPin, Check, ChevronDown } from "lucide-react";
+import { Settings, MapPin, Check } from "lucide-react";
 import {
   CALCULATION_METHODS,
   SCHOOLS,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/prayer/constants";
 import { computeIqamahTime, to12Hour } from "@/lib/prayer/utils";
 import { cn } from "@/lib/utils";
+import { Dropdown } from "../../components/Dropdown";
 import type { PrayerName, IqamahConfig, IqamahMode, TodaysPrayer } from "@/lib/prayer/types";
 
 function getNextPrayerIndex(prayers: { prayer_name: string; athan_time: string }[]): number {
@@ -39,7 +40,6 @@ const BTN_PRIMARY = "rounded-lg bg-stone-900 px-5 py-2.5 text-sm font-medium tex
 const BTN_PRIMARY_DISABLED = "rounded-lg bg-stone-100 px-5 py-2.5 text-sm font-medium text-stone-400 cursor-not-allowed";
 const BTN_GHOST = "rounded-lg px-4 py-2 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-50 hover:text-stone-700";
 const CARD = "rounded-xl border border-stone-200 bg-white p-6 shadow-sm";
-const SELECT_CLASS = "h-10 w-full appearance-none rounded-lg border border-stone-200 bg-white pl-4 pr-10 text-sm text-stone-900 shadow-sm outline-none transition-colors hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100";
 
 // ─── Stepper Component ───
 function Stepper({ step }: { step: Exclude<Step, "view"> }) {
@@ -344,39 +344,27 @@ export default function PrayerTimesPanel({
                     <p className="mb-4 text-[13px] text-stone-500">
                       Most North American mosques use ISNA. This determines Fajr and Isha angles.
                     </p>
-                    <div className="relative mb-5">
-                      <select
+                    <div className="mb-5">
+                      <Dropdown
                         value={method}
-                        onChange={(e) => setMethod(Number(e.target.value))}
-                        className={SELECT_CLASS}
-                      >
-                        {CALCULATION_METHODS.map((m) => (
-                          <option key={m.value} value={m.value}>
-                            {m.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                        onChange={(v) => setMethod(Number(v))}
+                        options={CALCULATION_METHODS.map((m) => ({ value: m.value, label: m.label }))}
+                        className="w-full"
+                        minWidth={0}
+                      />
                     </div>
 
                     <p className="mb-1 text-[14px] font-semibold text-stone-900">School</p>
                     <p className="mb-3 text-[13px] text-stone-500">
                       Determines Asr calculation.
                     </p>
-                    <div className="relative">
-                      <select
-                        value={school}
-                        onChange={(e) => setSchool(Number(e.target.value))}
-                        className={SELECT_CLASS}
-                      >
-                        {SCHOOLS.map((s) => (
-                          <option key={s.value} value={s.value}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
-                    </div>
+                    <Dropdown
+                      value={school}
+                      onChange={(v) => setSchool(Number(v))}
+                      options={SCHOOLS.map((s) => ({ value: s.value, label: s.label }))}
+                      className="w-full"
+                      minWidth={0}
+                    />
                     <p className="mt-1 text-xs text-stone-400">
                       Standard (Shafi) is used by most mosques. Hanafi calculates a later Asr time.
                     </p>
@@ -447,17 +435,16 @@ export default function PrayerTimesPanel({
                           <span className="w-24 text-[14px] font-medium text-stone-800">
                             {PRAYER_DISPLAY_NAMES[row.prayer_name]}
                           </span>
-                          <div className="relative">
-                            <select
-                              value={row.mode}
-                              onChange={(e) => updateIqamahRow(i, { mode: e.target.value as IqamahMode })}
-                              className="h-10 appearance-none rounded-lg border border-stone-200 bg-white pl-3 pr-8 text-[13px] text-stone-800 shadow-sm outline-none transition-colors hover:border-stone-300 focus:border-stone-400"
-                            >
-                              <option value="fixed">Fixed Time</option>
-                              <option value="offset">Offset from Athan</option>
-                            </select>
-                            <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
-                          </div>
+                          <Dropdown
+                            value={row.mode}
+                            onChange={(v) => updateIqamahRow(i, { mode: v as IqamahMode })}
+                            options={[
+                              { value: "fixed", label: "Fixed Time" },
+                              { value: "offset", label: "Offset from Athan" },
+                            ]}
+                            size="sm"
+                            minWidth={150}
+                          />
                           {row.mode === "fixed" && (
                             <input
                               type="time"
