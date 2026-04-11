@@ -200,14 +200,14 @@ export default function AddLeadModal({ open, onClose, onSuccess }: Props) {
               type="button"
               onClick={handleCancel}
               disabled={isSubmitting}
-              className="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+              className="rounded-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !mosque.trim()}
-              className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               {isSubmitting ? "Saving…" : "Save lead"}
             </button>

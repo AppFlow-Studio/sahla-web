@@ -453,7 +453,7 @@ export default function KanbanBoard({ cards }: Props) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search mosques or contacts..."
-            className="w-full rounded-lg border border-green/12 bg-white py-2 pl-9 pr-3 text-sm text-green placeholder:text-green/40 outline-none transition focus:border-green/30 focus:ring-1 focus:ring-green/15"
+            className="w-full rounded-full border border-green/12 bg-white py-2 pl-9 pr-3 text-sm text-green placeholder:text-green/40 outline-none transition focus:border-green/30 focus:ring-1 focus:ring-green/15"
           />
         </div>
 
@@ -461,7 +461,7 @@ export default function KanbanBoard({ cards }: Props) {
           <select
             value={stateFilter}
             onChange={(e) => setStateFilter(e.target.value)}
-            className="w-full appearance-none rounded-lg border border-green/12 bg-white py-2 pl-3 pr-8 text-sm text-green outline-none transition cursor-pointer focus:border-green/30 focus:ring-1 focus:ring-green/15"
+            className="w-full appearance-none rounded-full border border-green/12 bg-white py-2 pl-3 pr-8 text-sm text-green outline-none transition cursor-pointer focus:border-green/30 focus:ring-1 focus:ring-green/15"
           >
             <option value="all">All States</option>
             {uniqueStates.map((st) => (
