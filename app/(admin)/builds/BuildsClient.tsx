@@ -17,17 +17,17 @@ type App = {
   icon: string | null;
   platform: "ios" | "android";
   currentVersion: string;
-  status: "live" | "review" | "building" | "rejected";
+  status: "live" | "pending_review" | "building" | "rejected";
   bundleId?: string;
   versions: Version[];
 };
 
-type StatusFilter = "all" | "live" | "review" | "building" | "rejected";
+type StatusFilter = "all" | "live" | "pending_review" | "building" | "rejected";
 
 const statusConfig: Record<string, { label: string; dot: string; bg: string; text: string; ring: string }> = {
   live: { label: "Live", dot: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700", ring: "ring-emerald-500/20" },
-  review: { label: "In Review", dot: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-500/20" },
-  building: { label: "Building", dot: "bg-blue-500", bg: "bg-blue-50", text: "text-blue-700", ring: "ring-blue-500/20" },
+  pending_review: { label: "Pending Review", dot: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-500/20" },
+  building: { label: "Building", dot: "bg-purple-500", bg: "bg-purple-50", text: "text-purple-700", ring: "ring-purple-500/20" },
   rejected: { label: "Rejected", dot: "bg-red-500", bg: "bg-red-50", text: "text-red-700", ring: "ring-red-500/20" },
 };
 
@@ -198,7 +198,7 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
   const counts = useMemo(() => ({
     all: apps.length,
     live: apps.filter((a) => a.status === "live").length,
-    review: apps.filter((a) => a.status === "review").length,
+    pending_review: apps.filter((a) => a.status === "pending_review").length,
     building: apps.filter((a) => a.status === "building").length,
     rejected: apps.filter((a) => a.status === "rejected").length,
   }), [apps]);
@@ -206,8 +206,8 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
   const filterTabs: { label: string; value: StatusFilter; dot?: string }[] = [
     { label: "All", value: "all" },
     { label: "Live", value: "live", dot: "bg-emerald-500" },
-    { label: "In Review", value: "review", dot: "bg-amber-500" },
-    { label: "Building", value: "building", dot: "bg-blue-500" },
+    { label: "Pending Review", value: "pending_review", dot: "bg-amber-500" },
+    { label: "Building", value: "building", dot: "bg-purple-500" },
   ];
 
   return (
@@ -224,6 +224,23 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
           <span className="font-mono text-2xl font-bold text-ink">{apps.length}</span>
           <span className="text-faint">apps tracked</span>
         </div>
+      </div>
+
+      {/* Metrics */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Live on App Store", count: counts.live, dot: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700" },
+          { label: "Building", count: counts.building, dot: "bg-purple-500", bg: "bg-purple-50", text: "text-purple-700" },
+          { label: "Pending Review", count: counts.pending_review, dot: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700" },
+        ].map((m) => (
+          <div key={m.label} className="rounded-2xl border border-edge bg-white px-5 py-4 shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className={`h-2 w-2 rounded-full ${m.dot}`} />
+              <p className="text-xs font-medium text-subtle">{m.label}</p>
+            </div>
+            <p className="mt-2 font-mono text-2xl font-bold text-ink">{m.count}</p>
+          </div>
+        ))}
       </div>
 
       {/* Filter tabs */}

@@ -1,6 +1,5 @@
 import { Toaster } from "sonner";
 import AdminSidebar, { SidebarProvider } from "./components/AdminSidebar";
-import SmoothScroll from "./components/SmoothScroll";
 
 export default function AdminLayout({
   children,
@@ -10,7 +9,6 @@ export default function AdminLayout({
   return (
     <SidebarProvider>
       <div className="flex h-screen bg-[#fffbf2]">
-        <SmoothScroll />
         <AdminSidebar />
         <main className="flex-1 overflow-y-auto p-8">{children}</main>
         <Toaster
