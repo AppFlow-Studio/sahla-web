@@ -11,12 +11,15 @@ export default async function MosquesPage() {
       id,
       name,
       city,
+      state,
       brand_color,
       onboarding_status,
       onboarding_progress,
+      created_at,
       pipeline_stages (
         stage,
-        contact_name
+        contact_name,
+        updated_at
       )
     `
     )

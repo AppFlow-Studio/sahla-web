@@ -3,25 +3,25 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronRight, Building2, X, ChevronDown } from "lucide-react";
+import {
+  Search,
+  ChevronRight,
+  Building2,
+  X,
+  ChevronDown,
+  LayoutList,
+  Columns3,
+} from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
 import { Dropdown } from "../components/Dropdown";
 import { cn } from "@/lib/utils";
+import MosqueKanbanView from "./MosqueKanbanView";
+import { STAGES, type KanbanMosque } from "./mosque-kanban-types";
 
-type Mosque = {
-  id: string;
-  name: string;
-  city: string | null;
-  brand_color: string | null;
-  onboarding_status: string | null;
-  onboarding_progress: Record<string, unknown> | null;
-  pipeline_stages: {
-    stage: string;
-    contact_name: string | null;
-  }[] | null;
-};
+type Mosque = KanbanMosque;
 
-const STAGES = ["lead", "contacted", "demo", "contract", "onboarding", "live"] as const;
+const VIEW_STORAGE_KEY = "sahla-mosques-view";
+type ViewMode = "list" | "kanban";
 
 const AVATAR_PALETTE = ["#64748b", "#6366f1", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed", "#0d9488"];
 function nameToColor(name: string): string {
@@ -41,7 +41,33 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Hydrate view preference from localStorage on mount.
+  // Reading window in useState's initializer breaks SSR, so we have to read
+  // it post-mount. The setState here is the standard pattern for syncing with
+  // a browser-only API and is exactly what useEffect is for.
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
+      if (stored === "list" || stored === "kanban") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setViewMode(stored);
+      }
+    } catch {
+      // localStorage unavailable — stick with default
+    }
+  }, []);
+
+  function selectView(next: ViewMode) {
+    setViewMode(next);
+    try {
+      window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
@@ -51,7 +77,8 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
     timerRef.current = setTimeout(() => setDebouncedSearch(v), 200);
   }
 
-  const list = useMemo(() => {
+  // List view: filtered list (search + stage filter both applied)
+  const filteredList = useMemo(() => {
     const q = debouncedSearch.toLowerCase().trim();
     return mosques.filter((m) => {
       const stage = m.pipeline_stages?.[0]?.stage || "lead";
@@ -63,10 +90,32 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
     });
   }, [mosques, debouncedSearch, statusFilter]);
 
+  // Visible count differs by view:
+  // - List: filtered rows
+  // - Kanban: cards that match the search across the (possibly stage-filtered) board
+  const kanbanVisibleCount = useMemo(() => {
+    const q = debouncedSearch.toLowerCase().trim();
+    return mosques.filter((m) => {
+      if (q) {
+        const matches = [m.name, m.city, m.pipeline_stages?.[0]?.contact_name]
+          .filter(Boolean)
+          .some((s) => s!.toLowerCase().includes(q));
+        if (!matches) return false;
+      }
+      if (statusFilter !== "all") {
+        const stage = m.pipeline_stages?.[0]?.stage || "lead";
+        if (stage !== statusFilter) return false;
+      }
+      return true;
+    }).length;
+  }, [mosques, debouncedSearch, statusFilter]);
+
+  const visibleCount = viewMode === "list" ? filteredList.length : kanbanVisibleCount;
+
   return (
     <div>
       {/* ── Unified filter bar ── */}
-      <div className="mb-4 flex items-center rounded-xl border border-stone-200 bg-stone-50 p-1.5">
+      <div className="mb-4 flex items-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 p-1.5">
         <div className="relative flex-1">
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
           <input
@@ -102,90 +151,148 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
             </div>
           )}
         />
+        <div className="h-6 w-px bg-stone-200" />
+        {/* View toggle (segmented control) */}
+        <div className="flex overflow-hidden rounded-lg border border-stone-200">
+          <button
+            type="button"
+            onClick={() => selectView("kanban")}
+            aria-pressed={viewMode === "kanban"}
+            title="Kanban view"
+            className={cn(
+              "flex items-center justify-center px-2.5 py-1.5 transition-colors",
+              viewMode === "kanban"
+                ? "bg-stone-900 text-white"
+                : "bg-white text-stone-400 hover:text-stone-600"
+            )}
+          >
+            <Columns3 size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => selectView("list")}
+            aria-pressed={viewMode === "list"}
+            title="List view"
+            className={cn(
+              "flex items-center justify-center px-2.5 py-1.5 transition-colors",
+              viewMode === "list"
+                ? "bg-stone-900 text-white"
+                : "bg-white text-stone-400 hover:text-stone-600"
+            )}
+          >
+            <LayoutList size={16} />
+          </button>
+        </div>
       </div>
 
       {/* ── Count ── */}
       <p className="mb-3 text-[12px] text-subtle">
-        Showing <span className="font-semibold text-ink">{list.length}</span> mosque{list.length !== 1 ? "s" : ""}
+        Showing <span className="font-semibold text-ink">{visibleCount}</span> mosque{visibleCount !== 1 ? "s" : ""}
       </p>
 
-      {/* ── List ── */}
-      {list.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          {mosques.length === 0 ? (
-            <>
-              <Building2 size={48} className="mb-4 text-stone-300" strokeWidth={1} />
-              <p className="text-[15px] font-medium text-stone-600">Add your first mosque</p>
-              <p className="mt-1 text-[13px] text-stone-400">Get started by adding a mosque to your pipeline.</p>
-            </>
-          ) : (
-            <>
-              <Search size={40} className="mb-4 text-stone-300" strokeWidth={1} />
-              <p className="text-[14px] text-stone-500">No mosques match your filters</p>
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-xl border border-stone-200 bg-white">
-          {list.map((mosque, i) => {
-            const stage = mosque.pipeline_stages?.[0]?.stage || "lead";
-            const isOnboarding = stage === "onboarding";
-            const pct = isOnboarding ? getOnboardingPct(mosque.onboarding_progress) : 0;
-            const color = mosque.brand_color || nameToColor(mosque.name || "M");
+      {/* ── View swap with crossfade ── */}
+      <AnimatePresence mode="wait">
+        {viewMode === "list" ? (
+          <motion.div
+            key="list"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {filteredList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                {mosques.length === 0 ? (
+                  <>
+                    <Building2 size={48} className="mb-4 text-stone-300" strokeWidth={1} />
+                    <p className="text-[15px] font-medium text-stone-600">Add your first mosque</p>
+                    <p className="mt-1 text-[13px] text-stone-400">Get started by adding a mosque to your pipeline.</p>
+                  </>
+                ) : (
+                  <>
+                    <Search size={40} className="mb-4 text-stone-300" strokeWidth={1} />
+                    <p className="text-[14px] text-stone-500">No mosques match your filters</p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-stone-200 bg-white">
+                {filteredList.map((mosque, i) => {
+                  const stage = mosque.pipeline_stages?.[0]?.stage || "lead";
+                  const isOnboarding = stage === "onboarding";
+                  const pct = isOnboarding ? getOnboardingPct(mosque.onboarding_progress) : 0;
+                  const color = mosque.brand_color || nameToColor(mosque.name || "M");
 
-            return (
-              <motion.div
-                key={mosque.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.15, delay: Math.min(i * 0.02, 0.2) }}
-              >
-                <Link
-                  href={`/mosques/${mosque.id}`}
-                  className={cn(
-                    "group flex items-center gap-3.5 px-5 py-3.5 transition-colors duration-150 hover:bg-stone-50/80",
-                    i < list.length - 1 && "border-b border-stone-100"
-                  )}
-                >
-                  {/* Avatar */}
-                  <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white"
-                    style={{ backgroundColor: `${color}20`, color }}
-                  >
-                    {mosque.name?.charAt(0).toUpperCase() || "M"}
-                  </div>
+                  return (
+                    <motion.div
+                      key={mosque.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.15, delay: Math.min(i * 0.02, 0.2) }}
+                    >
+                      <Link
+                        href={`/mosques/${mosque.id}`}
+                        className={cn(
+                          "group flex items-center gap-3.5 px-5 py-3.5 transition-colors duration-150 hover:bg-stone-50/80",
+                          i < filteredList.length - 1 && "border-b border-stone-100"
+                        )}
+                      >
+                        {/* Avatar */}
+                        <div
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white"
+                          style={{ backgroundColor: `${color}20`, color }}
+                        >
+                          {mosque.name?.charAt(0).toUpperCase() || "M"}
+                        </div>
 
-                  {/* Name + city */}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-medium text-stone-900">{mosque.name}</p>
-                    <p className="truncate text-[12px] text-stone-500">
-                      {[mosque.city, mosque.pipeline_stages?.[0]?.contact_name].filter(Boolean).join(" · ") || (
-                        <span className="italic text-stone-300">No city</span>
-                      )}
-                    </p>
-                  </div>
+                        {/* Name + city */}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[14px] font-medium text-stone-900">{mosque.name}</p>
+                          <p className="truncate text-[12px] text-stone-500">
+                            {[mosque.city, mosque.pipeline_stages?.[0]?.contact_name].filter(Boolean).join(" · ") || (
+                              <span className="italic text-stone-300">No city</span>
+                            )}
+                          </p>
+                        </div>
 
-                  {/* Onboarding mini bar */}
-                  {isOnboarding && (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="h-1 w-12 overflow-hidden rounded-full bg-stone-200">
-                        <div className="h-full rounded-full bg-teal-500 transition-all" style={{ width: `${pct}%` }} />
-                      </div>
-                      <span className="text-[11px] font-medium tabular-nums text-teal-600">{pct}%</span>
-                    </div>
-                  )}
+                        {/* Onboarding mini bar */}
+                        {isOnboarding && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="h-1 w-12 overflow-hidden rounded-full bg-stone-200">
+                              <div className="h-full rounded-full bg-teal-500 transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-[11px] font-medium tabular-nums text-teal-600">{pct}%</span>
+                          </div>
+                        )}
 
-                  {/* Badge */}
-                  <StatusBadge stage={stage} />
+                        {/* Badge */}
+                        <StatusBadge stage={stage} />
 
-                  {/* Chevron */}
-                  <ChevronRight size={16} className="shrink-0 text-stone-300 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-stone-500" />
-                </Link>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
+                        {/* Chevron */}
+                        <ChevronRight size={16} className="shrink-0 text-stone-300 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-stone-500" />
+                      </Link>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="kanban"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <MosqueKanbanView
+              mosques={mosques}
+              searchQuery={debouncedSearch.toLowerCase().trim()}
+              statusFilter={statusFilter}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
