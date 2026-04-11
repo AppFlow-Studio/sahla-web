@@ -1,19 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Settings } from "lucide-react";
-
-const G = "#0A261E";
-const G60 = "rgba(10,38,30,0.6)";
-const G35 = "rgba(10,38,30,0.35)";
-const G08 = "rgba(10,38,30,0.08)";
-const G15 = "rgba(10,38,30,0.15)";
-const G04 = "rgba(10,38,30,0.04)";
-const CARD: React.CSSProperties = { borderRadius: 12, border: `1px solid ${G08}`, backgroundColor: "#fff", padding: 24 };
-const INPUT: React.CSSProperties = { borderRadius: 10, border: `1px solid ${G08}`, backgroundColor: "#fff", padding: "10px 16px", fontSize: 14, color: G, outline: "none" };
-const BTN_PRIMARY: React.CSSProperties = { backgroundColor: G, color: "#fffbf2", borderRadius: 10, padding: "10px 20px", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer" };
-const BTN_SECONDARY: React.CSSProperties = { backgroundColor: "transparent", border: `1px solid ${G08}`, borderRadius: 10, padding: "10px 20px", fontSize: 13, fontWeight: 500, color: G60, cursor: "pointer" };
+import { motion, AnimatePresence } from "framer-motion";
+import { Settings, MapPin, Check, ChevronDown } from "lucide-react";
 import {
   CALCULATION_METHODS,
   SCHOOLS,
@@ -22,6 +11,7 @@ import {
 } from "@/lib/prayer/constants";
 import { computeIqamahTime, to12Hour } from "@/lib/prayer/utils";
 import { cn } from "@/lib/utils";
+import type { PrayerName, IqamahConfig, IqamahMode, TodaysPrayer } from "@/lib/prayer/types";
 
 function getNextPrayerIndex(prayers: { prayer_name: string; athan_time: string }[]): number {
   const now = new Date();
@@ -30,14 +20,11 @@ function getNextPrayerIndex(prayers: { prayer_name: string; athan_time: string }
     const [h, m] = prayers[i].athan_time.split(":").map(Number);
     if (h * 60 + m > nowMins) return i;
   }
-  return 0; // All passed — highlight Fajr as next
+  return 0;
 }
-import type { PrayerName, IqamahConfig, IqamahMode, TodaysPrayer } from "@/lib/prayer/types";
 
 type Step = "view" | 1 | 2 | 3 | 4 | 5;
-
 type PreviewTimings = Record<PrayerName, string>;
-
 type IqamahFormRow = {
   prayer_name: PrayerName;
   mode: IqamahMode;
@@ -45,13 +32,63 @@ type IqamahFormRow = {
   offset_minutes: number;
 };
 
-const STEP_LABELS = [
-  "Address",
-  "Method",
-  "Preview",
-  "Iqamah",
-  "Confirm",
-];
+const STEP_LABELS = ["Address", "Method", "Preview", "Iqamah", "Confirm"];
+
+// ─── Shared button styles ───
+const BTN_PRIMARY = "rounded-lg bg-stone-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-stone-800 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40";
+const BTN_PRIMARY_DISABLED = "rounded-lg bg-stone-100 px-5 py-2.5 text-sm font-medium text-stone-400 cursor-not-allowed";
+const BTN_GHOST = "rounded-lg px-4 py-2 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-50 hover:text-stone-700";
+const CARD = "rounded-xl border border-stone-200 bg-white p-6 shadow-sm";
+const SELECT_CLASS = "h-10 w-full appearance-none rounded-lg border border-stone-200 bg-white pl-4 pr-10 text-sm text-stone-900 shadow-sm outline-none transition-colors hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100";
+
+// ─── Stepper Component ───
+function Stepper({ step }: { step: Exclude<Step, "view"> }) {
+  return (
+    <div className="mx-auto mb-8 flex max-w-2xl items-start justify-between">
+      {STEP_LABELS.map((label, i) => {
+        const stepNum = i + 1;
+        const isActive = step === stepNum;
+        const isDone = step > stepNum;
+        const isLast = i === STEP_LABELS.length - 1;
+
+        return (
+          <div key={label} className="flex flex-1 items-start last:flex-none">
+            <div className="flex flex-col items-center">
+              <div
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold transition-all",
+                  isDone && "bg-emerald-500 text-white",
+                  isActive && "bg-stone-900 text-white shadow-sm ring-4 ring-stone-100",
+                  !isActive && !isDone && "bg-stone-50 text-stone-400 border border-stone-200"
+                )}
+              >
+                {isDone ? <Check size={14} strokeWidth={3} /> : stepNum}
+              </div>
+              <span
+                className={cn(
+                  "mt-2 text-xs font-medium whitespace-nowrap",
+                  isActive && "text-stone-900",
+                  isDone && "text-stone-500",
+                  !isActive && !isDone && "text-stone-400"
+                )}
+              >
+                {label}
+              </span>
+            </div>
+            {!isLast && (
+              <div
+                className={cn(
+                  "mx-2 mt-4 h-0.5 flex-1 rounded-full transition-colors",
+                  isDone ? "bg-emerald-400" : "bg-stone-200"
+                )}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function PrayerTimesPanel({
   mosque,
@@ -172,7 +209,6 @@ export default function PrayerTimesPanel({
       });
       if (!configRes.ok) throw new Error("Failed to save config");
 
-      // Trigger sync and get computed times
       const syncRes = await fetch(`/api/mosques/${mosque.id}/prayer-sync`, { method: "POST" });
       if (syncRes.ok) {
         const syncData = await syncRes.json();
@@ -196,14 +232,10 @@ export default function PrayerTimesPanel({
 
   return (
     <div>
-      {/* Configured View */}
+      {/* ════════ Configured View ════════ */}
       {step === "view" && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <div className="rounded-xl border border-stone-200 bg-white p-6">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+          <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
             <div className="mb-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <p className="text-[15px] font-semibold text-stone-900">Prayer Schedule</p>
@@ -260,301 +292,253 @@ export default function PrayerTimesPanel({
         </motion.div>
       )}
 
-      {/* Step Indicator */}
-      {step !== "view" && <div className="mb-6 flex items-center gap-2">
-        {STEP_LABELS.map((label, i) => {
-          const stepNum = (i + 1) as Step;
-          const isActive = step === stepNum;
-          const isDone = Number(step) > Number(stepNum);
-          return (
-            <div key={label} className="flex items-center gap-2">
-              <div
-                className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
-                  isActive
-                    ? "bg-highlight text-background"
-                    : isDone
-                      ? "bg-gold/20 text-subtle"
-                      : "bg-ink/5 text-subtle"
-                }`}
-              >
-                {isDone ? "✓" : stepNum}
-              </div>
-              <span
-                className={`text-[11px] ${isActive ? "text-ink" : "text-subtle"}`}
-              >
-                {label}
-              </span>
-              {i < STEP_LABELS.length - 1 && (
-                <div className="mx-1 h-px w-6 bg-gold/20" />
-              )}
-            </div>
-          );
-        })}
-      </div>}
+      {/* ════════ Wizard ════════ */}
+      {step !== "view" && (
+        <>
+          <Stepper step={step} />
 
-      {/* Step Content */}
-      <motion.div
-        key={step}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        {/* Step 1: Address */}
-        {step === 1 && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-stone-200 bg-white p-5">
-              <p className="mb-1 text-sm font-medium text-ink">
-                Mosque Address
-              </p>
-              <p className="mb-4 text-[12px] text-subtle">
-                This address is used to calculate accurate prayer times.
-              </p>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g., 123 Main St, Staten Island, NY 10301"
-                className="w-full rounded-lg border border-edge bg-card px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-edge-bold focus:outline-none"
-              />
-            </div>
-            <div className="flex justify-end">
-              <button
-                onClick={() => address.trim() ? setStep(2) : showToast("Address is required", "error")}
-                className="rounded-lg bg-gold/20 px-5 py-2.5 text-sm font-medium text-gold hover:bg-gold/30"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Method + School */}
-        {step === 2 && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-stone-200 bg-white p-5">
-              <p className="mb-1 text-sm font-medium text-ink">
-                Calculation Method
-              </p>
-              <p className="mb-4 text-[12px] text-subtle">
-                Most North American mosques use ISNA. This determines Fajr and Isha angles.
-              </p>
-              <select
-                value={method}
-                onChange={(e) => setMethod(Number(e.target.value))}
-                className="mb-4 w-full rounded-lg border border-edge bg-card px-4 py-2.5 text-sm text-ink focus:border-edge-bold focus:outline-none"
-              >
-                {CALCULATION_METHODS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-
-              <p className="mb-2 text-sm font-medium text-ink">School</p>
-              <select
-                value={school}
-                onChange={(e) => setSchool(Number(e.target.value))}
-                className="w-full rounded-lg border border-edge bg-card px-4 py-2.5 text-sm text-ink focus:border-edge-bold focus:outline-none"
-              >
-                {SCHOOLS.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex justify-between">
-              <button
-                onClick={() => setStep(1)}
-                className="rounded-lg border border-edge px-5 py-2.5 text-sm text-gold hover:text-ink"
-              >
-                Back
-              </button>
-              <button
-                onClick={fetchPreview}
-                disabled={loading}
-                className="rounded-lg bg-gold/20 px-5 py-2.5 text-sm font-medium text-gold hover:bg-gold/30 disabled:opacity-40"
-              >
-                {loading ? "Fetching..." : "Preview Times"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Athan Preview */}
-        {step === 3 && previewTimings && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-stone-200 bg-white p-5">
-              <p className="mb-1 text-sm font-medium text-ink">
-                Today&apos;s Athan Times
-              </p>
-              <p className="mb-4 text-[12px] text-subtle">
-                Do these times look correct for your mosque?
-              </p>
-              <div className="space-y-2">
-                {PRAYER_NAMES.map((prayer) => (
-                  <div
-                    key={prayer}
-                    className="flex items-center justify-between rounded-lg bg-ink/5 px-4 py-2.5"
-                  >
-                    <span className="text-[13px] text-ink">
-                      {PRAYER_DISPLAY_NAMES[prayer]}
-                    </span>
-                    <span className="text-[13px] font-medium tabular-nums text-ink">
-                      {to12Hour(previewTimings[prayer])}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <button
-                onClick={() => setStep(2)}
-                className="rounded-lg border border-edge px-5 py-2.5 text-sm text-gold hover:text-ink"
-              >
-                Change Method
-              </button>
-              <button
-                onClick={() => setStep(4)}
-                className="rounded-lg bg-gold/20 px-5 py-2.5 text-sm font-medium text-gold hover:bg-gold/30"
-              >
-                Looks Good
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Iqamah Configuration */}
-        {step === 4 && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-stone-200 bg-white p-5">
-              <p className="mb-1 text-sm font-medium text-ink">
-                Iqamah Times
-              </p>
-              <p className="mb-4 text-[12px] text-subtle">
-                Set how each prayer&apos;s congregation time is determined.
-              </p>
-              <div className="space-y-3">
-                {iqamahRows.map((row, i) => (
-                  <div
-                    key={row.prayer_name}
-                    className="flex items-center gap-3 rounded-lg bg-ink/5 px-4 py-3"
-                  >
-                    <span className="w-20 text-[13px] text-ink">
-                      {PRAYER_DISPLAY_NAMES[row.prayer_name]}
-                    </span>
-                    <select
-                      value={row.mode}
-                      onChange={(e) =>
-                        updateIqamahRow(i, { mode: e.target.value as IqamahMode })
-                      }
-                      className="rounded-lg border border-edge bg-card px-3 py-1.5 text-[12px] text-ink focus:outline-none"
-                    >
-                      <option value="fixed">Fixed Time</option>
-                      <option value="offset">Offset from Athan</option>
-                    </select>
-                    {row.mode === "fixed" && (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              {/* ─── Step 1: Address ─── */}
+              {step === 1 && (
+                <div className="space-y-5">
+                  <div className={CARD}>
+                    <p className="mb-1 text-[14px] font-semibold text-stone-900">Mosque Address</p>
+                    <p className="mb-4 text-[13px] text-stone-500">
+                      This address is used to calculate accurate prayer times.
+                    </p>
+                    <div className="relative">
+                      <MapPin size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
                       <input
-                        type="time"
-                        value={row.fixed_time}
-                        onChange={(e) =>
-                          updateIqamahRow(i, { fixed_time: e.target.value })
-                        }
-                        className="rounded-lg border border-edge bg-card px-3 py-1.5 text-[12px] tabular-nums text-tan focus:outline-none"
+                        type="text"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="e.g., 123 Main St, Staten Island, NY 10301"
+                        className="h-11 w-full rounded-lg border border-stone-200 bg-white pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none transition-colors placeholder:text-stone-400 hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
                       />
-                    )}
-                    {row.mode === "offset" && (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={0}
-                          max={120}
-                          value={row.offset_minutes}
-                          onChange={(e) =>
-                            updateIqamahRow(i, {
-                              offset_minutes: Number(e.target.value),
-                            })
-                          }
-                          className="w-16 rounded-lg border border-edge bg-card px-3 py-1.5 text-[12px] tabular-nums text-tan focus:outline-none"
-                        />
-                        <span className="text-[11px] text-subtle">
-                          min after athan
-                        </span>
-                      </div>
-                    )}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <button
-                onClick={() => setStep(3)}
-                className="rounded-lg border border-edge px-5 py-2.5 text-sm text-gold hover:text-ink"
-              >
-                Back
-              </button>
-              <button
-                onClick={() => setStep(5)}
-                className="rounded-lg bg-gold/20 px-5 py-2.5 text-sm font-medium text-gold hover:bg-gold/30"
-              >
-                Preview Final Times
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 5: Final Preview + Save */}
-        {step === 5 && finalPreview && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-stone-200 bg-white p-5">
-              <p className="mb-1 text-sm font-medium text-ink">
-                Final Prayer Times
-              </p>
-              <p className="mb-4 text-[12px] text-subtle">
-                This is what your app users will see.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center px-4 py-1 text-[11px] font-medium uppercase tracking-wider text-subtle">
-                  <span className="flex-1">Prayer</span>
-                  <span className="w-20 text-center">Athan</span>
-                  <span className="w-20 text-center">Iqamah</span>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => address.trim() ? setStep(2) : showToast("Address is required", "error")}
+                      className={address.trim() ? BTN_PRIMARY : BTN_PRIMARY_DISABLED}
+                      disabled={!address.trim()}
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
-                {PRAYER_NAMES.map((prayer) => (
-                  <div
-                    key={prayer}
-                    className="flex items-center rounded-lg bg-ink/5 px-4 py-2.5"
-                  >
-                    <span className="flex-1 text-[13px] text-ink">
-                      {PRAYER_DISPLAY_NAMES[prayer]}
-                    </span>
-                    <span className="w-24 text-center text-[13px] tabular-nums text-subtle">
-                      {to12Hour(finalPreview[prayer].athan)}
-                    </span>
-                    <span className="w-24 text-center text-[13px] font-medium tabular-nums text-subtle">
-                      {to12Hour(finalPreview[prayer].iqamah)}
-                    </span>
+              )}
+
+              {/* ─── Step 2: Method + School ─── */}
+              {step === 2 && (
+                <div className="space-y-5">
+                  <div className={CARD}>
+                    <p className="mb-1 text-[14px] font-semibold text-stone-900">Calculation Method</p>
+                    <p className="mb-4 text-[13px] text-stone-500">
+                      Most North American mosques use ISNA. This determines Fajr and Isha angles.
+                    </p>
+                    <div className="relative mb-5">
+                      <select
+                        value={method}
+                        onChange={(e) => setMethod(Number(e.target.value))}
+                        className={SELECT_CLASS}
+                      >
+                        {CALCULATION_METHODS.map((m) => (
+                          <option key={m.value} value={m.value}>
+                            {m.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                    </div>
+
+                    <p className="mb-1 text-[14px] font-semibold text-stone-900">School</p>
+                    <p className="mb-3 text-[13px] text-stone-500">
+                      Determines Asr calculation.
+                    </p>
+                    <div className="relative">
+                      <select
+                        value={school}
+                        onChange={(e) => setSchool(Number(e.target.value))}
+                        className={SELECT_CLASS}
+                      >
+                        {SCHOOLS.map((s) => (
+                          <option key={s.value} value={s.value}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                    </div>
+                    <p className="mt-1 text-xs text-stone-400">
+                      Standard (Shafi) is used by most mosques. Hanafi calculates a later Asr time.
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setStep(4)}
-                className="rounded-lg border border-edge px-5 py-2.5 text-sm text-gold hover:text-ink"
-              >
-                Adjust Iqamah
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-40"
-              >
-                {saving ? "Saving..." : "Save & Activate"}
-              </button>
-            </div>
-          </div>
-        )}
-      </motion.div>
+                  <div className="flex justify-between">
+                    <button onClick={() => setStep(1)} className={BTN_GHOST}>
+                      Back
+                    </button>
+                    <button onClick={fetchPreview} disabled={loading} className={BTN_PRIMARY}>
+                      {loading ? "Fetching..." : "Preview Times"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Step 3: Athan Preview ─── */}
+              {step === 3 && previewTimings && (
+                <div className="space-y-5">
+                  <div className={CARD}>
+                    <p className="mb-1 text-[14px] font-semibold text-stone-900">Today&apos;s Athan Times</p>
+                    <p className="mb-4 text-[13px] text-stone-500">
+                      Do these times look correct for your mosque?
+                    </p>
+                    <div className="overflow-hidden rounded-xl border border-stone-200">
+                      {PRAYER_NAMES.map((prayer, i) => (
+                        <div
+                          key={prayer}
+                          className="flex items-center px-4 py-2.5"
+                          style={{ backgroundColor: i % 2 === 1 ? "rgba(250,250,249,0.6)" : "#ffffff" }}
+                        >
+                          <Check size={14} className="mr-3 text-teal-500" strokeWidth={3} />
+                          <span className="flex-1 text-[14px] font-medium text-stone-800">
+                            {PRAYER_DISPLAY_NAMES[prayer]}
+                          </span>
+                          <span className="font-mono text-[13px] font-semibold text-stone-900">
+                            {to12Hour(previewTimings[prayer])}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <button onClick={() => setStep(2)} className={BTN_GHOST}>
+                      Change Method
+                    </button>
+                    <button onClick={() => setStep(4)} className={BTN_PRIMARY}>
+                      Looks Good
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Step 4: Iqamah Configuration ─── */}
+              {step === 4 && (
+                <div className="space-y-5">
+                  <div className={CARD}>
+                    <p className="mb-1 text-[14px] font-semibold text-stone-900">Iqamah Times</p>
+                    <p className="mb-4 text-[13px] text-stone-500">
+                      Set how each prayer&apos;s congregation time is determined.
+                    </p>
+                    <div className="overflow-hidden rounded-xl border border-stone-200">
+                      {iqamahRows.map((row, i) => (
+                        <div
+                          key={row.prayer_name}
+                          className="flex items-center gap-3 px-4 py-3"
+                          style={{ backgroundColor: i % 2 === 1 ? "rgba(250,250,249,0.6)" : "#ffffff" }}
+                        >
+                          <span className="w-24 text-[14px] font-medium text-stone-800">
+                            {PRAYER_DISPLAY_NAMES[row.prayer_name]}
+                          </span>
+                          <div className="relative">
+                            <select
+                              value={row.mode}
+                              onChange={(e) => updateIqamahRow(i, { mode: e.target.value as IqamahMode })}
+                              className="h-10 appearance-none rounded-lg border border-stone-200 bg-white pl-3 pr-8 text-[13px] text-stone-800 shadow-sm outline-none transition-colors hover:border-stone-300 focus:border-stone-400"
+                            >
+                              <option value="fixed">Fixed Time</option>
+                              <option value="offset">Offset from Athan</option>
+                            </select>
+                            <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                          </div>
+                          {row.mode === "fixed" && (
+                            <input
+                              type="time"
+                              value={row.fixed_time}
+                              onChange={(e) => updateIqamahRow(i, { fixed_time: e.target.value })}
+                              className="h-10 rounded-lg border border-stone-200 bg-white px-3 font-mono text-[13px] text-stone-800 shadow-sm outline-none transition-colors hover:border-stone-300 focus:border-stone-400"
+                            />
+                          )}
+                          {row.mode === "offset" && (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min={0}
+                                max={120}
+                                value={row.offset_minutes}
+                                onChange={(e) => updateIqamahRow(i, { offset_minutes: Number(e.target.value) })}
+                                className="h-10 w-20 rounded-lg border border-stone-200 bg-white px-3 text-center font-mono text-[13px] tabular-nums text-stone-800 shadow-sm outline-none transition-colors hover:border-stone-300 focus:border-stone-400"
+                              />
+                              <span className="text-xs text-stone-400">min after athan</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <button onClick={() => setStep(3)} className={BTN_GHOST}>
+                      Back
+                    </button>
+                    <button onClick={() => setStep(5)} className={BTN_PRIMARY}>
+                      Preview Final Times
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Step 5: Final Preview + Save ─── */}
+              {step === 5 && finalPreview && (
+                <div className="space-y-5">
+                  <div className={CARD}>
+                    <p className="mb-1 text-[14px] font-semibold text-stone-900">Final Prayer Times</p>
+                    <p className="mb-4 text-[13px] text-stone-500">
+                      This is what your app users will see.
+                    </p>
+                    <div className="overflow-hidden rounded-xl border border-stone-200">
+                      <div className="flex bg-stone-50 px-4 py-2">
+                        <span className="flex-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Prayer</span>
+                        <span className="w-24 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Athan</span>
+                        <span className="w-24 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Iqamah</span>
+                      </div>
+                      {PRAYER_NAMES.map((prayer, i) => (
+                        <div
+                          key={prayer}
+                          className="flex items-center px-4 py-2.5"
+                          style={{ backgroundColor: i % 2 === 1 ? "rgba(250,250,249,0.6)" : "#ffffff" }}
+                        >
+                          <Check size={14} className="mr-3 text-teal-500" strokeWidth={3} />
+                          <span className="flex-1 text-[14px] font-medium text-stone-800">{PRAYER_DISPLAY_NAMES[prayer]}</span>
+                          <span className="w-24 text-right font-mono text-[13px] text-stone-500">{to12Hour(finalPreview[prayer].athan)}</span>
+                          <span className="w-24 text-right font-mono text-[13px] font-semibold text-stone-900">{to12Hour(finalPreview[prayer].iqamah)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-4 text-xs text-stone-400">
+                      Prayer times will update automatically each day based on your configuration.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => setStep(4)} className={BTN_GHOST}>
+                      Adjust Iqamah
+                    </button>
+                    <button onClick={handleSave} disabled={saving} className={BTN_PRIMARY}>
+                      {saving ? "Saving..." : "Save & Activate"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </>
+      )}
     </div>
   );
 }
