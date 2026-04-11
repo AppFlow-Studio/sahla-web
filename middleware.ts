@@ -1,76 +1,120 @@
-// src/middleware.ts
 // ============================================================================
-// CRM Middleware — Role-Based Routing via Clerk Organizations
+// Sahla Middleware — Role-Based Routing via Clerk Organizations
 // ============================================================================
-//
-// This middleware runs on every request to crm.sahla.app and determines
-// whether the user should see Admin HQ (Sahla team) or the Mosque CRM
-// (mosque admin onboarding).
 //
 // Routing logic:
-//   Active org = Sahla HQ org → route to (admin)/ → Admin HQ dashboard
-//   Active org = any mosque   → route to (masjid)/ → Onboarding/management
-//   No active org             → redirect to org selection
+//   Active org = Sahla HQ org → Admin HQ (overview, pipeline, mosques, ...)
+//   Active org = any mosque   → Masjid CRM (onboarding tasks at /[taskId])
+//   No active org             → /select-org
+//   Not signed in             → /login (or marketing page at /)
 //
+// IMPORTANT: Next.js strips route group names from URLs, so we cannot match
+// admin routes via "/(admin)(.*)" — we have to enumerate the real URL paths.
 // ============================================================================
 
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-// ── Sahla HQ Organization ID ──
-// This is the Clerk Organization created for Temur's internal team.
-// It's the ONLY org that routes to the admin dashboard.
-// All other orgs are mosque orgs and route to the mosque CRM.
 const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID!;
 
-// Route matchers
-const isAdminRoute = createRouteMatcher(["/(admin)(.*)"]);
-const isMasjidRoute = createRouteMatcher(["/(masjid)(.*)"]);
-const isPublicRoute = createRouteMatcher(["/","/login(.*)", "/api/webhooks(.*)"]);
+// Real URL paths owned by the admin section.
+const ADMIN_PATHS = [
+  "/overview",
+  "/pipeline",
+  "/mosques",
+  "/revenue",
+  "/expenses",
+  "/builds",
+];
+
+const isMarketingHome = createRouteMatcher(["/"]);
+const isLoginRoute = createRouteMatcher(["/login(.*)"]);
+const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
+const isApiRoute = createRouteMatcher(["/api/(.*)"]);
+const isSelectOrgRoute = createRouteMatcher(["/select-org"]);
+
+// Virtual "post-login bouncer" path. Login + select-org point here, and the
+// middleware decides where to send the user based on their active org.
+// Never renders a page — middleware always redirects before render.
+const LAUNCH_PATH = "/launch";
+
+// First task in the onboarding flow — masjid users land here after login.
+const MASJID_LANDING = "/mosque_profile";
+const ADMIN_LANDING = "/overview";
+
+function isAdminPath(pathname: string): boolean {
+  return ADMIN_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
 
 export default clerkMiddleware(async (auth, req) => {
-  // Allow public routes (login page, webhook endpoints)
-  if (isPublicRoute(req)) {
+  // Always-public routes
+  if (isWebhookRoute(req) || isLoginRoute(req)) {
     return NextResponse.next();
   }
 
-  // Require authentication for everything else
   const session = await auth();
-  if (!session.userId) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
-
-  const activeOrgId = session.orgId;
   const url = req.nextUrl.clone();
 
-  // ── No active org: redirect to org selection ──
-  // This happens on first login before the user selects which org to work in.
-  // Clerk's <OrganizationSwitcher> component handles the selection UI.
-  if (!activeOrgId) {
-    // If they're already on a page with org selector, let them through
-    if (url.pathname === "/select-org") {
-      return NextResponse.next();
+  // Marketing homepage is always public — both guests and signed-in users
+  // can view it. Signed-in users get back to their app via /launch.
+  if (isMarketingHome(req)) {
+    return NextResponse.next();
+  }
+
+  // Everything below requires authentication
+  if (!session.userId) {
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  // ── Post-login bouncer ──
+  // /launch is a virtual route — it always redirects, never renders.
+  if (url.pathname === LAUNCH_PATH) {
+    if (!session.orgId) {
+      url.pathname = "/select-org";
+      return NextResponse.redirect(url);
     }
+    url.pathname =
+      session.orgId === SAHLA_HQ_ORG_ID ? ADMIN_LANDING : MASJID_LANDING;
+    return NextResponse.redirect(url);
+  }
+
+  // Org selector page: allowed once signed in
+  if (isSelectOrgRoute(req)) {
+    return NextResponse.next();
+  }
+
+  // Signed in but no org chosen yet → org selector
+  if (!session.orgId) {
     url.pathname = "/select-org";
     return NextResponse.redirect(url);
   }
 
-  // ── Sahla HQ org: route to admin dashboard ──
-  if (activeOrgId === SAHLA_HQ_ORG_ID) {
-    // If trying to access masjid routes while in HQ org → redirect to admin
-    if (isMasjidRoute(req)) {
-      url.pathname = "/";
-      return NextResponse.redirect(url);
-    }
+  const isHQ = session.orgId === SAHLA_HQ_ORG_ID;
+
+  // ── Admin section ──
+  if (isAdminPath(url.pathname)) {
+    if (isHQ) return NextResponse.next();
+    // Mosque admin trying to peek at HQ pages → bounce to their onboarding
+    url.pathname = MASJID_LANDING;
+    return NextResponse.redirect(url);
+  }
+
+  // API routes: any authenticated org member is allowed; per-route handlers
+  // are responsible for their own authorization checks.
+  if (isApiRoute(req)) {
     return NextResponse.next();
   }
 
-  // ── Any other org (mosque): route to mosque CRM ──
-  // If trying to access admin routes while in a mosque org → redirect to masjid
-  if (isAdminRoute(req)) {
-    url.pathname = "/";
+  // ── Everything else is a masjid /[taskId] route ──
+  if (isHQ) {
+    // HQ user wandering into masjid routes → back to admin
+    url.pathname = ADMIN_LANDING;
     return NextResponse.redirect(url);
   }
+
   return NextResponse.next();
 });
 
@@ -81,37 +125,3 @@ export const config = {
     "/(api|trpc)(.*)",
   ],
 };
-
-
-// ============================================================================
-// COMPANION: Layout Route Groups
-// ============================================================================
-//
-// src/app/
-//   (admin)/          ← Sahla HQ dashboard (dark theme)
-//     layout.tsx      ← Admin shell with sidebar: Overview, Mosques, Pipeline, Revenue, Pulse, Settings
-//     page.tsx        ← D1: Overview dashboard
-//
-//   (masjid)/         ← Mosque CRM (light theme, brand-colored)
-//     layout.tsx      ← Onboarding shell with task sidebar
-//     page.tsx        ← Onboarding dashboard
-//     [taskId]/       ← Individual task panels
-//
-//   select-org/       ← Organization selection page (for users in multiple orgs)
-//     page.tsx        ← <OrganizationSwitcher /> component
-//
-//   login/            ← Public login page
-//     page.tsx        ← <SignIn /> component
-//
-// ============================================================================
-//
-// ENVIRONMENT VARIABLES NEEDED:
-//
-//   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_xxx
-//   CLERK_SECRET_KEY=sk_live_xxx
-//   NEXT_PUBLIC_SAHLA_ORG_ID=org_sahla_xxx       ← The Sahla HQ org ID
-//   NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-//   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxx
-//   SUPABASE_SERVICE_ROLE_KEY=eyJxxx
-//
-// ============================================================================

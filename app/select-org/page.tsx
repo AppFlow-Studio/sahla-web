@@ -27,7 +27,7 @@ export default function SelectOrgPage() {
         </Link>
         <OrganizationList
           hidePersonal={true}
-          afterSelectOrganizationUrl="/overview"
+          afterSelectOrganizationUrl="/launch"
         />
       </div>
     </div>
