@@ -24,18 +24,24 @@ export type KanbanCard = {
   /** e.g. "NY" — optional; shown as "City, ST" when set */
   state?: string | null;
   contactName: string;
+  /** Shown under contact name; omit row when empty */
+  contactEmail?: string | null;
+  /** e.g. chapter / affiliate; omit row when empty */
+  organization?: string | null;
+  /** Footer left line; omit when empty */
+  referredBy?: string | null;
   stage: Stage;
   /** 0–100 for onboarding progress bar; omit or null when not onboarding */
   onboardingProgress?: number | null;
   updatedAt: string;
 };
 
-/** Stage dots use @theme colors from globals.css (green, highlight, white) */
+/** Stage dots match MasjidCard left accent per column */
 export const defaultColumns: Column[] = [
-  { id: "lead", title: "Lead", dotClass: "bg-green/35" },
-  { id: "contacted", title: "Contacted", dotClass: "bg-green/55" },
-  { id: "demo", title: "Demo", dotClass: "bg-highlight/70" },
-  { id: "contract", title: "Contract", dotClass: "bg-highlight" },
-  { id: "onboarding", title: "Onboarding", dotClass: "bg-green" },
-  { id: "live", title: "Live", dotClass: "bg-highlight/90" },
+  { id: "lead", title: "Lead", dotClass: "bg-slate-400" },
+  { id: "contacted", title: "Contacted", dotClass: "bg-sky-500" },
+  { id: "demo", title: "Demo", dotClass: "bg-violet-500" },
+  { id: "contract", title: "Contract", dotClass: "bg-amber-500" },
+  { id: "onboarding", title: "Onboarding", dotClass: "bg-cyan-600" },
+  { id: "live", title: "Live", dotClass: "bg-lime-500" },
 ];

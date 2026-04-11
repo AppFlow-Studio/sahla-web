@@ -207,6 +207,7 @@ export async function POST(req: Request) {
         mosque_id: mosqueRow.id,
         stage: "onboarding",
         contact_name: lead.contactName,
+        contact_email: lead.contactEmail,
         updated_at: updatedAt,
       });
 

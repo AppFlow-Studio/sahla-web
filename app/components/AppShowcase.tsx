@@ -1,8 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useRef, useState, useCallback, useEffect } from "react";
-import PhoneCarousel from "./PhoneCarousel";
+
+const PhoneCarousel = dynamic(() => import("./PhoneCarousel"), { ssr: false });
 
 export default function AppShowcase() {
   const sectionRef = useRef<HTMLElement>(null);

@@ -29,6 +29,7 @@ export default async function PipelinePage() {
     mosque_id: string | null;
     stage: string | null;
     contact_name: string | null;
+    contact_email: string | null;
     updated_at: string | null;
     mosques: MosqueEmbed | MosqueEmbed[] | null;
   };
@@ -46,6 +47,7 @@ export default async function PipelinePage() {
     mosque_id,
     stage,
     contact_name,
+    contact_email,
     updated_at,
     mosques (
       id,
@@ -69,17 +71,39 @@ export default async function PipelinePage() {
     );
   }
 
-  const cards: KanbanCard[] = ((data ?? []) as PipelineRow[]).map((row) => {
+  const latestByMosque = new Map<string, PipelineRow>();
+  const fallbackRows: PipelineRow[] = [];
+
+  for (const row of (data ?? []) as PipelineRow[]) {
+    const mosque = unwrapMosque(row.mosques);
+    const mosqueId = (row.mosque_id ?? mosque?.id ?? "").trim();
+
+    // Keep only the latest stage row per mosque so board reflects current pipeline state.
+    if (mosqueId) {
+      if (!latestByMosque.has(mosqueId)) {
+        latestByMosque.set(mosqueId, row);
+      }
+      continue;
+    }
+
+    // Rows without mosque id cannot be de-duplicated safely; keep them as-is.
+    fallbackRows.push(row);
+  }
+
+  const dedupedRows = [...latestByMosque.values(), ...fallbackRows];
+
+  const cards: KanbanCard[] = dedupedRows.map((row) => {
     const mosque = unwrapMosque(row.mosques);
     const mosqueId = row.mosque_id ?? mosque?.id ?? "";
 
     return {
       id: mosqueId || row.id,
       mosqueId,
-      mosqueName: mosque?.name ?? "Unknown mosque",
-      city: mosque?.city ?? "",
-      state: mosque?.state ?? null,
-      contactName: row.contact_name ?? "—",
+      mosqueName: (mosque?.name ?? "").trim(),
+      city: (mosque?.city ?? "").trim(),
+      state: mosque?.state?.trim() ?? null,
+      contactName: (row.contact_name ?? "").trim(),
+      contactEmail: (row.contact_email ?? "").trim() || null,
       stage: normalizeStage(row.stage),
       onboardingProgress:
         typeof mosque?.onboarding_progress === "number"
