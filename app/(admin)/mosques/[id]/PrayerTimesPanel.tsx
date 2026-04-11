@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, MapPin, Check } from "lucide-react";
+import { Settings, MapPin, Check, CheckCircle2, Loader2 } from "lucide-react";
 import {
   CALCULATION_METHODS,
   SCHOOLS,
@@ -24,7 +24,7 @@ function getNextPrayerIndex(prayers: { prayer_name: string; athan_time: string }
   return 0;
 }
 
-type Step = "view" | 1 | 2 | 3 | 4 | 5;
+type Step = "view" | "success" | 1 | 2 | 3 | 4 | 5;
 type PreviewTimings = Record<PrayerName, string>;
 type IqamahFormRow = {
   prayer_name: PrayerName;
@@ -43,12 +43,13 @@ const CARD = "rounded-xl border border-stone-200 bg-white p-6 shadow-sm";
 
 // ─── Stepper Component ───
 function Stepper({ step }: { step: Exclude<Step, "view"> }) {
+  const allDone = step === "success";
   return (
     <div className="mx-auto mb-8 flex max-w-2xl items-start justify-between">
       {STEP_LABELS.map((label, i) => {
         const stepNum = i + 1;
-        const isActive = step === stepNum;
-        const isDone = step > stepNum;
+        const isActive = !allDone && step === stepNum;
+        const isDone = allDone || (typeof step === "number" && step > stepNum);
         const isLast = i === STEP_LABELS.length - 1;
 
         return (
@@ -95,7 +96,7 @@ export default function PrayerTimesPanel({
   existingConfig,
   showToast,
 }: {
-  mosque: { id: string; address: string | null; calculation_method: number | null; school: number | null };
+  mosque: { id: string; name: string; address: string | null; calculation_method: number | null; school: number | null };
   existingConfig: IqamahConfig[];
   showToast: (message: string, type: "success" | "error") => void;
 }) {
@@ -215,8 +216,7 @@ export default function PrayerTimesPanel({
         if (syncData.prayers) setTodaysPrayers(syncData.prayers);
       }
 
-      showToast("Prayer times saved and synced", "success");
-      setStep("view");
+      setStep("success");
     } catch {
       showToast("Failed to save prayer configuration", "error");
     } finally {
@@ -516,10 +516,80 @@ export default function PrayerTimesPanel({
                     <button onClick={() => setStep(4)} className={BTN_GHOST}>
                       Adjust Iqamah
                     </button>
-                    <button onClick={handleSave} disabled={saving} className={BTN_PRIMARY}>
+                    <button onClick={handleSave} disabled={saving} className={cn(BTN_PRIMARY, "inline-flex items-center gap-2")}>
+                      {saving && <Loader2 size={14} className="animate-spin" />}
                       {saving ? "Saving..." : "Save & Activate"}
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* ─── Success State ─── */}
+              {step === "success" && (
+                <div className="flex min-h-[400px] flex-col items-center justify-center">
+                  <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 12 }}
+                  >
+                    <CheckCircle2 size={56} className="text-emerald-500" strokeWidth={2} />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.15 }}
+                    className="flex flex-col items-center"
+                  >
+                    <h3 className="mt-4 text-center text-xl font-semibold text-stone-900">
+                      Prayer Times Activated
+                    </h3>
+                    <p className="mx-auto mt-1 max-w-md text-center text-sm text-stone-500">
+                      Prayer times are now live for {mosque.name}. They will update automatically each day.
+                    </p>
+
+                    {/* Summary card */}
+                    {(todaysPrayers || finalPreview) && (
+                      <div className="mx-auto mt-6 w-full max-w-lg rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+                        <div className="overflow-hidden rounded-lg border border-stone-100">
+                          <div className="flex bg-stone-50 px-3 py-1.5">
+                            <span className="flex-1 text-[9px] font-semibold uppercase tracking-wider text-stone-400">Prayer</span>
+                            <span className="w-20 text-right text-[9px] font-semibold uppercase tracking-wider text-stone-400">Athan</span>
+                            <span className="w-20 text-right text-[9px] font-semibold uppercase tracking-wider text-stone-400">Iqamah</span>
+                          </div>
+                          {PRAYER_NAMES.map((prayer, i) => {
+                            const athan = todaysPrayers?.find((p) => p.prayer_name === prayer)?.athan_time || finalPreview?.[prayer]?.athan || "";
+                            const iqamah = todaysPrayers?.find((p) => p.prayer_name === prayer)?.iqamah_time || finalPreview?.[prayer]?.iqamah || "";
+                            return (
+                              <div
+                                key={prayer}
+                                className="flex items-center px-3 py-1.5"
+                                style={{ backgroundColor: i % 2 === 1 ? "rgba(250,250,249,0.6)" : "#ffffff" }}
+                              >
+                                <span className="flex-1 text-[12px] font-medium text-stone-800">{PRAYER_DISPLAY_NAMES[prayer]}</span>
+                                <span className="w-20 text-right font-mono text-xs text-stone-500">{to12Hour(athan)}</span>
+                                <span className="w-20 text-right font-mono text-xs font-semibold text-stone-900">{to12Hour(iqamah)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-6 flex items-center gap-3">
+                      <button
+                        onClick={() => setStep("view")}
+                        className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50"
+                      >
+                        View Prayer Schedule
+                      </button>
+                      <a
+                        href="/mosques"
+                        className="rounded-lg border border-stone-200 px-4 py-2 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50"
+                      >
+                        Back to Mosques
+                      </a>
+                    </div>
+                  </motion.div>
                 </div>
               )}
             </motion.div>

@@ -106,7 +106,7 @@ export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStag
           {activeTab === "Tasks" && <TasksTab progress={mosque.onboarding_progress} />}
           {activeTab === "Notes" && <NotesTab mosqueId={mosque.id} initial={initialNotes} />}
           {activeTab === "Prayer Times" && (
-            <PrayerTimesPanel mosque={{ id: mosque.id, address: mosque.address, calculation_method: mosque.calculation_method, school: mosque.school }} existingConfig={iqamahConfig} showToast={showToast} />
+            <PrayerTimesPanel mosque={{ id: mosque.id, name: mosque.name, address: mosque.address, calculation_method: mosque.calculation_method, school: mosque.school }} existingConfig={iqamahConfig} showToast={showToast} />
           )}
         </motion.div>
       </AnimatePresence>
