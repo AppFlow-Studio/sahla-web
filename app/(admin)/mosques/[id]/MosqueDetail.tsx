@@ -407,9 +407,21 @@ function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
                       <Tooltip.Provider delayDuration={200}>
                         <Tooltip.Root>
                           <Tooltip.Trigger asChild>
-                            <span className={cn("cursor-default rounded-full px-2 py-0.5 text-[9px] font-semibold",
-                              task.badge === "REQ" ? "bg-red-50 text-red-600" : "bg-stone-100 text-stone-500"
-                            )}>{task.badge}</span>
+                            <span
+                              className={cn(
+                                "cursor-default rounded-md px-1.5 py-0.5 uppercase tracking-wider",
+                                task.badge === "REQ"
+                                  ? "text-[10px] font-bold"
+                                  : "text-[10px] font-semibold"
+                              )}
+                              style={
+                                task.badge === "REQ"
+                                  ? { backgroundColor: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }
+                                  : { backgroundColor: "#fafaf9", border: "1px solid #e7e5e4", color: "#a8a29e" }
+                              }
+                            >
+                              {task.badge}
+                            </span>
                           </Tooltip.Trigger>
                           <Tooltip.Portal>
                             <Tooltip.Content
