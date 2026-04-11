@@ -4,9 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock, MoreHorizontal, Users, Activity, BookOpen, Calendar, Mail, Phone, ArrowRight } from "lucide-react";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { StatusBadge } from "../../components/StatusBadge";
+import { StatusBadge, STAGE_COLORS } from "../../components/StatusBadge";
 import PrayerTimesPanel from "./PrayerTimesPanel";
 import type { IqamahConfig } from "@/lib/prayer/types";
 import { ONBOARDING_CATEGORIES, ALL_TASKS } from "@/app/(masjid)/components/onboarding-tasks";
@@ -46,7 +46,9 @@ function timeAgo(d: string) {
 function daysSince(d: string) { return Math.floor((Date.now() - new Date(d).getTime()) / 86400000); }
 function showToast(msg: string, type: "success" | "error") { type === "success" ? toast.success(msg) : toast.error(msg); }
 
-export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStage, iqamahConfig }: { mosque: Mosque; notes: Note[]; pipelineStage: PipelineStage | null; iqamahConfig: IqamahConfig[] }) {
+type ContentCounts = { programs: number; events: number };
+
+export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStage, iqamahConfig, contentCounts }: { mosque: Mosque; notes: Note[]; pipelineStage: PipelineStage | null; iqamahConfig: IqamahConfig[]; contentCounts: ContentCounts }) {
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
   const stage = pipelineStage?.stage || "lead";
   const color = mosque.brand_color || nameToColor(mosque.name || "M");
@@ -100,7 +102,7 @@ export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStag
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15, ease: "easeOut" }}
         >
-          {activeTab === "Overview" && <OverviewTab mosque={mosque} stage={stage} pipeline={pipelineStage} />}
+          {activeTab === "Overview" && <OverviewTab mosque={mosque} stage={stage} pipeline={pipelineStage} contentCounts={contentCounts} />}
           {activeTab === "Tasks" && <TasksTab progress={mosque.onboarding_progress} />}
           {activeTab === "Notes" && <NotesTab mosqueId={mosque.id} initial={initialNotes} />}
           {activeTab === "Prayer Times" && (
@@ -114,44 +116,126 @@ export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStag
 
 /* ════════════════════════════ OVERVIEW ════════════════════════════ */
 
-function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: string; pipeline: PipelineStage | null }) {
+const PIPELINE_STAGES = ["lead", "contacted", "demo", "contract", "onboarding", "live"] as const;
+
+function getNextTask(progress: Record<string, boolean> | null) {
+  // First incomplete REQ task, then first incomplete any task
+  const req = ALL_TASKS.find((t) => t.badge === "REQ" && progress?.[t.id] !== true);
+  if (req) return req;
+  return ALL_TASKS.find((t) => progress?.[t.id] !== true) || null;
+}
+
+function PipelineStepper({ currentStage }: { currentStage: string }) {
+  const currentIdx = PIPELINE_STAGES.indexOf(currentStage as typeof PIPELINE_STAGES[number]);
+  return (
+    <div className="flex items-center justify-between">
+      {PIPELINE_STAGES.map((s, i) => {
+        const isPast = i < currentIdx;
+        const isCurrent = i === currentIdx;
+        const stageColor = STAGE_COLORS[s];
+        return (
+          <div key={s} className="flex flex-1 items-center last:flex-none">
+            <div className="flex flex-col items-center">
+              <div
+                className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-semibold transition-all"
+                style={{
+                  backgroundColor: isCurrent ? stageColor.bg : isPast ? "#f5f5f4" : "transparent",
+                  color: isCurrent ? stageColor.color : isPast ? "#a8a29e" : "#d6d3d1",
+                  border: isCurrent ? `2px solid ${stageColor.dot}` : isPast ? "2px solid #e7e5e4" : "2px dashed #e7e5e4",
+                }}
+              >
+                {isPast ? <Check size={12} strokeWidth={3} /> : i + 1}
+              </div>
+              <span
+                className="mt-2 text-[10px] font-semibold uppercase tracking-wider capitalize whitespace-nowrap"
+                style={{
+                  color: isCurrent ? stageColor.color : isPast ? "#78716c" : "#d6d3d1",
+                }}
+              >
+                {s}
+              </span>
+            </div>
+            {i < PIPELINE_STAGES.length - 1 && (
+              <div
+                className="mx-2 h-0.5 flex-1 -translate-y-3"
+                style={{ backgroundColor: i < currentIdx ? "#e7e5e4" : "#f5f5f4" }}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function OverviewTab({
+  mosque,
+  stage,
+  pipeline,
+  contentCounts,
+}: {
+  mosque: Mosque;
+  stage: string;
+  pipeline: PipelineStage | null;
+  contentCounts: ContentCounts;
+}) {
   const isLive = stage === "live";
   const isOnboarding = stage === "onboarding";
+  const isPipeline = !isLive && !isOnboarding;
   const stats = getStats(mosque.onboarding_progress);
   const stuck = isOnboarding ? daysSince(mosque.updated_at) : 0;
+  const nextTask = isOnboarding ? getNextTask(mosque.onboarding_progress) : null;
+
+  const fadeIn = (delay: number) => ({
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.25, delay, ease: "easeOut" as const },
+  });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* ── LIVE: Metric Cards ── */}
       {isLive && (
-        <div className="grid grid-cols-4 gap-4">
-          {[{ l: "Users", v: "—" }, { l: "WAU", v: "—" }, { l: "Programs", v: "—" }, { l: "Events", v: "—" }].map((m) => (
-            <div key={m.l} className="rounded-xl border border-stone-200 bg-white p-5">
+        <motion.div {...fadeIn(0)} className="grid max-w-3xl grid-cols-2 gap-4 lg:grid-cols-4">
+          {[
+            { l: "Users", v: "—", Icon: Users },
+            { l: "WAU", v: "—", Icon: Activity },
+            { l: "Programs", v: contentCounts.programs > 0 ? String(contentCounts.programs) : "—", Icon: BookOpen },
+            { l: "Events", v: contentCounts.events > 0 ? String(contentCounts.events) : "—", Icon: Calendar },
+          ].map((m) => (
+            <div key={m.l} className="relative rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+              <m.Icon size={16} className="absolute right-4 top-4 text-stone-400" />
               <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{m.l}</p>
               <p className="mt-1.5 text-2xl font-semibold tabular-nums text-stone-900">{m.v}</p>
             </div>
           ))}
-        </div>
+        </motion.div>
       )}
 
+      {/* ── ONBOARDING: Progress Card ── */}
       {isOnboarding && (
-        <div className="rounded-xl border border-stone-200 bg-white p-6">
+        <motion.div {...fadeIn(0)} className="max-w-3xl rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <p className="text-[14px] font-semibold text-stone-900">Onboarding Progress</p>
-            <span className="text-[13px] font-semibold tabular-nums text-teal-600">{stats.pct}%</span>
+            <span className="text-[20px] font-semibold tabular-nums text-teal-600">{stats.pct}%</span>
           </div>
           <div className="mb-5 h-2 overflow-hidden rounded-full bg-stone-100">
-            <motion.div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400" initial={{ width: 0 }} animate={{ width: `${stats.pct}%` }} transition={{ duration: 0.8, ease: "easeOut" }} />
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400"
+              initial={{ width: 0 }}
+              animate={{ width: `${stats.pct}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            />
           </div>
-          <div className="flex gap-6">
-            {[
-              { l: "Started", v: fmtDate(mosque.created_at) || "—" },
-              { l: "Tasks", v: `${stats.completed}/${stats.total}` },
-            ].map((s) => (
-              <div key={s.l}>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">{s.l}</p>
-                <p className="mt-0.5 text-[13px] font-semibold text-stone-900">{s.v}</p>
-              </div>
-            ))}
+          <div className="flex gap-8">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Started</p>
+              <p className="mt-0.5 text-[13px] font-medium text-stone-900">{fmtDate(mosque.created_at) || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Tasks</p>
+              <p className="mt-0.5 text-[13px] font-medium text-stone-900">{stats.completed}/{stats.total}</p>
+            </div>
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">Stuck</p>
               {stuck > 3 ? (
@@ -159,14 +243,24 @@ function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: strin
                   <AlertTriangle size={11} /> {stuck}d
                 </span>
               ) : (
-                <p className="mt-0.5 text-[13px] font-semibold text-stone-900">{stuck}d</p>
+                <p className="mt-0.5 text-[13px] font-medium text-stone-900">{stuck}d</p>
               )}
             </div>
           </div>
-        </div>
+          {nextTask && (
+            <div className="mt-5 border-t border-stone-100 pt-4">
+              <div className="flex items-center gap-2 text-[13px] text-stone-600">
+                <span className="font-medium text-stone-400">Next:</span>
+                <span className="font-medium text-stone-900">{nextTask.label}</span>
+                <ArrowRight size={13} className="text-stone-300" />
+              </div>
+            </div>
+          )}
+        </motion.div>
       )}
 
-      <div className="max-w-3xl overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+      {/* ── DETAILS (always shown) ── */}
+      <motion.div {...fadeIn(isPipeline ? 0 : 0.1)} className="max-w-3xl overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
         <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
           <p className="text-[14px] font-semibold text-stone-900">Details</p>
         </div>
@@ -194,7 +288,46 @@ function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: strin
             });
           })()}
         </div>
-      </div>
+      </motion.div>
+
+      {/* ── PIPELINE: Stepper + Quick Actions ── */}
+      {isPipeline && (
+        <motion.div {...fadeIn(0.1)} className="max-w-3xl rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+          <p className="mb-5 text-[14px] font-semibold text-stone-900">Pipeline Status</p>
+          <PipelineStepper currentStage={stage} />
+
+          {/* Quick Actions */}
+          <div className="mt-6 border-t border-stone-100 pt-5">
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Quick Actions</p>
+            {pipeline?.contact_email || pipeline?.contact_phone ? (
+              <div className="flex gap-2">
+                {pipeline?.contact_email && (
+                  <a
+                    href={`mailto:${pipeline.contact_email}`}
+                    className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-[12px] font-medium text-stone-700 transition-colors hover:bg-stone-50"
+                  >
+                    <Mail size={13} className="text-stone-400" />
+                    {pipeline.contact_email}
+                  </a>
+                )}
+                {pipeline?.contact_phone && (
+                  <a
+                    href={`tel:${pipeline.contact_phone}`}
+                    className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-[12px] font-medium text-stone-700 transition-colors hover:bg-stone-50"
+                  >
+                    <Phone size={13} className="text-stone-400" />
+                    {pipeline.contact_phone}
+                  </a>
+                )}
+              </div>
+            ) : (
+              <p className="text-[12px] italic text-stone-400">
+                No contact info — add in Details above
+              </p>
+            )}
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
