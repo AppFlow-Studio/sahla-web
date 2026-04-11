@@ -43,14 +43,14 @@ type Toast = {
   tone: "success" | "error";
 };
 
-/** Drop-target ring uses @theme green / highlight from globals.css */
+/** Matches MasjidCard left accent per stage when dragging over a column */
 const STAGE_DROP_BORDER_CLASS: Record<Stage, string> = {
-  lead: "border-green/35",
-  contacted: "border-green/50",
-  demo: "border-highlight/45",
-  contract: "border-highlight/70",
-  onboarding: "border-green/65",
-  live: "border-highlight",
+  lead: "border-slate-400",
+  contacted: "border-sky-500",
+  demo: "border-violet-500",
+  contract: "border-amber-500",
+  onboarding: "border-cyan-600",
+  live: "border-lime-500",
 };
 
 const STAGE_ORDER: Stage[] = ["lead", "contacted", "demo", "contract", "onboarding", "live"];
@@ -406,14 +406,6 @@ export default function KanbanBoard({ cards }: Props) {
           className="rounded-full border border-green/15 bg-white px-4 py-2 text-sm font-medium text-green shadow-sm transition hover:border-green/25 hover:bg-tan/50"
         >
           + Add lead
-        </button>
-        <button
-          type="button"
-          onClick={() => setIsCreateAccountModalOpen(true)}
-          title="After a lead is confirmed — creates Clerk org and sends invite"
-          className="rounded-full bg-green px-4 py-2 text-sm font-medium text-tan shadow-sm transition hover:bg-green/90"
-        >
-          Create account
         </button>
       </div>
       <AddLeadModal

@@ -11,11 +11,30 @@ type Mosque = {
   city: string | null;
   onboarding_status: string | null;
   onboarding_progress: Record<string, unknown> | null;
-  pipeline_stages: {
-    stage: string;
-    contact_name: string | null;
-  }[] | null;
+  pipeline_stages:
+    | {
+        stage: string;
+        contact_name: string | null;
+        updated_at?: string | null;
+      }[]
+    | {
+        stage: string;
+        contact_name: string | null;
+        updated_at?: string | null;
+      }
+    | null;
 };
+
+type PipelineStage = {
+  stage: string;
+  contact_name: string | null;
+  updated_at?: string | null;
+};
+
+function normalizeStages(input: Mosque["pipeline_stages"]): PipelineStage[] {
+  if (!input) return [];
+  return Array.isArray(input) ? input : [input];
+}
 
 const STAGES = [
   "lead",
@@ -32,6 +51,24 @@ function getOnboardingPercentage(progress: Record<string, unknown> | null): numb
   if (values.length === 0) return 0;
   const completed = values.filter((v) => v === true).length;
   return Math.round((completed / values.length) * 100);
+}
+
+function getLatestPipelineStage(mosque: Mosque) {
+  const stages = normalizeStages(mosque.pipeline_stages);
+  if (stages.length === 0) {
+    return { stage: "lead", contactName: null as string | null };
+  }
+
+  const latest = stages.reduce((best, current) => {
+    const bestTs = best.updated_at ? Date.parse(best.updated_at) : 0;
+    const currentTs = current.updated_at ? Date.parse(current.updated_at) : 0;
+    return currentTs > bestTs ? current : best;
+  }, stages[0]);
+
+  return {
+    stage: latest.stage || "lead",
+    contactName: latest.contact_name ?? null,
+  };
 }
 
 export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
@@ -56,12 +93,13 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
   const displayList = useMemo(() => {
     const q = debouncedSearch.toLowerCase().trim();
     return mosques.filter((m) => {
-      const stage = m.pipeline_stages?.[0]?.stage || "lead";
+      const latest = getLatestPipelineStage(m);
+      const stage = latest.stage;
       if (statusFilter !== "all" && stage !== statusFilter) return false;
       if (!q) return true;
       const name = (m.name || "").toLowerCase();
       const city = (m.city || "").toLowerCase();
-      const contact = (m.pipeline_stages?.[0]?.contact_name || "").toLowerCase();
+      const contact = (latest.contactName || "").toLowerCase();
       return name.includes(q) || city.includes(q) || contact.includes(q);
     });
   }, [mosques, debouncedSearch, statusFilter]);
@@ -138,7 +176,8 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
         <div className="space-y-2">
           <AnimatePresence mode="popLayout">
             {displayList.map((mosque, i) => {
-              const stage = mosque.pipeline_stages?.[0]?.stage || "lead";
+              const latest = getLatestPipelineStage(mosque);
+              const stage = latest.stage;
               const borderColor = STAGE_COLORS[stage]?.border || "border-l-zinc-500";
               const isOnboarding = stage === "onboarding";
               const isLive = stage === "live";
@@ -163,7 +202,7 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
                         {mosque.name}
                       </p>
                       <p className="text-[11.5px] text-subtle">
-                        {[mosque.city, mosque.pipeline_stages?.[0]?.contact_name]
+                        {[mosque.city, latest.contactName]
                           .filter(Boolean)
                           .join(" · ") || "—"}
                       </p>

@@ -71,7 +71,28 @@ export default async function PipelinePage() {
     );
   }
 
-  const cards: KanbanCard[] = ((data ?? []) as PipelineRow[]).map((row) => {
+  const latestByMosque = new Map<string, PipelineRow>();
+  const fallbackRows: PipelineRow[] = [];
+
+  for (const row of (data ?? []) as PipelineRow[]) {
+    const mosque = unwrapMosque(row.mosques);
+    const mosqueId = (row.mosque_id ?? mosque?.id ?? "").trim();
+
+    // Keep only the latest stage row per mosque so board reflects current pipeline state.
+    if (mosqueId) {
+      if (!latestByMosque.has(mosqueId)) {
+        latestByMosque.set(mosqueId, row);
+      }
+      continue;
+    }
+
+    // Rows without mosque id cannot be de-duplicated safely; keep them as-is.
+    fallbackRows.push(row);
+  }
+
+  const dedupedRows = [...latestByMosque.values(), ...fallbackRows];
+
+  const cards: KanbanCard[] = dedupedRows.map((row) => {
     const mosque = unwrapMosque(row.mosques);
     const mosqueId = row.mosque_id ?? mosque?.id ?? "";
 

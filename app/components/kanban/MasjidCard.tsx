@@ -100,13 +100,14 @@ function MetaLine({
 const iconRail =
   "flex w-[18px] shrink-0 justify-center pt-[3px] text-green/38 [&_svg]:shrink-0";
 
+/** Distinct hues per pipeline stage so columns read at a glance (not just green opacity steps). */
 const stageBorderClass: Record<Stage, string> = {
-  lead: "border-l-green/35",
-  contacted: "border-l-green/55",
-  demo: "border-l-highlight/70",
-  contract: "border-l-highlight",
-  onboarding: "border-l-green",
-  live: "border-l-highlight/90",
+  lead: "border-l-slate-400",
+  contacted: "border-l-sky-500",
+  demo: "border-l-violet-500",
+  contract: "border-l-amber-500",
+  onboarding: "border-l-cyan-600",
+  live: "border-l-lime-500",
 };
 
 function badgeClasses(iso: string): string {
