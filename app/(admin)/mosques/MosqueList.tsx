@@ -121,7 +121,7 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-edge bg-white">
+        <div className="overflow-hidden rounded-xl border border-stone-200 bg-white">
           {list.map((mosque, i) => {
             const stage = mosque.pipeline_stages?.[0]?.stage || "lead";
             const isOnboarding = stage === "onboarding";

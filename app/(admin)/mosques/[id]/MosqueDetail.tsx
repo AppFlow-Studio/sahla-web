@@ -33,7 +33,16 @@ function getStats(progress: Record<string, boolean> | null) {
   return { completed: c, total: ALL_TASKS.length, pct: Math.round((c / ALL_TASKS.length) * 100) };
 }
 function fmtDate(d: string | null) { return d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null; }
-function timeAgo(d: string) { const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000); if (s < 60) return "just now"; if (s < 3600) return `${Math.floor(s / 60)}m ago`; if (s < 86400) return `${Math.floor(s / 3600)}h ago`; if (s < 604800) return `${Math.floor(s / 86400)}d ago`; return fmtDate(d) || "—"; }
+function timeAgo(d: string) {
+  const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  if (s < 604800) return `${Math.floor(s / 86400)}d ago`;
+  if (s < 2592000) return `${Math.floor(s / 604800)}w ago`;
+  if (s < 31536000) return `${Math.floor(s / 2592000)}mo ago`;
+  return `${Math.floor(s / 31536000)}y ago`;
+}
 function daysSince(d: string) { return Math.floor((Date.now() - new Date(d).getTime()) / 86400000); }
 function showToast(msg: string, type: "success" | "error") { type === "success" ? toast.success(msg) : toast.error(msg); }
 
@@ -50,7 +59,7 @@ export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStag
           <Link href="/mosques" className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600">
             <ArrowLeft size={18} />
           </Link>
-          <div className="flex h-12 w-12 items-center justify-center rounded-full text-[18px] font-semibold ring-2 ring-white shadow-sm" style={{ backgroundColor: `${color}18`, color }}>
+          <div className="flex h-12 w-12 items-center justify-center rounded-full text-[18px] font-semibold ring-4 ring-white shadow-md" style={{ backgroundColor: `${color}18`, color }}>
             {mosque.name?.charAt(0).toUpperCase() || "M"}
           </div>
           <div>
@@ -84,7 +93,13 @@ export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStag
 
       {/* ── Content ── */}
       <AnimatePresence mode="wait">
-        <motion.div key={activeTab} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+        >
           {activeTab === "Overview" && <OverviewTab mosque={mosque} stage={stage} pipeline={pipelineStage} />}
           {activeTab === "Tasks" && <TasksTab progress={mosque.onboarding_progress} />}
           {activeTab === "Notes" && <NotesTab mosqueId={mosque.id} initial={initialNotes} />}
@@ -151,9 +166,11 @@ function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: strin
         </div>
       )}
 
-      <div className="max-w-3xl rounded-xl border border-stone-200 border-l-[3px] border-l-teal-500 bg-white p-6 shadow-sm">
-        <p className="mb-5 text-[14px] font-semibold text-stone-900">Details</p>
-        <div className="grid grid-cols-2 gap-x-8">
+      <div className="max-w-3xl overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+          <p className="text-[14px] font-semibold text-stone-900">Details</p>
+        </div>
+        <div className="grid grid-cols-2 gap-x-8 px-6 py-5">
           {(() => {
             const rows = [
               { l: "Contact", v: pipeline?.contact_name },
@@ -164,7 +181,6 @@ function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: strin
               { l: "Status", v: mosque.subscription_status, cap: true },
               ...(isLive ? [{ l: "Launched", v: fmtDate(mosque.launched_at) }, { l: "Last Activity", v: fmtDate(mosque.updated_at) }] : []),
             ];
-            // Last two rows get no bottom border (they're on the last row of the grid)
             return rows.map((r, i) => {
               const isLastRow = i >= rows.length - 2;
               return (
@@ -184,6 +200,15 @@ function OverviewTab({ mosque, stage, pipeline }: { mosque: Mosque; stage: strin
 }
 
 /* ════════════════════════════ TASKS ════════════════════════════ */
+
+const CAT_DOT_COLORS: Record<string, string> = {
+  Foundation: "bg-blue-500",
+  "Prayer & Worship": "bg-emerald-500",
+  Content: "bg-violet-500",
+  Revenue: "bg-amber-500",
+  Team: "bg-cyan-500",
+  Launch: "bg-rose-500",
+};
 
 function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
   const stats = getStats(progress);
@@ -211,12 +236,14 @@ function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
       </div>
 
       {/* Categories */}
-      <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.04 } } }}>
+      <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.04 } } }} className="space-y-8">
         {ONBOARDING_CATEGORIES.map((cat) => {
           const done = cat.tasks.filter((t) => progress?.[t.id] === true).length;
+          const dotColor = CAT_DOT_COLORS[cat.label] || "bg-stone-400";
           return (
-            <div key={cat.id} className="mb-7">
+            <div key={cat.id}>
               <div className="mb-2 flex items-center gap-2">
+                <span className={cn("h-2.5 w-2.5 rounded-full", dotColor)} />
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">{cat.label}</span>
                 <span className="text-[10px] font-semibold tabular-nums text-stone-300">{done}/{cat.tasks.length}</span>
               </div>
