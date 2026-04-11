@@ -14,6 +14,9 @@ export default async function OnboardingDashboard() {
 
   const mosque = await getMosqueOnboardingData(orgId);
   const progress = (mosque?.onboarding_progress as Record<string, boolean>) || {};
+  const onboardingStatus = typeof mosque?.onboarding_status === "string" ? mosque.onboarding_status : null;
+  const needsOnboarding = onboardingStatus === "in_progress";
+  const mosqueName = mosque?.name?.trim() || "This masjid";
   const completed = ALL_TASKS.filter((t) => progress[t.id] === true).length;
   const total = ALL_TASKS.length;
   const pct = Math.round((completed / total) * 100);
@@ -30,6 +33,15 @@ export default async function OnboardingDashboard() {
         Let&apos;s get your app set up. Complete the tasks on the left to launch
         your mosque&apos;s app.
       </p>
+
+      {needsOnboarding ? (
+        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+          <p className="text-[14px] font-semibold text-amber-900">Needs Onboarding</p>
+          <p className="mt-1 text-[13px] text-amber-800">
+            {mosqueName} needs to be onboarded. Continue the setup tasks below.
+          </p>
+        </div>
+      ) : null}
 
       {/* Progress Card */}
       <div className="mt-8 rounded-xl border border-stone-200 bg-white p-6">
