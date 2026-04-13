@@ -16,7 +16,7 @@ import { StatusBadge } from "../components/StatusBadge";
 import { Dropdown } from "../components/Dropdown";
 import { cn } from "@/lib/utils";
 import MosqueKanbanView from "./MosqueKanbanView";
-import { STAGES, type KanbanMosque } from "./mosque-kanban-types";
+import { STAGES, normalizeStages, type KanbanMosque } from "./mosque-kanban-types";
 
 type Mosque = KanbanMosque;
 
@@ -35,6 +35,24 @@ function getOnboardingPct(progress: Record<string, unknown> | null): number {
   const vals = Object.values(progress);
   if (!vals.length) return 0;
   return Math.round((vals.filter((v) => v === true).length / vals.length) * 100);
+}
+
+function getLatestPipelineStage(mosque: Mosque) {
+  const stages = normalizeStages(mosque.pipeline_stages);
+  if (stages.length === 0) {
+    return { stage: "lead", contactName: null as string | null };
+  }
+
+  const latest = stages.reduce((best, current) => {
+    const bestTs = best.updated_at ? Date.parse(best.updated_at) : 0;
+    const currentTs = current.updated_at ? Date.parse(current.updated_at) : 0;
+    return currentTs > bestTs ? current : best;
+  }, stages[0]);
+
+  return {
+    stage: latest.stage || "lead",
+    contactName: latest.contact_name ?? null,
+  };
 }
 
 export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
@@ -77,14 +95,14 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
     timerRef.current = setTimeout(() => setDebouncedSearch(v), 200);
   }
 
-  // List view: filtered list (search + stage filter both applied)
   const filteredList = useMemo(() => {
     const q = debouncedSearch.toLowerCase().trim();
     return mosques.filter((m) => {
-      const stage = m.pipeline_stages?.[0]?.stage || "lead";
+      const latest = getLatestPipelineStage(m);
+      const stage = latest.stage;
       if (statusFilter !== "all" && stage !== statusFilter) return false;
       if (!q) return true;
-      return [m.name, m.city, m.pipeline_stages?.[0]?.contact_name]
+      return [m.name, m.city, latest.contactName]
         .filter(Boolean)
         .some((s) => s!.toLowerCase().includes(q));
     });
@@ -96,15 +114,15 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
   const kanbanVisibleCount = useMemo(() => {
     const q = debouncedSearch.toLowerCase().trim();
     return mosques.filter((m) => {
+      const latest = getLatestPipelineStage(m);
       if (q) {
-        const matches = [m.name, m.city, m.pipeline_stages?.[0]?.contact_name]
+        const matches = [m.name, m.city, latest.contactName]
           .filter(Boolean)
           .some((s) => s!.toLowerCase().includes(q));
         if (!matches) return false;
       }
       if (statusFilter !== "all") {
-        const stage = m.pipeline_stages?.[0]?.stage || "lead";
-        if (stage !== statusFilter) return false;
+        if (latest.stage !== statusFilter) return false;
       }
       return true;
     }).length;
@@ -218,7 +236,8 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
             ) : (
               <div className="overflow-hidden rounded-xl border border-stone-200 bg-white">
                 {filteredList.map((mosque, i) => {
-                  const stage = mosque.pipeline_stages?.[0]?.stage || "lead";
+                  const latest = getLatestPipelineStage(mosque);
+                  const stage = latest.stage;
                   const isOnboarding = stage === "onboarding";
                   const pct = isOnboarding ? getOnboardingPct(mosque.onboarding_progress) : 0;
                   const color = mosque.brand_color || nameToColor(mosque.name || "M");
@@ -249,7 +268,7 @@ export default function MosqueList({ mosques }: { mosques: Mosque[] }) {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[14px] font-medium text-stone-900">{mosque.name}</p>
                           <p className="truncate text-[12px] text-stone-500">
-                            {[mosque.city, mosque.pipeline_stages?.[0]?.contact_name].filter(Boolean).join(" · ") || (
+                            {[mosque.city, latest.contactName].filter(Boolean).join(" · ") || (
                               <span className="italic text-stone-300">No city</span>
                             )}
                           </p>

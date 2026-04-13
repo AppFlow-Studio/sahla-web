@@ -3,8 +3,9 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { ALL_TASKS } from "../components/onboarding-tasks";
+import { ALL_TASKS, ONBOARDING_CATEGORIES } from "../components/onboarding-tasks";
 import { getMosqueOnboardingData } from "../data";
+import TaskPageTransition from "./TaskPageTransition";
 import MosqueProfilePanel from "./panels/MosqueProfilePanel";
 import AppBrandingPanel from "./panels/AppBrandingPanel";
 import PrayerTimesOnboardingPanel from "./panels/PrayerTimesOnboardingPanel";
@@ -13,7 +14,12 @@ import SpeakersPanel from "./panels/SpeakersPanel";
 import ProgramsPanel from "./panels/ProgramsPanel";
 import EventsPanel from "./panels/EventsPanel";
 import StripeConnectPanel from "./panels/StripeConnectPanel";
+import InviteAdminsPanel from "./panels/InviteAdminsPanel";
+import DonationsPanel from "./panels/DonationsPanel";
+import BusinessAdsPanel from "./panels/BusinessAdsPanel";
 import PreviewAppPanel from "./panels/PreviewAppPanel";
+import LaunchMaterialsPanel from "./panels/LaunchMaterialsPanel";
+import GoLivePanel from "./panels/GoLivePanel";
 import { createStripeClient } from "@/lib/stripe";
 
 export default async function TaskPage({
@@ -51,15 +57,6 @@ export default async function TaskPage({
   let speakersData = null;
   let programsData = null;
   let eventsData = null;
-  let previewCounts: {
-    speakers: number;
-    programs: number;
-    events: number;
-    jummahSlots: number;
-    prayersConfigured: number;
-    stripeConnected: boolean;
-  } | null = null;
-
   if (taskId === "prayer_times") {
     const { data } = await supabase
       .from("iqamah_config")
@@ -97,21 +94,75 @@ export default async function TaskPage({
     else eventsData = contentRes.data ?? [];
   }
 
+  const progress = ((mosque.onboarding_progress ?? {}) as Record<string, unknown>);
+
+  let queuedInvites: { name: string; email: string; role: "org:admin" | "org:editor" | "org:viewer" }[] = [];
+  if (taskId === "invite_admins") {
+    queuedInvites = (progress._queued_invites as typeof queuedInvites) ?? [];
+  }
+
+  let donationsConfig = null;
+  if (taskId === "donations") {
+    donationsConfig = (progress._donations_config as {
+      projectName: string;
+      goalAmount: string;
+      suggestedAmounts: number[];
+      suggestedEnabled: boolean;
+      recurringEnabled: boolean;
+    }) ?? null;
+  }
+
+  let adsConfig = null;
+  if (taskId === "ads_config") {
+    adsConfig = (progress._ads_config as {
+      enabled: boolean;
+      onboardingFee: string;
+      monthlyRate: string;
+    }) ?? null;
+  }
+
+  let previewData = null;
   if (taskId === "preview_app") {
-    const [speakersRes, programsRes, eventsRes, jummahRes, iqamahRes] = await Promise.all([
+    const [speakersRes, programsRes, eventsRes, iqamahRes] = await Promise.all([
       supabase.from("speaker_data").select("speaker_id", { count: "exact", head: true }).eq("mosque_id", session.orgId),
       supabase.from("content_items").select("id", { count: "exact", head: true }).eq("mosque_id", session.orgId).eq("type", "program"),
       supabase.from("content_items").select("id", { count: "exact", head: true }).eq("mosque_id", session.orgId).eq("type", "event"),
-      supabase.from("jummah").select("id", { count: "exact", head: true }).eq("mosque_id", session.orgId),
       supabase.from("iqamah_config").select("id", { count: "exact", head: true }).eq("mosque_id", session.orgId),
     ]);
-    previewCounts = {
-      speakers: speakersRes.count ?? 0,
-      programs: programsRes.count ?? 0,
-      events: eventsRes.count ?? 0,
-      jummahSlots: jummahRes.count ?? 0,
-      prayersConfigured: iqamahRes.count ?? 0,
-      stripeConnected: !!(mosque as Record<string, unknown>).stripe_account_id,
+    previewData = {
+      mosque: {
+        id: mosque.id,
+        name: mosque.name,
+        app_name: mosque.app_name,
+        brand_color: mosque.brand_color,
+        logo_url: mosque.logo_url,
+        city: mosque.city,
+        state: mosque.state,
+      },
+      counts: {
+        speakers: speakersRes.count ?? 0,
+        programs: programsRes.count ?? 0,
+        events: eventsRes.count ?? 0,
+      },
+      hasPrayerTimes: (iqamahRes.count ?? 0) > 0,
+      hasStripe: !!(mosque as Record<string, unknown>).stripe_account_id,
+      hasDonations: !!progress._donations_config,
+    };
+  }
+
+  let goLiveData = null;
+  if (taskId === "go_live") {
+    const allOnboardingTasks = ONBOARDING_CATEGORIES.flatMap((c) => c.tasks)
+      .filter((t) => t.id !== "go_live");
+    goLiveData = {
+      mosqueId: mosque.id,
+      mosqueName: mosque.name,
+      tasks: allOnboardingTasks.map((t) => ({
+        id: t.id,
+        label: t.label,
+        required: t.badge === "REQ",
+        completed: !!(progress as Record<string, boolean>)[t.id],
+      })),
     };
   }
 
@@ -145,6 +196,7 @@ export default async function TaskPage({
   const resolvedSearchParams = await searchParams;
 
   return (
+    <TaskPageTransition taskId={taskId}>
     <div className="mx-auto max-w-2xl py-8">
       <div className="mb-2 flex items-center gap-2">
         <span
@@ -196,14 +248,33 @@ export default async function TaskPage({
             stripeReturn={resolvedSearchParams.stripe}
           />
         )}
-        {taskId === "preview_app" && previewCounts && (
-          <PreviewAppPanel mosque={mosque} counts={previewCounts} />
+        {taskId === "invite_admins" && (
+          <InviteAdminsPanel mosqueId={mosque.id} initialInvites={queuedInvites} />
         )}
-        {!["mosque_profile", "app_branding", "prayer_times", "jummah_setup", "speakers", "programs", "events", "stripe_connect", "preview_app"].includes(taskId) && (
-          <div className="rounded-xl border-2 border-dashed border-stone-200 bg-white p-12 text-center">
-            <p className="text-[14px] text-stone-400">Task panel coming soon</p>
-            <p className="mt-1 text-[12px] text-stone-300">This form will be built in a follow-up ticket</p>
-          </div>
+        {taskId === "donations" && (
+          <DonationsPanel
+            mosqueId={mosque.id}
+            initialConfig={donationsConfig}
+            stripeConnected={!!(mosque as Record<string, unknown>).stripe_account_id}
+          />
+        )}
+        {taskId === "ads_config" && (
+          <BusinessAdsPanel mosqueId={mosque.id} initialConfig={adsConfig} />
+        )}
+        {taskId === "preview_app" && previewData && (
+          <PreviewAppPanel data={previewData} />
+        )}
+        {taskId === "launch_materials" && (
+          <LaunchMaterialsPanel mosque={{
+            id: mosque.id,
+            name: mosque.name,
+            app_name: mosque.app_name,
+            city: mosque.city,
+            state: mosque.state,
+          }} />
+        )}
+        {taskId === "go_live" && goLiveData && (
+          <GoLivePanel data={goLiveData} />
         )}
       </div>
 
@@ -235,5 +306,6 @@ export default async function TaskPage({
         )}
       </div>
     </div>
+    </TaskPageTransition>
   );
 }

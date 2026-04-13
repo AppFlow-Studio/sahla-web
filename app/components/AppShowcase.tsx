@@ -1,8 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useRef, useState, useCallback, useEffect } from "react";
-import PhoneCarousel from "./PhoneCarousel";
+
+const PhoneCarousel = dynamic(() => import("./PhoneCarousel"), { ssr: false });
 
 export default function AppShowcase() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -104,8 +106,20 @@ export default function AppShowcase() {
               "Real-time member engagement",
               "Events, calendars & notifications",
               "Secure messaging & groups",
-            ].map((feature) => (
-              <div key={feature} className="flex items-center gap-2.5">
+            ].map((feature, i) => (
+              <motion.div
+                key={feature}
+                className="flex items-center gap-2.5"
+                initial={{ opacity: 0, x: -16 }}
+                animate={
+                  demoActive
+                    ? { opacity: 0 }
+                    : isInView
+                      ? { opacity: 1, x: 0 }
+                      : {}
+                }
+                transition={{ duration: 0.5, ease: "easeOut", delay: 0.8 + i * 0.1 }}
+              >
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-light">
                   <svg
                     className="h-3 w-3 text-accent"
@@ -122,7 +136,7 @@ export default function AppShowcase() {
                   </svg>
                 </div>
                 <span className="text-sm text-dark-green/70">{feature}</span>
-              </div>
+              </motion.div>
             ))}
           </div>
         </motion.div>
@@ -176,8 +190,20 @@ export default function AppShowcase() {
               { value: "25K", label: "Active Users", change: "+34% growth" },
               { value: "98%", label: "Uptime", change: "Last 12 months" },
               { value: "4.8", label: "App Store Rating", change: "Avg across apps" },
-            ].map((stat) => (
-              <div key={stat.label} className="flex items-start gap-3">
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                className="flex items-start gap-3"
+                initial={{ opacity: 0, x: 16 }}
+                animate={
+                  demoActive
+                    ? { opacity: 0 }
+                    : isInView
+                      ? { opacity: 1, x: 0 }
+                      : {}
+                }
+                transition={{ duration: 0.5, ease: "easeOut", delay: 1.0 + i * 0.12 }}
+              >
                 <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-light">
                   <span className="text-sm font-bold text-accent">
                     {stat.value}
@@ -189,7 +215,7 @@ export default function AppShowcase() {
                   </p>
                   <p className="text-xs text-accent/60">{stat.change}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </motion.div>
@@ -213,16 +239,24 @@ export default function AppShowcase() {
         }}
         style={{ pointerEvents: demoActive ? "none" : "auto" }}
       >
-        <button className="group relative cursor-pointer overflow-hidden rounded-full bg-dark-green px-10 py-4 text-base font-medium tracking-wide text-white transition-all duration-300 hover:shadow-lg hover:shadow-dark-green/20">
+        <motion.button
+          className="group relative cursor-pointer overflow-hidden rounded-full bg-dark-green px-10 py-4 text-base font-medium tracking-wide text-white transition-all duration-300 hover:shadow-lg hover:shadow-dark-green/20"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+        >
           <span className="relative z-10">Get Started</span>
           <div className="absolute inset-0 -translate-x-full bg-accent transition-transform duration-300 group-hover:translate-x-0" />
-        </button>
-        <button
+        </motion.button>
+        <motion.button
           onClick={openDemo}
           className="group relative cursor-pointer overflow-hidden rounded-full border border-dark-green/15 px-10 py-4 text-base font-medium tracking-wide text-dark-green transition-all duration-300 hover:border-dark-green/30 hover:bg-dark-green/5"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
         >
           <span className="relative z-10">Demo</span>
-        </button>
+        </motion.button>
       </motion.div>
 
       {/* Demo mode overlay */}

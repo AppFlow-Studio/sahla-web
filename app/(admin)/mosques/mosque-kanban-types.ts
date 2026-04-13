@@ -24,6 +24,12 @@ export const STAGE_LABELS: Record<Stage, string> = {
   live: "Live",
 };
 
+export type PipelineStage = {
+  stage: string;
+  contact_name: string | null;
+  updated_at?: string | null;
+};
+
 export type KanbanMosque = {
   id: string;
   name: string;
@@ -33,12 +39,13 @@ export type KanbanMosque = {
   onboarding_status: string | null;
   onboarding_progress: Record<string, unknown> | null;
   created_at: string | null;
-  pipeline_stages: {
-    stage: string;
-    contact_name: string | null;
-    updated_at: string | null;
-  }[] | null;
+  pipeline_stages: PipelineStage[] | PipelineStage | null;
 };
+
+export function normalizeStages(input: KanbanMosque["pipeline_stages"]): PipelineStage[] {
+  if (!input) return [];
+  return Array.isArray(input) ? input : [input];
+}
 
 export function isStage(value: unknown): value is Stage {
   return (

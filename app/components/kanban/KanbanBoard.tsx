@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import {
   DndContext,
@@ -43,17 +44,19 @@ type Toast = {
   tone: "success" | "error";
 };
 
-/** Drop-target ring uses @theme green / highlight from globals.css */
+/** Matches MasjidCard left accent per stage when dragging over a column */
 const STAGE_DROP_BORDER_CLASS: Record<Stage, string> = {
-  lead: "border-green/35",
-  contacted: "border-green/50",
-  demo: "border-highlight/45",
-  contract: "border-highlight/70",
-  onboarding: "border-green/65",
-  live: "border-highlight",
+  lead: "border-slate-400",
+  contacted: "border-sky-500",
+  demo: "border-violet-500",
+  contract: "border-amber-500",
+  onboarding: "border-cyan-600",
+  live: "border-lime-500",
 };
 
-function DraggableMasjidCard({ card }: { card: KanbanCard }) {
+const STAGE_ORDER: Stage[] = ["lead", "contacted", "demo", "contract", "onboarding", "live"];
+
+function DraggableMasjidCard({ card, onMoveNext, onNoteAdded, onContactEdited }: { card: KanbanCard; onMoveNext: () => void; onNoteAdded: (note: string) => void; onContactEdited: (name: string, email: string) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: String(card.id),
     data: { card },
@@ -66,7 +69,7 @@ function DraggableMasjidCard({ card }: { card: KanbanCard }) {
       {...attributes}
       className={`touch-none ${isDragging ? "opacity-50" : ""}`}
     >
-      <MasjidCard card={card} />
+      <MasjidCard card={card} onMoveNext={onMoveNext} onNoteAdded={onNoteAdded} onContactEdited={onContactEdited} />
     </div>
   );
 }
@@ -75,10 +78,16 @@ function DroppableColumn({
   column,
   columnCards,
   dragging,
+  onMoveNext,
+  onNoteAdded,
+  onContactEdited,
 }: {
   column: Column;
   columnCards: KanbanCard[];
   dragging: boolean;
+  onMoveNext: (card: KanbanCard) => void;
+  onNoteAdded: (card: KanbanCard, note: string) => void;
+  onContactEdited: (card: KanbanCard, name: string, email: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
@@ -112,7 +121,7 @@ function DroppableColumn({
         ) : (
           <div ref={animateRef} className="flex w-full flex-col gap-[5px] self-start">
             {columnCards.map((card) => (
-              <DraggableMasjidCard key={String(card.id)} card={card} />
+              <DraggableMasjidCard key={String(card.id)} card={card} onMoveNext={() => onMoveNext(card)} onNoteAdded={(note) => onNoteAdded(card, note)} onContactEdited={(name, email) => onContactEdited(card, name, email)} />
             ))}
           </div>
         )}
@@ -128,10 +137,51 @@ export default function KanbanBoard({ cards }: Props) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [isCreateAccountModalOpen, setIsCreateAccountModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [stateFilter, setStateFilter] = useState("all");
 
   useEffect(() => {
     setLocalCards(cards);
   }, [cards]);
+
+  const uniqueStates = useMemo(() => {
+    const states = new Set<string>();
+    for (const card of localCards) {
+      if (card.state) states.add(card.state);
+    }
+    return Array.from(states).sort();
+  }, [localCards]);
+
+  const filteredCards = useMemo(() => {
+    let result = localCards;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.mosqueName.toLowerCase().includes(q) ||
+          c.contactName.toLowerCase().includes(q) ||
+          (c.contactEmail && c.contactEmail.toLowerCase().includes(q))
+      );
+    }
+
+    if (stateFilter !== "all") {
+      result = result.filter((c) => c.state === stateFilter);
+    }
+
+    return result;
+  }, [localCards, searchQuery, stateFilter]);
+
+  const stats = useMemo(() => {
+    const total = filteredCards.length;
+    const live = filteredCards.filter((c) => c.stage === "live").length;
+    const value = live * 300;
+    return {
+      totalMosques: total,
+      liveMosques: live,
+      pipelineValue: value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }),
+    };
+  }, [filteredCards]);
 
   function pushToast(message: string, tone: Toast["tone"]) {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -158,7 +208,7 @@ export default function KanbanBoard({ cards }: Props) {
       "onboarding",
       "live",
     ];
-    for (const card of localCards) {
+    for (const card of filteredCards) {
       const stage = stages.includes(card.stage) ? card.stage : "lead";
       next[stage].push(card);
     }
@@ -169,7 +219,7 @@ export default function KanbanBoard({ cards }: Props) {
       );
     }
     return next;
-  }, [localCards]);
+  }, [filteredCards]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -265,6 +315,75 @@ export default function KanbanBoard({ cards }: Props) {
     setActiveCard(null);
   }
 
+  async function handleMoveNext(card: KanbanCard) {
+    const idx = STAGE_ORDER.indexOf(card.stage);
+    if (idx === -1 || idx >= STAGE_ORDER.length - 1) {
+      pushToast(`${card.mosqueName} is already at the last stage.`, "error");
+      return;
+    }
+
+    const newStage = STAGE_ORDER[idx + 1];
+    const previousStage = card.stage;
+    const cardId = String(card.id);
+    const nowIso = new Date().toISOString();
+
+    setLocalCards((prev) =>
+      prev.map((c) =>
+        String(c.id) === cardId ? { ...c, stage: newStage, updatedAt: nowIso } : c
+      )
+    );
+
+    const mosqueIdPayload = String(card.mosqueId ?? card.id).trim();
+    if (!mosqueIdPayload) {
+      pushToast("Missing mosque id — cannot save move.", "error");
+      setLocalCards((prev) =>
+        prev.map((c) => (String(c.id) === cardId ? { ...c, stage: previousStage } : c))
+      );
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/pipeline/move", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mosqueId: mosqueIdPayload, newStage }),
+      });
+      if (!res.ok) {
+        const body = (await res.json()) as { error?: string };
+        throw new Error(body.error ?? "Failed to move mosque.");
+      }
+      pushToast(`${card.mosqueName} moved to ${newStage}.`, "success");
+    } catch (error) {
+      setLocalCards((prev) =>
+        prev.map((c) => (String(c.id) === cardId ? { ...c, stage: previousStage } : c))
+      );
+      const message = error instanceof Error ? error.message : "Failed to move mosque.";
+      pushToast(message, "error");
+    }
+  }
+
+  function handleNoteAdded(card: KanbanCard, note: string) {
+    const cardId = String(card.id);
+    setLocalCards((prev) =>
+      prev.map((c) =>
+        String(c.id) === cardId ? { ...c, referredBy: note } : c
+      )
+    );
+    pushToast(`Note added to ${card.mosqueName}.`, "success");
+  }
+
+  function handleContactEdited(card: KanbanCard, name: string, email: string) {
+    const cardId = String(card.id);
+    setLocalCards((prev) =>
+      prev.map((c) =>
+        String(c.id) === cardId
+          ? { ...c, contactName: name, contactEmail: email || null }
+          : c
+      )
+    );
+    pushToast(`Contact updated for ${card.mosqueName}.`, "success");
+  }
+
   function handleLeadSaved(mosqueName: string) {
     setIsLeadModalOpen(false);
     pushToast(`${mosqueName} added to pipeline.`, "success");
@@ -289,14 +408,6 @@ export default function KanbanBoard({ cards }: Props) {
         >
           + Add lead
         </button>
-        <button
-          type="button"
-          onClick={() => setIsCreateAccountModalOpen(true)}
-          title="After a lead is confirmed — creates Clerk org and sends invite"
-          className="rounded-full bg-green px-4 py-2 text-sm font-medium text-tan shadow-sm transition hover:bg-green/90"
-        >
-          Create account
-        </button>
       </div>
       <AddLeadModal
         open={isLeadModalOpen}
@@ -309,7 +420,74 @@ export default function KanbanBoard({ cards }: Props) {
         onSuccess={handleAccountCreated}
       />
 
-      <div className="mt-4">
+      {/* Stats bar */}
+      <div className="mt-2 mb-5 grid grid-cols-3 gap-4">
+        {[
+          { label: "Total Mosques", value: stats.totalMosques },
+          { label: "Pipeline Value", value: `${stats.pipelineValue}/mo` },
+          { label: "Live Mosques", value: stats.liveMosques },
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: i * 0.07, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="rounded-xl border border-green/10 bg-white px-5 py-4"
+          >
+            <p className="text-xs font-medium text-green/50">{stat.label}</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-green">{stat.value}</p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Search & state filter */}
+      <div className="mt-4 mb-5 flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-55 max-w-80">
+          <svg
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green/40"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" strokeLinecap="round" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search mosques or contacts..."
+            className="w-full rounded-full border border-green/12 bg-white py-2 pl-9 pr-3 text-sm text-green placeholder:text-green/40 outline-none transition focus:border-green/30 focus:ring-1 focus:ring-green/15"
+          />
+        </div>
+
+        <div className="relative min-w-35">
+          <select
+            value={stateFilter}
+            onChange={(e) => setStateFilter(e.target.value)}
+            className="w-full appearance-none rounded-full border border-green/12 bg-white py-2 pl-3 pr-8 text-sm text-green outline-none transition cursor-pointer focus:border-green/30 focus:ring-1 focus:ring-green/15"
+          >
+            <option value="all">All States</option>
+            {uniqueStates.map((st) => (
+              <option key={st} value={st}>
+                {st}
+              </option>
+            ))}
+          </select>
+          <svg
+            className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-green/40"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </div>
+
+      <div>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -324,33 +502,48 @@ export default function KanbanBoard({ cards }: Props) {
                 column={column}
                 columnCards={buckets[column.id]}
                 dragging={dragging}
+                onMoveNext={handleMoveNext}
+                onNoteAdded={handleNoteAdded}
+                onContactEdited={handleContactEdited}
               />
             ))}
           </div>
 
           <DragOverlay dropAnimation={null}>
             {activeCard ? (
-              <div className="cursor-grabbing shadow-lg">
+              <motion.div
+                className="cursor-grabbing"
+                initial={{ scale: 1, rotate: 0, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}
+                animate={{ scale: 1.03, rotate: 1.5, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.06)" }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                style={{ borderRadius: 12 }}
+              >
                 <MasjidCard card={activeCard} />
-              </div>
+              </motion.div>
             ) : null}
           </DragOverlay>
         </DndContext>
       </div>
 
       <div className="pointer-events-none fixed top-4 right-4 z-60 flex w-[320px] max-w-[90vw] flex-col gap-2">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`pointer-events-auto rounded-xl border px-3 py-2 text-sm shadow-lg ${
-              t.tone === "success"
-                ? "border-green/15 bg-white text-green"
-                : "border-highlight/50 bg-white text-green"
-            }`}
-          >
-            {t.message}
-          </div>
-        ))}
+        <AnimatePresence>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              initial={{ opacity: 0, x: 40, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 40, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className={`pointer-events-auto rounded-xl border px-3 py-2 text-sm shadow-lg ${
+                t.tone === "success"
+                  ? "border-green/15 bg-white text-green"
+                  : "border-highlight/50 bg-white text-green"
+              }`}
+            >
+              {t.message}
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );

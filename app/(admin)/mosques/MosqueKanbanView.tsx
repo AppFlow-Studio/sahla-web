@@ -22,6 +22,7 @@ import {
   STAGES,
   STAGE_LABELS,
   isStage,
+  normalizeStages,
   type KanbanMosque,
   type Stage,
 } from "./mosque-kanban-types";
@@ -36,7 +37,8 @@ type Props = {
 
 function matchesSearch(m: KanbanMosque, q: string): boolean {
   if (!q) return true;
-  return [m.name, m.city, m.pipeline_stages?.[0]?.contact_name]
+  const stages = normalizeStages(m.pipeline_stages);
+  return [m.name, m.city, stages[0]?.contact_name]
     .filter(Boolean)
     .some((s) => s!.toLowerCase().includes(q));
 }
@@ -143,7 +145,8 @@ export default function MosqueKanbanView({
       live: [],
     };
     for (const m of localMosques) {
-      const raw = m.pipeline_stages?.[0]?.stage;
+      const stages = normalizeStages(m.pipeline_stages);
+      const raw = stages[0]?.stage;
       const stage = isStage(raw) ? raw : "lead";
       next[stage].push(m);
     }
@@ -176,8 +179,9 @@ export default function MosqueKanbanView({
 
     const moving = localMosques.find((m) => m.id === mosqueId);
     if (!moving) return;
+    const movingStages = normalizeStages(moving.pipeline_stages);
     const previousStage =
-      (moving.pipeline_stages?.[0]?.stage as Stage | undefined) || "lead";
+      (movingStages[0]?.stage as Stage | undefined) || "lead";
     if (previousStage === newStage) return;
 
     const nowIso = new Date().toISOString();
@@ -191,7 +195,7 @@ export default function MosqueKanbanView({
               pipeline_stages: [
                 {
                   stage: newStage,
-                  contact_name: m.pipeline_stages?.[0]?.contact_name ?? null,
+                  contact_name: normalizeStages(m.pipeline_stages)[0]?.contact_name ?? null,
                   updated_at: nowIso,
                 },
               ],
@@ -213,7 +217,7 @@ export default function MosqueKanbanView({
       toast.success(`Moved ${moving.name} to ${STAGE_LABELS[newStage]}`);
       router.refresh();
     } catch (err) {
-      // Rollback
+      const rollbackStages = normalizeStages(moving.pipeline_stages);
       setLocalMosques((prev) =>
         prev.map((m) =>
           m.id === mosqueId
@@ -222,8 +226,8 @@ export default function MosqueKanbanView({
                 pipeline_stages: [
                   {
                     stage: previousStage,
-                    contact_name: m.pipeline_stages?.[0]?.contact_name ?? null,
-                    updated_at: m.pipeline_stages?.[0]?.updated_at ?? null,
+                    contact_name: rollbackStages[0]?.contact_name ?? null,
+                    updated_at: rollbackStages[0]?.updated_at ?? null,
                   },
                 ],
               }
@@ -263,9 +267,15 @@ export default function MosqueKanbanView({
         <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[#fffbf2] to-transparent" />
       </div>
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeMosque ? (
-          <MosqueKanbanCard mosque={activeMosque} overlay />
+          <motion.div
+            initial={{ scale: 1, rotate: 0 }}
+            animate={{ scale: 1.04, rotate: 2 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          >
+            <MosqueKanbanCard mosque={activeMosque} overlay />
+          </motion.div>
         ) : null}
       </DragOverlay>
     </DndContext>
