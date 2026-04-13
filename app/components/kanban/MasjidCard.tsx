@@ -233,7 +233,7 @@ export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdi
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
-              className="rounded-lg px-3 py-1 text-[11px] font-medium text-green/50 transition-colors hover:text-green"
+              className="rounded-full px-3 py-1 text-[11px] font-medium text-green/50 transition-colors hover:text-green"
               onClick={handleCancelNote}
               disabled={isSaving}
             >
@@ -241,7 +241,7 @@ export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdi
             </button>
             <button
               type="button"
-              className="rounded-lg bg-green px-3 py-1 text-[11px] font-medium text-tan transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="rounded-full bg-green px-3 py-1 text-[11px] font-medium text-tan transition-opacity hover:opacity-90 disabled:opacity-50"
               onClick={handleSaveNote}
               disabled={isSaving || !noteText.trim()}
             >

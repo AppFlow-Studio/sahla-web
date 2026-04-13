@@ -3,14 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
+import { cn } from "@/lib/utils";
+import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY } from "@/lib/ui-classes";
 
-type JummahSlot = {
-  time: string;
-  khateeb_name: string;
-  topic: string;
-};
-
+type JummahSlot = { time: string; khateeb_name: string; topic: string };
 type JummahRecord = {
   id: number;
   mosque_id: string;
@@ -18,10 +16,7 @@ type JummahRecord = {
   topic: string | null;
   capacity_status: string | null;
 };
-
-type MosqueData = {
-  id: string;
-};
+type MosqueData = { id: string };
 
 export default function JummahSetupPanel({
   mosque,
@@ -103,29 +98,32 @@ export default function JummahSetupPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Number of Jummah Prayers */}
-      <div className="rounded-xl border border-stone-200 bg-white p-6">
-        <p className="mb-1 text-[14px] font-semibold text-stone-900">
-          Number of Jummah Prayers
-        </p>
-        <p className="mb-3 text-[12px] text-stone-400">
-          How many Friday prayers does your mosque offer?
-        </p>
-        <div className="flex gap-2">
-          {[1, 2, 3, 4].map((n) => (
-            <button
-              key={n}
-              onClick={() => handleSlotCountChange(n)}
-              className={`rounded-lg px-5 py-2 text-[13px] font-medium transition-colors ${
-                slotCount === n
-                  ? "bg-emerald-600 text-white"
-                  : "border border-stone-300 text-stone-600 hover:bg-stone-50"
-              }`}
-            >
-              {n}
-            </button>
-          ))}
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+          <p className="text-[14px] font-semibold text-stone-900">Number of Jummah Prayers</p>
+          <p className="mt-0.5 text-[12px] text-stone-500">
+            How many Friday prayers does your mosque offer?
+          </p>
+        </div>
+        <div className="px-6 py-5">
+          <div className="inline-flex items-center rounded-lg border border-stone-200 bg-white p-1 shadow-sm">
+            {[1, 2, 3, 4].map((n) => (
+              <button
+                key={n}
+                onClick={() => handleSlotCountChange(n)}
+                className={cn(
+                  "rounded-md px-5 py-1.5 text-[13px] font-medium transition-all",
+                  slotCount === n
+                    ? "bg-stone-900 text-white shadow-sm"
+                    : "text-stone-600 hover:text-stone-900"
+                )}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -138,45 +136,41 @@ export default function JummahSetupPanel({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="rounded-xl border border-stone-200 bg-white p-6"
+            className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm"
           >
-            <p className="mb-4 text-[14px] font-semibold text-stone-900">
-              Jummah {slotCount > 1 ? `#${i + 1}` : "Prayer"}
-            </p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+              <p className="text-[14px] font-semibold text-stone-900">
+                Jummah {slotCount > 1 ? `#${i + 1}` : "Prayer"}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 px-6 py-5">
               <div>
-                <label className="mb-1 block text-[12px] font-medium text-stone-600">
-                  Time
-                </label>
+                <label className={LABEL_CLASS}>Time</label>
                 <input
                   type="time"
                   value={slot.time}
                   onChange={(e) => updateSlot(i, { time: e.target.value })}
-                  className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-[13px] tabular-nums text-stone-900 focus:border-emerald-500 focus:outline-none"
+                  className={cn(INPUT_CLASS, "tabular-nums")}
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[12px] font-medium text-stone-600">
-                  Khateeb
-                </label>
+                <label className={LABEL_CLASS}>Khateeb</label>
                 <input
                   type="text"
                   value={slot.khateeb_name}
                   onChange={(e) => updateSlot(i, { khateeb_name: e.target.value })}
                   placeholder="Imam name"
-                  className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+                  className={INPUT_CLASS}
                 />
               </div>
               <div className="col-span-2">
-                <label className="mb-1 block text-[12px] font-medium text-stone-600">
-                  Topic (optional)
-                </label>
+                <label className={LABEL_CLASS}>Topic (optional)</label>
                 <input
                   type="text"
                   value={slot.topic}
                   onChange={(e) => updateSlot(i, { topic: e.target.value })}
                   placeholder="This week's khutbah topic"
-                  className="w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
+                  className={INPUT_CLASS}
                 />
               </div>
             </div>
@@ -185,24 +179,26 @@ export default function JummahSetupPanel({
       </AnimatePresence>
 
       {/* Capacity Toggle */}
-      <div className="rounded-xl border border-stone-200 bg-white p-6">
-        <div className="flex items-center justify-between">
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between px-6 py-5">
           <div>
             <p className="text-[14px] font-semibold text-stone-900">Capacity Tracking</p>
-            <p className="text-[12px] text-stone-400">
+            <p className="mt-0.5 text-[12px] text-stone-500">
               Show capacity status to users before Jummah
             </p>
           </div>
           <button
             onClick={() => setCapacityEnabled(!capacityEnabled)}
-            className={`relative h-6 w-11 rounded-full transition-colors ${
+            className={cn(
+              "relative h-6 w-11 rounded-full transition-colors",
               capacityEnabled ? "bg-emerald-500" : "bg-stone-300"
-            }`}
+            )}
           >
             <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+              className={cn(
+                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
                 capacityEnabled ? "translate-x-5" : "translate-x-0.5"
-              }`}
+              )}
             />
           </button>
         </div>
@@ -213,8 +209,9 @@ export default function JummahSetupPanel({
         <button
           onClick={handleSave}
           disabled={saving}
-          className="rounded-lg bg-emerald-600 px-5 py-2.5 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
+          className={BTN_PRIMARY}
         >
+          {saving && <Loader2 size={14} className="animate-spin" />}
           {saving ? "Saving..." : "Save & Complete"}
         </button>
       </div>

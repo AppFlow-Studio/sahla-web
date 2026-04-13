@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import {
   DndContext,
@@ -421,18 +422,22 @@ export default function KanbanBoard({ cards }: Props) {
 
       {/* Stats bar */}
       <div className="mt-2 mb-5 grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-green/10 bg-white px-5 py-4">
-          <p className="text-xs font-medium text-green/50">Total Mosques</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-green">{stats.totalMosques}</p>
-        </div>
-        <div className="rounded-xl border border-green/10 bg-white px-5 py-4">
-          <p className="text-xs font-medium text-green/50">Pipeline Value</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-green">{stats.pipelineValue}/mo</p>
-        </div>
-        <div className="rounded-xl border border-green/10 bg-white px-5 py-4">
-          <p className="text-xs font-medium text-green/50">Live Mosques</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-green">{stats.liveMosques}</p>
-        </div>
+        {[
+          { label: "Total Mosques", value: stats.totalMosques },
+          { label: "Pipeline Value", value: `${stats.pipelineValue}/mo` },
+          { label: "Live Mosques", value: stats.liveMosques },
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: i * 0.07, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="rounded-xl border border-green/10 bg-white px-5 py-4"
+          >
+            <p className="text-xs font-medium text-green/50">{stat.label}</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums text-green">{stat.value}</p>
+          </motion.div>
+        ))}
       </div>
 
       {/* Search & state filter */}
@@ -453,7 +458,7 @@ export default function KanbanBoard({ cards }: Props) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search mosques or contacts..."
-            className="w-full rounded-lg border border-green/12 bg-white py-2 pl-9 pr-3 text-sm text-green placeholder:text-green/40 outline-none transition focus:border-green/30 focus:ring-1 focus:ring-green/15"
+            className="w-full rounded-full border border-green/12 bg-white py-2 pl-9 pr-3 text-sm text-green placeholder:text-green/40 outline-none transition focus:border-green/30 focus:ring-1 focus:ring-green/15"
           />
         </div>
 
@@ -461,7 +466,7 @@ export default function KanbanBoard({ cards }: Props) {
           <select
             value={stateFilter}
             onChange={(e) => setStateFilter(e.target.value)}
-            className="w-full appearance-none rounded-lg border border-green/12 bg-white py-2 pl-3 pr-8 text-sm text-green outline-none transition cursor-pointer focus:border-green/30 focus:ring-1 focus:ring-green/15"
+            className="w-full appearance-none rounded-full border border-green/12 bg-white py-2 pl-3 pr-8 text-sm text-green outline-none transition cursor-pointer focus:border-green/30 focus:ring-1 focus:ring-green/15"
           >
             <option value="all">All States</option>
             {uniqueStates.map((st) => (
@@ -506,27 +511,39 @@ export default function KanbanBoard({ cards }: Props) {
 
           <DragOverlay dropAnimation={null}>
             {activeCard ? (
-              <div className="cursor-grabbing shadow-lg">
+              <motion.div
+                className="cursor-grabbing"
+                initial={{ scale: 1, rotate: 0, boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}
+                animate={{ scale: 1.03, rotate: 1.5, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.06)" }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                style={{ borderRadius: 12 }}
+              >
                 <MasjidCard card={activeCard} />
-              </div>
+              </motion.div>
             ) : null}
           </DragOverlay>
         </DndContext>
       </div>
 
       <div className="pointer-events-none fixed top-4 right-4 z-60 flex w-[320px] max-w-[90vw] flex-col gap-2">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`pointer-events-auto rounded-xl border px-3 py-2 text-sm shadow-lg ${
-              t.tone === "success"
-                ? "border-green/15 bg-white text-green"
-                : "border-highlight/50 bg-white text-green"
-            }`}
-          >
-            {t.message}
-          </div>
-        ))}
+        <AnimatePresence>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              initial={{ opacity: 0, x: 40, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 40, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className={`pointer-events-auto rounded-xl border px-3 py-2 text-sm shadow-lg ${
+                t.tone === "success"
+                  ? "border-green/15 bg-white text-green"
+                  : "border-highlight/50 bg-white text-green"
+              }`}
+            >
+              {t.message}
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );

@@ -1,14 +1,19 @@
 "use client";
 
+import { motion } from "framer-motion";
+
 export default function ScrollCTA() {
   const handleClick = () => {
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
 
   return (
-    <button
+    <motion.button
       onClick={handleClick}
       className="absolute bottom-20 left-1/2 z-20 flex -translate-x-1/2 cursor-pointer flex-col items-center gap-2 border-0 bg-transparent"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut", delay: 0.9 }}
     >
       <span className="text-sm text-tan-light/50">Scroll to explore</span>
       <div className="flex h-10 w-10 items-center justify-center rounded-full border border-dark-green/15 transition-colors hover:border-dark-green/30 hover:bg-dark-green/5">
@@ -27,6 +32,6 @@ export default function ScrollCTA() {
           />
         </svg>
       </div>
-    </button>
+    </motion.button>
   );
 }

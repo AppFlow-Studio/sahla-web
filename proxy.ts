@@ -1,68 +1,100 @@
 // proxy.ts — Role-Based Routing via Clerk Organizations
 //
 // Routing logic:
-//   Active org = Sahla HQ org → route to (admin)/ → Admin HQ dashboard
-//   Active org = any mosque   → route to (masjid)/ → Onboarding/management
-//   No active org             → redirect to org selection
+//   Active org = Sahla HQ org → Admin HQ (overview, pipeline, mosques, ...)
+//   Active org = any mosque   → Masjid CRM (onboarding tasks at /[taskId])
+//   No active org             → /select-org
+//   Not signed in             → /login (or marketing page at /)
 
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID!;
 
-const isAdminRoute = createRouteMatcher(["/(admin)(.*)"]);
-const isMasjidRoute = createRouteMatcher(["/(masjid)(.*)"]);
-const isPublicRoute = createRouteMatcher(["/", "/login(.*)", "/api/webhooks(.*)"]);
+const ADMIN_PATHS = [
+  "/overview",
+  "/pipeline",
+  "/mosques",
+  "/revenue",
+  "/expenses",
+  "/builds",
+];
+
+const isMarketingHome = createRouteMatcher(["/"]);
+const isLoginRoute = createRouteMatcher(["/login(.*)"]);
+const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
+const isApiRoute = createRouteMatcher(["/api/(.*)"]);
+const isSelectOrgRoute = createRouteMatcher(["/select-org"]);
+
+const LAUNCH_PATH = "/launch";
+const MASJID_LANDING = "/mosque_profile";
+const ADMIN_LANDING = "/overview";
+
+function isAdminPath(pathname: string): boolean {
+  return ADMIN_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
 
 export const proxy = clerkMiddleware(async (auth, req) => {
-  // Allow public routes (login page, webhook endpoints)
-  if (isPublicRoute(req)) {
+  if (isWebhookRoute(req) || isLoginRoute(req)) {
     return NextResponse.next();
   }
 
-  // Require authentication for everything else
   const session = await auth();
-  if (!session.userId) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
-
-  const activeOrgId = session.orgId;
   const url = req.nextUrl.clone();
 
-  // ── No active org: redirect to org selection ──
-  // This happens on first login before the user selects which org to work in.
-  // Clerk's <OrganizationSwitcher> component handles the selection UI.
-  if (!activeOrgId) {
-    // If they're already on a page with org selector, let them through
-    if (url.pathname === "/select-org") {
-      return NextResponse.next();
+  if (isMarketingHome(req)) {
+    return NextResponse.next();
+  }
+
+  if (!session.userId) {
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  // /launch is a virtual route — it always redirects, never renders.
+  if (url.pathname === LAUNCH_PATH) {
+    if (!session.orgId) {
+      url.pathname = "/select-org";
+      return NextResponse.redirect(url);
     }
+    url.pathname =
+      session.orgId === SAHLA_HQ_ORG_ID ? ADMIN_LANDING : MASJID_LANDING;
+    return NextResponse.redirect(url);
+  }
+
+  if (isSelectOrgRoute(req)) {
+    return NextResponse.next();
+  }
+
+  if (!session.orgId) {
     url.pathname = "/select-org";
     return NextResponse.redirect(url);
   }
 
-  // ── Sahla HQ org: route to admin dashboard ──
-  if (activeOrgId === SAHLA_HQ_ORG_ID) {
-    // If trying to access masjid routes while in HQ org → redirect to admin
-    if (isMasjidRoute(req)) {
-      url.pathname = "/";
-      return NextResponse.redirect(url);
-    }
+  const isHQ = session.orgId === SAHLA_HQ_ORG_ID;
+
+  if (isAdminPath(url.pathname)) {
+    if (isHQ) return NextResponse.next();
+    url.pathname = MASJID_LANDING;
+    return NextResponse.redirect(url);
+  }
+
+  if (isApiRoute(req)) {
     return NextResponse.next();
   }
 
-  // ── Any other org (mosque): route to mosque CRM ──
-  // If trying to access admin routes while in a mosque org → redirect to masjid
-  if (isAdminRoute(req)) {
-    url.pathname = "/";
+  if (isHQ) {
+    url.pathname = ADMIN_LANDING;
     return NextResponse.redirect(url);
   }
+
   return NextResponse.next();
 });
 
 export const config = {
   matcher: [
-    // Run middleware on all routes except static files and _next
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     "/(api|trpc)(.*)",
   ],

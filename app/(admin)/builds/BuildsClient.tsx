@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Version = {
   version: string;
@@ -17,17 +17,17 @@ type App = {
   icon: string | null;
   platform: "ios" | "android";
   currentVersion: string;
-  status: "live" | "review" | "building" | "rejected";
+  status: "live" | "pending_review" | "building" | "rejected";
   bundleId?: string;
   versions: Version[];
 };
 
-type StatusFilter = "all" | "live" | "review" | "building" | "rejected";
+type StatusFilter = "all" | "live" | "pending_review" | "building" | "rejected";
 
 const statusConfig: Record<string, { label: string; dot: string; bg: string; text: string; ring: string }> = {
   live: { label: "Live", dot: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700", ring: "ring-emerald-500/20" },
-  review: { label: "In Review", dot: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-500/20" },
-  building: { label: "Building", dot: "bg-blue-500", bg: "bg-blue-50", text: "text-blue-700", ring: "ring-blue-500/20" },
+  pending_review: { label: "Pending Review", dot: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-500/20" },
+  building: { label: "Building", dot: "bg-purple-500", bg: "bg-purple-50", text: "text-purple-700", ring: "ring-purple-500/20" },
   rejected: { label: "Rejected", dot: "bg-red-500", bg: "bg-red-50", text: "text-red-700", ring: "ring-red-500/20" },
 };
 
@@ -50,16 +50,16 @@ function daysSince(dateStr: string) {
 
 /* ── App Card ── */
 
-function AppCard({ app, isSelected, onSelect }: { app: App; isSelected: boolean; onSelect: () => void }) {
+function AppCard({ app, isSelected, onSelect, index }: { app: App; isSelected: boolean; onSelect: () => void; index: number }) {
   const s = statusConfig[app.status];
   const lastDate = app.versions[0]?.date;
 
   return (
     <motion.button
       onClick={onSelect}
-      initial={false}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.15 }}
+      transition={{ duration: 0.25, delay: Math.min(index * 0.05, 0.3), ease: [0.25, 0.46, 0.45, 0.94] }}
       whileTap={{ scale: 0.98 }}
       className={`group w-full rounded-2xl p-4 text-left transition-all duration-200 ${
         isSelected
@@ -120,9 +120,9 @@ function AppCard({ app, isSelected, onSelect }: { app: App; isSelected: boolean;
 function VersionRow({ v, isLatest, index }: { v: Version; isLatest: boolean; index: number }) {
   return (
     <motion.div
-      initial={false}
+      initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.15 }}
+      transition={{ duration: 0.3, delay: Math.min(index * 0.06, 0.4), ease: [0.25, 0.46, 0.45, 0.94] }}
       className="relative flex gap-4 pb-7 last:pb-0"
     >
       {/* Timeline connector */}
@@ -198,7 +198,7 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
   const counts = useMemo(() => ({
     all: apps.length,
     live: apps.filter((a) => a.status === "live").length,
-    review: apps.filter((a) => a.status === "review").length,
+    pending_review: apps.filter((a) => a.status === "pending_review").length,
     building: apps.filter((a) => a.status === "building").length,
     rejected: apps.filter((a) => a.status === "rejected").length,
   }), [apps]);
@@ -206,8 +206,8 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
   const filterTabs: { label: string; value: StatusFilter; dot?: string }[] = [
     { label: "All", value: "all" },
     { label: "Live", value: "live", dot: "bg-emerald-500" },
-    { label: "In Review", value: "review", dot: "bg-amber-500" },
-    { label: "Building", value: "building", dot: "bg-blue-500" },
+    { label: "Pending Review", value: "pending_review", dot: "bg-amber-500" },
+    { label: "Building", value: "building", dot: "bg-purple-500" },
   ];
 
   return (
@@ -224,6 +224,29 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
           <span className="font-mono text-2xl font-bold text-ink">{apps.length}</span>
           <span className="text-faint">apps tracked</span>
         </div>
+      </div>
+
+      {/* Metrics */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Live on App Store", count: counts.live, dot: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700" },
+          { label: "Building", count: counts.building, dot: "bg-purple-500", bg: "bg-purple-50", text: "text-purple-700" },
+          { label: "Pending Review", count: counts.pending_review, dot: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700" },
+        ].map((m, i) => (
+          <motion.div
+            key={m.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: i * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="rounded-2xl border border-edge bg-white px-5 py-4 shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <span className={`h-2 w-2 rounded-full ${m.dot}`} />
+              <p className="text-xs font-medium text-subtle">{m.label}</p>
+            </div>
+            <p className="mt-2 font-mono text-2xl font-bold text-ink">{m.count}</p>
+          </motion.div>
+        ))}
       </div>
 
       {/* Filter tabs */}
@@ -281,12 +304,13 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
 
           {/* Cards */}
           <div className="space-y-2">
-            {filtered.map((app) => (
+            {filtered.map((app, i) => (
               <AppCard
                 key={app.id}
                 app={app}
                 isSelected={selectedId === app.id}
                 onSelect={() => setSelectedId(app.id)}
+                index={i}
               />
             ))}
             {filtered.length === 0 && (
@@ -302,9 +326,14 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
 
         {/* Right: Detail panel */}
         <div className="min-w-0 flex-1">
+          <AnimatePresence mode="wait">
             {selected ? (
-              <div
+              <motion.div
                 key={selected.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className="overflow-hidden rounded-2xl border border-edge bg-white shadow-sm"
               >
                 {/* Hero header */}
@@ -382,9 +411,13 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
                     ))}
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ) : (
-              <div
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 className="flex h-full min-h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed border-edge-bold bg-white"
               >
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-ink/5">
@@ -394,8 +427,9 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
                 </div>
                 <p className="mt-4 text-sm font-medium text-subtle">Select an app to view build details</p>
                 <p className="mt-1 text-xs text-faint">Choose from the list on the left</p>
-              </div>
+              </motion.div>
             )}
+          </AnimatePresence>
         </div>
       </div>
     </div>

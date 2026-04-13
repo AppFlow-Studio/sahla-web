@@ -28,7 +28,7 @@ export default function LoginPage() {
         <SignIn
           routing="path"
           path="/login"
-          fallbackRedirectUrl="/overview"
+          fallbackRedirectUrl="/launch"
           appearance={{
             elements: {
               footerAction: { display: "none" },
