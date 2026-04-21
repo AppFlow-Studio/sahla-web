@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Geist } from "next/font/google";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import Providers from "./providers";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({
   subsets: ["latin"],
@@ -42,7 +45,7 @@ export default function RootLayout({
     >
       <html
         lang="en"
-        className={`${inter.variable} ${dmSerif.variable} h-full antialiased`}
+        className={cn("h-full", "antialiased", inter.variable, dmSerif.variable, "font-sans", geist.variable)}
       >
         <body className="min-h-full flex flex-col">
           <Providers>{children}</Providers>
