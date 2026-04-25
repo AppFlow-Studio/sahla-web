@@ -9,7 +9,6 @@ ALTER TABLE mosques
   ADD COLUMN IF NOT EXISTS subscription_tier TEXT
     CHECK (subscription_tier IN ('core', 'core_crm', 'complete')),
   ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ;
-
 -- Backfill email from pipeline_stages for existing mosques
 UPDATE mosques m
 SET email = ps.contact_email
@@ -17,17 +16,14 @@ FROM pipeline_stages ps
 WHERE ps.mosque_id = m.id
   AND ps.contact_email IS NOT NULL
   AND m.email IS NULL;
-
 -- Idempotent webhook processing
 CREATE TABLE IF NOT EXISTS stripe_webhook_events (
   event_id TEXT PRIMARY KEY,
   event_type TEXT NOT NULL,
   processed_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
 CREATE INDEX IF NOT EXISTS idx_stripe_webhook_events_processed_at
   ON stripe_webhook_events (processed_at);
-
 -- Price IDs stored in platform env vars (STRIPE_PRICE_CORE, STRIPE_PRICE_CORE_CRM, STRIPE_PRICE_COMPLETE)
 
 -- Daily cron: check past_due mosques and cancel after 7-day grace period
