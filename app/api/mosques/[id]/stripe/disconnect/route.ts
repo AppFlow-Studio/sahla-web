@@ -12,12 +12,19 @@ export async function POST(
   }
 
   const { id: mosqueId } = await params;
-
-  if (session.orgId && session.orgId !== mosqueId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const supabase = createAdminSupabaseClient();
+
+  // Auth: check clerk_org_id for graduated leads where mosque.id is a UUID
+  {
+    const { data: authMosque } = await supabase
+      .from("mosques")
+      .select("clerk_org_id")
+      .eq("id", mosqueId)
+      .single();
+    if (session.orgId && session.orgId !== mosqueId && session.orgId !== authMosque?.clerk_org_id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
 
   // Clear stripe_account_id (don't delete the Stripe account — mosque owns it)
   await supabase

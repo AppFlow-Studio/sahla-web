@@ -13,20 +13,19 @@ export async function POST(
   }
 
   const { id: mosqueId } = await params;
-
-  if (session.orgId && session.orgId !== mosqueId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const supabase = createAdminSupabaseClient();
   const stripe = createStripeClient();
 
   // Check if mosque already has a Stripe account
   const { data: mosque } = await supabase
     .from("mosques")
-    .select("stripe_account_id, name")
+    .select("stripe_account_id, name, clerk_org_id")
     .eq("id", mosqueId)
     .single();
+
+  if (session.orgId && session.orgId !== mosqueId && session.orgId !== mosque?.clerk_org_id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   if (!mosque) {
     return NextResponse.json({ error: "Mosque not found" }, { status: 404 });
