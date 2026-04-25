@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useDraggable } from "@dnd-kit/core";
 import { Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { KanbanMosque } from "./mosque-kanban-types";
+import { normalizeStages, type KanbanMosque } from "./mosque-kanban-types";
 
 function getOnboardingPct(progress: Record<string, unknown> | null): number {
   if (!progress) return 0;
@@ -37,9 +37,10 @@ export default function MosqueKanbanCard({
     disabled: overlay,
   });
 
-  const stage = mosque.pipeline_stages?.[0]?.stage || "lead";
-  const contactName = mosque.pipeline_stages?.[0]?.contact_name || null;
-  const stageUpdatedAt = mosque.pipeline_stages?.[0]?.updated_at || null;
+  const stages = normalizeStages(mosque.pipeline_stages);
+  const stage = stages[0]?.stage || "lead";
+  const contactName = stages[0]?.contact_name || null;
+  const stageUpdatedAt = stages[0]?.updated_at || null;
 
   const isOnboarding = stage === "onboarding";
   const isLive = stage === "live";
