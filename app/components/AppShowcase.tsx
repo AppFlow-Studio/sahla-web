@@ -12,7 +12,7 @@ import {
 const screens = [
   {
     id: "home", label: "Home", Icon: Clock,
-    duration: 12000,
+    duration: 8000,
     headline: "Your community,",
     headlineEm: "at a glance.",
     sub: "Prayer times, today\u2019s events, and donation campaigns \u2014 in one calm feed. Members open the app for one thing and stay for another.",
@@ -24,7 +24,7 @@ const screens = [
   },
   {
     id: "discover", label: "Discover", Icon: Compass,
-    duration: 6000,
+    duration: 3000,
     headline: "Discover",
     headlineEm: "everything.",
     sub: "Full Quran, 50+ programs, events \u2014 your community\u2019s catalog.",
@@ -36,7 +36,7 @@ const screens = [
   },
   {
     id: "watch", label: "Watch", Icon: Video,
-    duration: 5000,
+    duration: 3000,
     headline: "Islamic",
     headlineEm: "reels.",
     sub: "Short-form videos curated by your mosque \u2014 not an algorithm.",
@@ -48,7 +48,7 @@ const screens = [
   },
   {
     id: "prayer", label: "Prayer / Quran", Icon: Bell,
-    duration: 22000,
+    duration: 3000,
     headline: "Prayer times,",
     headlineEm: "beautifully clear.",
     sub: "Adhan, iqamah, and Quran tracking \u2014 precision meets design.",
@@ -60,7 +60,7 @@ const screens = [
   },
   {
     id: "profile", label: "Profile", Icon: User,
-    duration: 6000,
+    duration: 3000,
     headline: "Make it",
     headlineEm: "yours.",
     sub: "Dark mode, notification control, donation history \u2014 your way.",
@@ -168,27 +168,14 @@ export default function AppShowcase() {
               <div className="relative">
                 <IPhoneMockup screenWidth={240} screenType="island" frameColor="#1a1a1a" statusbarColor="#0a1410" hideStatusBar hideNavBar>
                   <div className="relative h-full w-full bg-dark-green">
-                    {/* TODO: re-enable after compressing app-demo.mov with ffmpeg */}
-                    {/* <video
-                      src="/screens/app-demo.mov"
+                    <video
+                      src="https://sahla.b-cdn.net/Simulator%20Screen%20Recording%20-%20iPhone%2017%20Pro%20-%202026-04-25%20at%2018.13.45.mov.mp4"
                       autoPlay
                       loop
                       muted
                       playsInline
                       className="absolute inset-0 h-full w-full object-cover object-top"
-                      onEnded={(e) => {
-                        const v = e.currentTarget;
-                        v.currentTime = 0;
-                        v.play();
-                      }}
-                      onPause={(e) => {
-                        const v = e.currentTarget;
-                        if (v.currentTime >= v.duration - 0.5 || v.ended) {
-                          v.currentTime = 0;
-                          v.play();
-                        }
-                      }}
-                    /> */}
+                    />
                   </div>
                 </IPhoneMockup>
               </div>
