@@ -1,318 +1,279 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { motion, useInView, AnimatePresence } from "framer-motion";
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { IPhoneMockup } from "react-device-mockup";
+import {
+  Clock, Heart, DollarSign, BookOpen, Play, User,
+  Calendar, Building, Bell, Compass, Video,
+  Moon, Shield, Sparkles, Users,
+} from "lucide-react";
 
-const PhoneCarousel = dynamic(() => import("./PhoneCarousel"), { ssr: false });
+const screens = [
+  {
+    id: "home", label: "Home", Icon: Clock,
+    duration: 12000,
+    headline: "Your community,",
+    headlineEm: "at a glance.",
+    sub: "Prayer times, today\u2019s events, and donation campaigns \u2014 in one calm feed. Members open the app for one thing and stay for another.",
+    features: [
+      { Icon: Clock, text: "Live prayer countdown", accent: "#4a8c65" },
+      { Icon: Calendar, text: "Today\u2019s events feed", accent: "#9a7b2e" },
+      { Icon: DollarSign, text: "One-tap donations", accent: "#1a6b42" },
+    ],
+  },
+  {
+    id: "discover", label: "Discover", Icon: Compass,
+    duration: 6000,
+    headline: "Discover",
+    headlineEm: "everything.",
+    sub: "Full Quran, 50+ programs, events \u2014 your community\u2019s catalog.",
+    features: [
+      { Icon: BookOpen, text: "114 surahs, searchable", accent: "#4a8c65" },
+      { Icon: Users, text: "50+ programs to join", accent: "#1a6b42" },
+      { Icon: Play, text: "Audio recitations", accent: "#9a7b2e" },
+    ],
+  },
+  {
+    id: "watch", label: "Watch", Icon: Video,
+    duration: 5000,
+    headline: "Islamic",
+    headlineEm: "reels.",
+    sub: "Short-form videos curated by your mosque \u2014 not an algorithm.",
+    features: [
+      { Icon: Video, text: "Mosque-curated content", accent: "#4a8c65" },
+      { Icon: Sparkles, text: "Daily reminders", accent: "#9a7b2e" },
+      { Icon: Heart, text: "Save & share", accent: "#dc2626" },
+    ],
+  },
+  {
+    id: "prayer", label: "Prayer / Quran", Icon: Bell,
+    duration: 22000,
+    headline: "Prayer times,",
+    headlineEm: "beautifully clear.",
+    sub: "Adhan, iqamah, and Quran tracking \u2014 precision meets design.",
+    features: [
+      { Icon: Bell, text: "Smart adhan notifications", accent: "#4a8c65" },
+      { Icon: Building, text: "Real-time iqamah sync", accent: "#1a6b42" },
+      { Icon: BookOpen, text: "Quran progress tracker", accent: "#9a7b2e" },
+    ],
+  },
+  {
+    id: "profile", label: "Profile", Icon: User,
+    duration: 6000,
+    headline: "Make it",
+    headlineEm: "yours.",
+    sub: "Dark mode, notification control, donation history \u2014 your way.",
+    features: [
+      { Icon: Moon, text: "Dark mode & themes", accent: "#0a261e" },
+      { Icon: Shield, text: "Privacy controls", accent: "#1a6b42" },
+      { Icon: Heart, text: "Donation history", accent: "#dc2626" },
+    ],
+  },
+];
 
 export default function AppShowcase() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const isInView = useInView(sectionRef, { once: true, margin: "-15%" });
-  const [demoActive, setDemoActive] = useState(false);
+  const [active, setActive] = useState(0);
+  const [progressKey, setProgressKey] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const openDemo = useCallback(() => setDemoActive(true), []);
-  const closeDemo = useCallback(() => setDemoActive(false), []);
-
-  useEffect(() => {
-    if (!demoActive) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeDemo();
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [demoActive, closeDemo]);
+  const scheduleNext = useCallback((index: number) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const next = index >= screens.length - 1 ? 0 : index + 1;
+      setActive(next);
+      setProgressKey((k) => k + 1);
+      scheduleNext(next);
+    }, screens[index].duration);
+  }, []);
 
   useEffect(() => {
-    if (demoActive) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [demoActive]);
+    scheduleNext(0);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [scheduleNext]);
+
+  const goTo = useCallback((i: number) => {
+    setActive(i);
+    setProgressKey((k) => k + 1);
+    scheduleNext(i);
+  }, [scheduleNext]);
+
+  const screen = screens[active];
 
   return (
-    <section
-      id="showcase"
-      ref={sectionRef}
-      className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-24"
-    >
-      {/* Soft gradient accent */}
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div
-          className="absolute top-1/2 left-1/2 h-[80vh] w-[80vw] -translate-x-1/2 -translate-y-1/2 rounded-full"
-          style={{
-            background:
-              "radial-gradient(ellipse at center, rgba(26,107,66,0.04) 0%, transparent 55%)",
-          }}
-        />
-      </div>
+    <section id="showcase" className="relative overflow-hidden bg-dark-green py-16 sm:py-[120px]">
+      {/* Pattern */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.02]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40 0L80 40L40 80L0 40Z' fill='none' stroke='%23fff' stroke-width='0.5'/%3E%3Cpath d='M40 10L70 40L40 70L10 40Z' fill='none' stroke='%23fff' stroke-width='0.3'/%3E%3Ccircle cx='40' cy='40' r='15' fill='none' stroke='%23fff' stroke-width='0.3'/%3E%3C/svg%3E")`,
+          backgroundSize: "80px 80px",
+        }}
+      />
 
-      {/* Heading */}
-      <motion.div
-        className="relative z-10 mb-16 overflow-hidden text-center"
-        animate={demoActive ? { opacity: 0, scale: 0.95 } : { opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        style={{ pointerEvents: demoActive ? "none" : "auto" }}
-      >
-        <motion.h2
-          className="mb-4 font-[family-name:var(--font-display)] text-[clamp(2rem,5vw,4rem)] text-dark-green"
-          initial={{ y: "100%", opacity: 0 }}
-          animate={isInView ? { y: 0, opacity: 1 } : {}}
+      <div className="relative mx-auto max-w-[1200px] px-5 sm:px-8">
+        {/* Section header */}
+        <motion.div
+          className="mb-10 text-center sm:mb-[72px]"
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         >
-          Experience the App
-        </motion.h2>
-        <motion.p
-          className="text-sm tracking-[0.15em] uppercase text-tan-gold/60"
-          initial={{ y: 30, opacity: 0 }}
-          animate={isInView ? { y: 0, opacity: 1 } : {}}
-          transition={{ duration: 0.6, ease: "easeOut", delay: 0.3 }}
-        >
-          Swipe through different screens
-        </motion.p>
-      </motion.div>
-
-      <div className="relative z-10 w-full max-w-5xl">
-        {/* About — fades out in demo mode */}
-        <motion.div
-          className="mb-10 max-w-xs px-4 text-center md:absolute md:top-1/2 md:-left-16 md:mb-0 md:-translate-y-1/2 md:px-0 md:text-left lg:-left-24"
-          initial={{ opacity: 0, x: -40 }}
-          animate={
-            demoActive
-              ? { opacity: 0, scale: 0.95, x: -40 }
-              : isInView
-                ? { opacity: 1, x: 0, scale: 1 }
-                : {}
-          }
-          transition={{ duration: demoActive ? 0.4 : 0.8, ease: "easeOut", delay: demoActive ? 0 : 0.6 }}
-          style={{ pointerEvents: demoActive ? "none" : "auto" }}
-        >
-          <h3 className="mb-4 font-[family-name:var(--font-display)] text-2xl text-dark-green">
-            Built for Communities
-          </h3>
-          <p className="mb-6 text-sm leading-relaxed text-tan-light/60">
-            Sahla empowers community centers to create their own custom mobile
-            apps without writing a single line of code. From event scheduling
-            and member directories to real-time messaging and donation
-            tracking — everything your community needs, designed in minutes.
-          </p>
-          <div className="flex flex-col gap-3">
-            {[
-              "Drag-and-drop app builder",
-              "Real-time member engagement",
-              "Events, calendars & notifications",
-              "Secure messaging & groups",
-            ].map((feature, i) => (
-              <motion.div
-                key={feature}
-                className="flex items-center gap-2.5"
-                initial={{ opacity: 0, x: -16 }}
-                animate={
-                  demoActive
-                    ? { opacity: 0 }
-                    : isInView
-                      ? { opacity: 1, x: 0 }
-                      : {}
-                }
-                transition={{ duration: 0.5, ease: "easeOut", delay: 0.8 + i * 0.1 }}
-              >
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-light">
-                  <svg
-                    className="h-3 w-3 text-accent"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={3}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-                <span className="text-sm text-dark-green/70">{feature}</span>
-              </motion.div>
-            ))}
+          {/* Diamond divider */}
+          <div className="mb-5 flex items-center justify-center gap-3.5">
+            <div className="h-[1px] w-12" style={{ background: "linear-gradient(90deg, transparent, rgba(217,196,160,0.5))" }} />
+            <div className="h-1.5 w-1.5 rotate-45 bg-gold" />
+            <div className="h-[1px] w-12" style={{ background: "linear-gradient(90deg, rgba(217,196,160,0.5), transparent)" }} />
           </div>
+          <p className="mb-4 inline-flex items-center gap-2.5 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#d9c4a0]">
+            <span className="h-1.5 w-1.5 rounded-full bg-gold shadow-[0_0_12px_#B8922A]" />
+            App Showcase
+          </p>
+          <h2 className="mt-4 font-[family-name:var(--font-display)] text-[clamp(36px,4.5vw,60px)] text-sand">
+            Experience the app.
+          </h2>
+          <p className="mx-auto mt-[18px] max-w-[520px] text-[15px] leading-[1.65] text-sand/45">
+            One tap to prayer times, events and donations &mdash; wrapped in your masjid&rsquo;s brand.
+          </p>
         </motion.div>
 
-        {/* Phone in normal flow */}
+        {/* Showcase card */}
         <motion.div
-          className="flex justify-center"
-          style={{ perspective: "1200px", transformStyle: "preserve-3d" }}
-          initial={{ opacity: 0, rotateX: 45, y: 200, scale: 0.6 }}
-          animate={
-            demoActive
-              ? { opacity: 0, scale: 0.8 }
-              : isInView
-                ? { opacity: 1, rotateX: 0, y: 0, scale: 1 }
-                : {}
-          }
-          transition={
-            demoActive
-              ? { duration: 0.3, ease: "easeOut" }
-              : {
-                  duration: 1.4,
-                  ease: [0.16, 1, 0.3, 1],
-                  delay: 0.15,
-                  opacity: { duration: 0.8, delay: 0.15 },
-                }
-          }
+          className="relative overflow-hidden rounded-[28px] border border-[#d9c4a0]/10 shadow-[0_60px_120px_-40px_rgba(0,0,0,0.6)]"
+          style={{ background: "linear-gradient(180deg, #0e2b22, #071a14)" }}
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.08 }}
         >
-          <PhoneCarousel demoMode={false} />
-        </motion.div>
+          {/* Top accent line */}
+          <div className="pointer-events-none absolute inset-x-[10%] top-0 h-[1px]" style={{ background: "linear-gradient(90deg, transparent, rgba(217,196,160,0.3), transparent)" }} />
 
-        {/* Analytics — fades out in demo mode */}
-        <motion.div
-          className="mt-10 max-w-xs px-4 text-center md:absolute md:top-1/2 md:right-0 md:mt-0 md:-translate-y-1/2 md:px-0 md:text-left lg:-right-8"
-          initial={{ opacity: 0, x: 40 }}
-          animate={
-            demoActive
-              ? { opacity: 0, scale: 0.95, x: 40 }
-              : isInView
-                ? { opacity: 1, x: 0, scale: 1 }
-                : {}
-          }
-          transition={{ duration: demoActive ? 0.4 : 0.8, ease: "easeOut", delay: demoActive ? 0 : 0.8 }}
-          style={{ pointerEvents: demoActive ? "none" : "auto" }}
-        >
-          <h3 className="mb-5 font-[family-name:var(--font-display)] text-2xl text-dark-green">
-            Our Impact
-          </h3>
-          <div className="flex flex-col gap-5">
-            {[
-              { value: "50+", label: "Apps Launched", change: "+12 this quarter" },
-              { value: "25K", label: "Active Users", change: "+34% growth" },
-              { value: "98%", label: "Uptime", change: "Last 12 months" },
-              { value: "4.8", label: "App Store Rating", change: "Avg across apps" },
-            ].map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                className="flex items-start gap-3"
-                initial={{ opacity: 0, x: 16 }}
-                animate={
-                  demoActive
-                    ? { opacity: 0 }
-                    : isInView
-                      ? { opacity: 1, x: 0 }
-                      : {}
-                }
-                transition={{ duration: 0.5, ease: "easeOut", delay: 1.0 + i * 0.12 }}
-              >
-                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-light">
-                  <span className="text-sm font-bold text-accent">
-                    {stat.value}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-dark-green/80">
-                    {stat.label}
+          <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr]">
+            {/* Phone panel */}
+            <div className="relative grid place-items-center bg-[#071a14] p-6 sm:p-12 lg:p-[72px_40px]">
+              {/* Pattern */}
+              <div
+                className="pointer-events-none absolute inset-0 opacity-[0.05]"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40 0L80 40L40 80L0 40Z' fill='none' stroke='%23fff' stroke-width='0.5'/%3E%3Ccircle cx='40' cy='40' r='15' fill='none' stroke='%23fff' stroke-width='0.3'/%3E%3C/svg%3E")`,
+                  backgroundSize: "80px 80px",
+                }}
+              />
+
+              {/* Halo */}
+              <div className="pointer-events-none absolute h-[500px] w-[500px] rounded-full" style={{ background: "radial-gradient(circle, rgba(74,140,101,0.3), transparent 62%)", filter: "blur(40px)" }} />
+
+              <div className="relative">
+                <IPhoneMockup screenWidth={240} screenType="island" frameColor="#1a1a1a" statusbarColor="#0a1410" hideStatusBar hideNavBar>
+                  <div className="relative h-full w-full bg-dark-green">
+                    {/* TODO: re-enable after compressing app-demo.mov with ffmpeg */}
+                    {/* <video
+                      src="/screens/app-demo.mov"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="absolute inset-0 h-full w-full object-cover object-top"
+                      onEnded={(e) => {
+                        const v = e.currentTarget;
+                        v.currentTime = 0;
+                        v.play();
+                      }}
+                      onPause={(e) => {
+                        const v = e.currentTarget;
+                        if (v.currentTime >= v.duration - 0.5 || v.ended) {
+                          v.currentTime = 0;
+                          v.play();
+                        }
+                      }}
+                    /> */}
+                  </div>
+                </IPhoneMockup>
+              </div>
+            </div>
+
+            {/* Content side */}
+            <div className="flex flex-col justify-center p-5 sm:p-8 lg:p-14">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={screen.id}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {/* Eyebrow */}
+                  <div className="mb-3.5 inline-flex items-center gap-2.5 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#d9c4a0]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-gold shadow-[0_0_12px_#B8922A]" />
+                    {screen.label}
+                  </div>
+
+                  <h3 className="mb-[18px] max-w-[400px] font-[family-name:var(--font-display)] text-[28px] leading-[1.06] text-sand sm:text-[36px] lg:text-[44px]">
+                    {screen.headline}<br />
+                    <em className="text-[#d9c4a0]">{screen.headlineEm}</em>
+                  </h3>
+                  <p className="mb-8 max-w-[420px] text-[15px] leading-[1.7] text-sand/50">
+                    {screen.sub}
                   </p>
-                  <p className="text-xs text-accent/60">{stat.change}</p>
-                </div>
-              </motion.div>
-            ))}
+
+                  <div className="flex flex-col gap-[18px]">
+                    {screen.features.map((f, j) => (
+                      <motion.div
+                        key={f.text}
+                        className="group flex items-center gap-4"
+                        initial={{ opacity: 0, x: 16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.35, delay: 0.08 + j * 0.06 }}
+                      >
+                        <div
+                          className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-[1.08]"
+                          style={{ backgroundColor: `${f.accent}1F` }}
+                        >
+                          <f.Icon size={20} strokeWidth={1.8} style={{ color: f.accent }} />
+                        </div>
+                        <span className="text-[14px] font-medium text-sand/75">{f.text}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Tab progress bars — each with its own duration */}
+              <div className="mt-10 flex gap-2">
+                {screens.map((s, i) => (
+                  <button
+                    key={s.id}
+                    onClick={() => goTo(i)}
+                    className="h-[3px] flex-1 cursor-pointer overflow-hidden rounded-full border-0 bg-sand/[0.06] p-0"
+                  >
+                    <div
+                      key={i === active ? `${i}-${progressKey}` : `${i}-idle`}
+                      className="h-full rounded-full"
+                      style={{
+                        background: i <= active ? "linear-gradient(90deg, #d9c4a0, #B8922A)" : "transparent",
+                        width: i < active ? "100%" : i === active ? "100%" : "0%",
+                        transition: i === active
+                          ? `width ${s.duration}ms linear`
+                          : "width 0.3s ease",
+                        ...(i === active ? { width: "0%" } : {}),
+                      }}
+                      ref={(el) => {
+                        // Force reflow to restart CSS transition for active tab
+                        if (el && i === active) {
+                          void el.offsetWidth;
+                          el.style.width = "100%";
+                        }
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>
-
-      {/* Buttons */}
-      <motion.div
-        className="relative z-10 mt-12 flex gap-4"
-        initial={{ opacity: 0, y: 40, scale: 0.9 }}
-        animate={
-          demoActive
-            ? { opacity: 0, scale: 0.9, y: 20 }
-            : isInView
-              ? { opacity: 1, y: 0, scale: 1 }
-              : {}
-        }
-        transition={{
-          duration: demoActive ? 0.3 : 0.8,
-          ease: demoActive ? "easeOut" : [0.16, 1, 0.3, 1],
-          delay: demoActive ? 0 : 1,
-        }}
-        style={{ pointerEvents: demoActive ? "none" : "auto" }}
-      >
-        <motion.button
-          className="group relative cursor-pointer overflow-hidden rounded-full bg-dark-green px-10 py-4 text-base font-medium tracking-wide text-white transition-all duration-300 hover:shadow-lg hover:shadow-dark-green/20"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.97 }}
-          transition={{ type: "spring", stiffness: 400, damping: 20 }}
-        >
-          <span className="relative z-10">Get Started</span>
-          <div className="absolute inset-0 -translate-x-full bg-accent transition-transform duration-300 group-hover:translate-x-0" />
-        </motion.button>
-        <motion.button
-          onClick={openDemo}
-          className="group relative cursor-pointer overflow-hidden rounded-full border border-dark-green/15 px-10 py-4 text-base font-medium tracking-wide text-dark-green transition-all duration-300 hover:border-dark-green/30 hover:bg-dark-green/5"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.97 }}
-          transition={{ type: "spring", stiffness: 400, damping: 20 }}
-        >
-          <span className="relative z-10">Demo</span>
-        </motion.button>
-      </motion.div>
-
-      {/* Demo mode overlay */}
-      <AnimatePresence>
-        {demoActive && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              onClick={closeDemo}
-            />
-
-            <motion.div
-              className="pointer-events-none fixed inset-0 z-[45] flex items-center justify-center"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              transition={{ duration: 0.6, type: "spring", stiffness: 100, damping: 18 }}
-            >
-              <div
-                className="pointer-events-auto"
-                style={{ transform: "scale(1.15)" }}
-              >
-                <PhoneCarousel demoMode={true} />
-              </div>
-            </motion.div>
-
-            <motion.button
-              className="fixed top-8 right-8 z-[60] flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-dark-green/80 text-white/70 backdrop-blur-sm transition-colors hover:border-white/40 hover:text-white"
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.6 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
-              onClick={closeDemo}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="h-5 w-5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </motion.button>
-          </>
-        )}
-      </AnimatePresence>
     </section>
   );
 }

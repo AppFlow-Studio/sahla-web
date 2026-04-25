@@ -183,6 +183,27 @@ export async function POST(req: Request) {
       inviterUserId: actorClerkUserId,
     });
 
+    const { data: mosqueRow, error: mosqueError } = await supabase
+      .from("mosques")
+      .insert({
+        id: mosqueId,
+        slug: mosqueSlug,
+        name: lead.mosqueName,
+        city: lead.city,
+        state: lead.state,
+        email: lead.contactEmail,
+        onboarding_status: "in_progress",
+      })
+      .select("id, name")
+      .single();
+
+    if (mosqueError || !mosqueRow) {
+      return NextResponse.json(
+        { error: mosqueError?.message ?? "Failed to create mosque." },
+        { status: 500 }
+      );
+    }
+
     const updatedAt = new Date().toISOString();
     let mosqueRow: { id: string; name: string | null } | null = null;
 

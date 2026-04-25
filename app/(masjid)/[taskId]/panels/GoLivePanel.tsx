@@ -17,10 +17,17 @@ type GoLiveData = {
   tasks: TaskStatus[];
 };
 
+const TIERS = [
+  { id: "core", label: "Sahla Core", price: "$300/mo" },
+  { id: "complete", label: "Sahla Complete", price: "$350/mo" },
+] as const;
+
 export default function GoLivePanel({ data }: { data: GoLiveData }) {
   const { showToast } = useToast();
   const [launching, setLaunching] = useState(false);
   const [launched, setLaunched] = useState(false);
+  const [selectedTier, setSelectedTier] = useState("complete");
+  const [openingPortal, setOpeningPortal] = useState(false);
 
   const requiredTasks = data.tasks.filter((t) => t.required);
   const optionalTasks = data.tasks.filter((t) => !t.required);
@@ -49,6 +56,7 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
       const res = await fetch(`/api/mosques/${data.mosqueId}/go-live`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier: selectedTier }),
       });
 
       if (!res.ok) {
@@ -71,6 +79,26 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
       showToast(e instanceof Error ? e.message : "Failed to go live", "error");
     } finally {
       setLaunching(false);
+    }
+  }
+
+  async function handleManageSubscription() {
+    setOpeningPortal(true);
+    try {
+      const res = await fetch(`/api/mosques/${data.mosqueId}/stripe/billing-portal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to open billing portal");
+      }
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Failed to open portal", "error");
+    } finally {
+      setOpeningPortal(false);
     }
   }
 
@@ -115,6 +143,14 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
             ))}
           </div>
         </div>
+
+        <button
+          onClick={handleManageSubscription}
+          disabled={openingPortal}
+          className="w-full rounded-xl border border-stone-200 bg-white py-3 text-[13px] font-semibold text-stone-700 transition-colors hover:bg-stone-50 disabled:opacity-60"
+        >
+          {openingPortal ? "Opening portal..." : "Manage Subscription"}
+        </button>
       </motion.div>
     );
   }
@@ -222,6 +258,43 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
         </div>
       )}
 
+      {/* Tier Selection */}
+      <div className="rounded-xl border border-stone-200 bg-white p-6">
+        <p className="mb-4 text-[13px] font-semibold text-stone-800">Select Your Plan</p>
+        <div className="space-y-2">
+          {TIERS.map((tier) => (
+            <label
+              key={tier.id}
+              className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-all ${
+                selectedTier === tier.id
+                  ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500"
+                  : "border-stone-200 hover:border-stone-300"
+              }`}
+            >
+              <input
+                type="radio"
+                name="tier"
+                value={tier.id}
+                checked={selectedTier === tier.id}
+                onChange={() => setSelectedTier(tier.id)}
+                className="sr-only"
+              />
+              <div
+                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                  selectedTier === tier.id ? "border-emerald-600" : "border-stone-300"
+                }`}
+              >
+                {selectedTier === tier.id && (
+                  <div className="h-2 w-2 rounded-full bg-emerald-600" />
+                )}
+              </div>
+              <span className="flex-1 text-[13px] font-medium text-stone-800">{tier.label}</span>
+              <span className="text-[13px] font-semibold text-stone-600">{tier.price}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       {/* Go Live Button */}
       <AnimatePresence>
         {!allRequiredDone && (
@@ -255,7 +328,7 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
             </svg>
-            Go Live — $250/month
+            Go Live — {TIERS.find((t) => t.id === selectedTier)?.price ?? "$350/mo"}
           </>
         )}
       </button>

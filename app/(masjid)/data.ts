@@ -10,9 +10,8 @@ export const getMosqueOnboardingData = cache(async (orgId: string) => {
   const supabase = createAdminSupabaseClient();
   const { data: mosque } = await supabase
     .from("mosques")
-    .select("id, name, address, city, state, timezone, app_name, logo_url, brand_color, accent_color, secondary_color, calculation_method, school, onboarding_progress, onboarding_status, stripe_account_id")
-    .or(`clerk_org_id.eq.${orgId},id.eq.${orgId}`)
-    .limit(1)
+    .select("id, name, address, city, state, timezone, app_name, logo_url, brand_color, accent_color, secondary_color, calculation_method, school, onboarding_progress, onboarding_status, stripe_account_id, subscription_status")
+    .eq("id", orgId)
     .single();
 
   return mosque;

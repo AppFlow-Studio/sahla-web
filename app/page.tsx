@@ -1,60 +1,39 @@
-"use client";
-
-import { motion } from "framer-motion";
+import type { Metadata } from "next";
+import { SoftwareApplicationJsonLd } from "./components/JsonLd";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
-import ScrollCTA from "./components/ScrollCTA";
+import ProofBar from "./components/ProofBar";
+import ThreeProblems from "./components/ThreeProblems";
+import HowItWorks from "./components/HowItWorks";
 import AppShowcase from "./components/AppShowcase";
+import Features from "./components/Features";
+import RevenueFlip from "./components/RevenueFlip";
+import BuiltForMosques from "./components/BuiltForMosques";
+import FAQTeaser from "./components/FAQTeaser";
+import CTASection from "./components/CTASection";
 import BottomBar from "./components/BottomBar";
 
-const drift = (x: number, y: number, duration: number) => ({
-  animate: { x: [0, x, -x * 0.6, 0], y: [0, -y, y * 0.8, 0] },
-  transition: { duration, repeat: Infinity, ease: "easeInOut" },
-});
+export const metadata: Metadata = {
+  title: "Sahla — Your Mosque Deserves Its Own App",
+  description:
+    "Sahla builds fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community. White-label mosque app builder with built-in donations, prayer times, and sponsor revenue.",
+};
 
 export default function Home() {
   return (
-    <div className="relative bg-night">
+    <div className="relative">
+      <SoftwareApplicationJsonLd />
       <Navbar />
-
-      {/* Hero Section */}
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
-        {/* Soft gradient orbs */}
-        <div className="pointer-events-none absolute inset-0 z-0">
-          <motion.div
-            className="absolute -top-[20%] -right-[10%] h-[70vh] w-[60vw] rounded-full"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, rgba(26,107,66,0.08) 0%, transparent 60%)",
-            }}
-            {...drift(25, 20, 22)}
-          />
-          <motion.div
-            className="absolute -bottom-[10%] -left-[15%] h-[60vh] w-[50vw] rounded-full"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, rgba(184,146,42,0.06) 0%, transparent 60%)",
-            }}
-            {...drift(-20, 25, 26)}
-          />
-          <motion.div
-            className="absolute top-[30%] left-[40%] h-[40vh] w-[40vw] rounded-full"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, rgba(26,107,66,0.04) 0%, transparent 50%)",
-            }}
-            {...drift(15, -18, 30)}
-          />
-        </div>
-
-        <Hero />
-        <ScrollCTA />
-      </section>
-
-      {/* App Showcase Section */}
+      <Hero />
       <AppShowcase />
-
-      {/* Footer */}
+      <ProofBar />
+      <ThreeProblems />
+      <HowItWorks />
+      <Features />
+      <RevenueFlip />
+      <BuiltForMosques />
+      <FAQTeaser />
+      <CTASection />
       <BottomBar />
     </div>
   );
