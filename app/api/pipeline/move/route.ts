@@ -1,6 +1,7 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { Stage } from "@/app/components/kanban/types";
-import { createClerkSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 const VALID_STAGES = new Set<Stage>([
   "lead",
@@ -17,6 +18,11 @@ type MoveRequest = {
 };
 
 export async function POST(req: Request) {
+  const session = await auth();
+  if (!session.userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = (await req.json()) as Partial<MoveRequest>;
   const mosqueId = body.mosqueId?.trim();
   const newStage = body.newStage;
@@ -25,7 +31,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
   }
 
-  const supabase = await createClerkSupabaseClient();
+  const supabase = createAdminSupabaseClient();
 
   const { data: mosqueRow, error: mosqueReadError } = await supabase
     .from("mosques")
@@ -62,16 +68,30 @@ export async function POST(req: Request) {
 
   const updatedAt = new Date().toISOString();
 
-  const { error: stageUpdateError } = await supabase
+  const { data: updatedRows, error: stageUpdateError } = await supabase
     .from("pipeline_stages")
     .update({ stage: newStage, updated_at: updatedAt })
-    .eq("mosque_id", mosqueId);
+    .eq("mosque_id", mosqueId)
+    .select("mosque_id");
 
   if (stageUpdateError) {
     return NextResponse.json(
       { error: `Failed to update stage: ${stageUpdateError.message}` },
       { status: 500 }
     );
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    const { error: stageInsertError } = await supabase
+      .from("pipeline_stages")
+      .insert({ mosque_id: mosqueId, stage: newStage, updated_at: updatedAt });
+
+    if (stageInsertError) {
+      return NextResponse.json(
+        { error: `Failed to create stage: ${stageInsertError.message}` },
+        { status: 500 }
+      );
+    }
   }
 
   if (newStage === "onboarding" || newStage === "live") {
