@@ -28,7 +28,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Webhook } from "https://esm.sh/svix@1.21.0";
-import {Deno} from "https://deno.land/x/dotenv/mod.ts";
 // ── Supabase client (service role — bypasses RLS) ──
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -174,6 +173,24 @@ function displayName(first: string | null, last: string | null): string {
   return [first, last].filter(Boolean).join(" ") || "Unknown";
 }
 
+/**
+ * Resolve a Clerk org ID to the actual mosques.id primary key.
+ * Supports both patterns:
+ *   - Legacy: mosques.id = Clerk org ID (create-account flow)
+ *   - New:    mosques.clerk_org_id = Clerk org ID (graduated leads)
+ * Falls back to the raw Clerk org ID if no mosque is found yet
+ * (e.g., the row hasn't been inserted by the API route yet).
+ */
+async function resolveMosqueId(clerkOrgId: string): Promise<string> {
+  const { data } = await supabase
+    .from("mosques")
+    .select("id")
+    .or(`clerk_org_id.eq.${clerkOrgId},id.eq.${clerkOrgId}`)
+    .limit(1)
+    .single();
+  return data?.id ?? clerkOrgId;
+}
+
 async function fetchTableData(){
   try {
     const {data, error} = await supabase.from("sahla_team").select("*");
@@ -314,7 +331,7 @@ async function handleUserDeleted(user: { id: string }) {
 //   1. Log to activity_log (Pulse feed: "New user joined {Mosque}")
 //   2. Initialize empty user_preferences for this mosque (so recs work)
 async function handleMembershipCreated(membership: ClerkOrganizationMembership) {
-  const mosqueId = membership.organization.id;
+  const clerkOrgId = membership.organization.id;
   const userId = membership.public_user_data.user_id;
   const userName = displayName(
     membership.public_user_data.first_name,
@@ -325,7 +342,7 @@ async function handleMembershipCreated(membership: ClerkOrganizationMembership) 
   // ── Guard: skip Sahla HQ org (not a mosque) ──
   // When a team member is added to the Sahla HQ org, we don't create
   // mosque user data (user_preferences, etc.) — they're a platform admin.
-  if (await isSahlaOrg(mosqueId)) {
+  if (await isSahlaOrg(clerkOrgId)) {
     console.log(`Skipping Sahla HQ org membership for ${userName} — not a mosque`);
 
     // Still ensure profile exists (they need a profiles row for RLS)
@@ -369,6 +386,7 @@ async function handleMembershipCreated(membership: ClerkOrganizationMembership) 
   }
 
   // ── Normal mosque membership flow ──
+  const mosqueId = await resolveMosqueId(clerkOrgId);
 
   // Ensure profile exists (in case webhook ordering is weird)
   await supabase.from("profiles").upsert(
@@ -428,7 +446,8 @@ async function handleMembershipUpdated(membership: ClerkOrganizationMembership) 
   );
 
   // ── Guard: Sahla HQ org role changes are team-level, not mosque-level ──
-  if (await isSahlaOrg(membership.organization.id)) {
+  const clerkOrgId = membership.organization.id;
+  if (await isSahlaOrg(clerkOrgId)) {
     // Update sahla_team.clerk_org_role if applicable
     await supabase
       .from("sahla_team")
@@ -439,8 +458,9 @@ async function handleMembershipUpdated(membership: ClerkOrganizationMembership) 
     return;
   }
 
+  const mosqueId = await resolveMosqueId(clerkOrgId);
   await logActivity({
-    mosque_id: membership.organization.id,
+    mosque_id: mosqueId,
     actor_name: userName,
     action: "role_changed",
     entity_type: "user",
@@ -462,7 +482,7 @@ async function handleMembershipUpdated(membership: ClerkOrganizationMembership) 
 // Clerk fires this when a user leaves or is removed from an organization.
 // We clean up their mosque-scoped data and deactivate push tokens.
 async function handleMembershipDeleted(membership: ClerkOrganizationMembership) {
-  const mosqueId = membership.organization.id;
+  const clerkOrgId = membership.organization.id;
   const userId = membership.public_user_data.user_id;
   const userName = displayName(
     membership.public_user_data.first_name,
@@ -470,7 +490,7 @@ async function handleMembershipDeleted(membership: ClerkOrganizationMembership) 
   );
 
   // ── Guard: Sahla HQ org removal = deactivate team member, not mosque cleanup ──
-  if (await isSahlaOrg(mosqueId)) {
+  if (await isSahlaOrg(clerkOrgId)) {
     await supabase
       .from("sahla_team")
       .update({ is_active: false })
@@ -489,6 +509,7 @@ async function handleMembershipDeleted(membership: ClerkOrganizationMembership) 
   }
 
   // ── Normal mosque membership removal ──
+  const mosqueId = await resolveMosqueId(clerkOrgId);
 
   // Deactivate push tokens for this mosque (don't delete — other mosques unaffected)
   await supabase
@@ -591,8 +612,9 @@ async function handleSessionCreated(session: ClerkSession) {
 
   // ── Normal mosque admin login ──
   // This feeds the health score's admin_activity component.
+  const mosqueId = await resolveMosqueId(orgId);
   await logActivity({
-    mosque_id: orgId,
+    mosque_id: mosqueId,
     actor_id: userId,
     actor_name: name,
     action: "admin_login",

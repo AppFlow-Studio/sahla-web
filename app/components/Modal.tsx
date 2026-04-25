@@ -18,6 +18,8 @@ type ModalProps = {
   open: boolean;
   onClose: () => void;
   onSuccess: (mosqueName: string) => void;
+  /** When graduating an existing lead, pass its mosque ID to update instead of insert */
+  existingMosqueId?: string | null;
 };
 
 type SuccessData = {
@@ -31,7 +33,7 @@ type SuccessData = {
 
 const COPY_STATUS_LINE = "Invite sent — they'll set their own password";
 
-const Modal = ({ open, onClose, onSuccess }: ModalProps) => {
+const Modal = ({ open, onClose, onSuccess, existingMosqueId }: ModalProps) => {
   const [mosque, setMosque] = useState("");
   const [city, setCity] = useState("");
   const [stateValue, setStateValue] = useState("");
@@ -138,6 +140,7 @@ Status: ${COPY_STATUS_LINE}`;
           contactEmail: trimmedContactEmail,
           phone: phone.trim() || undefined,
           notes: notes.trim() || undefined,
+          mosqueId: existingMosqueId || undefined,
         }),
       });
 

@@ -15,6 +15,7 @@ type CreateAccountBody = {
   contactEmail?: string;
   phone?: string;
   notes?: string;
+  mosqueId?: string; // Existing lead mosque ID to graduate (skip insert, update instead)
 };
 
 type Normalized = {
@@ -25,6 +26,7 @@ type Normalized = {
   contactEmail: string | null;
   phone: string | null;
   notes: string | null;
+  mosqueId: string | null;
 };
 
 function createSlug(name: string) {
@@ -46,6 +48,7 @@ function normalize(body: CreateAccountBody): Normalized {
   const contactEmail = (body.contactEmail ?? "").trim();
   const phone = (body.phone ?? "").trim();
   const notes = (body.notes ?? "").trim();
+  const mosqueId = (body.mosqueId ?? "").trim();
 
   return {
     mosqueName,
@@ -55,6 +58,7 @@ function normalize(body: CreateAccountBody): Normalized {
     contactEmail: contactEmail || null,
     phone: phone || null,
     notes: notes || null,
+    mosqueId: mosqueId || null,
   };
 }
 
@@ -171,7 +175,6 @@ export async function POST(req: Request) {
       mosqueSlug,
       actorClerkUserId
     );
-    const mosqueId = org.id;
 
     await client.organizations.createOrganizationInvitation({
       organizationId: org.id,
@@ -180,63 +183,132 @@ export async function POST(req: Request) {
       inviterUserId: actorClerkUserId,
     });
 
-    const { data: mosqueRow, error: mosqueError } = await supabase
-      .from("mosques")
-      .insert({
-        id: mosqueId,
-        slug: mosqueSlug,
-        name: lead.mosqueName,
-        city: lead.city,
-        state: lead.state,
-        onboarding_status: "in_progress",
-      })
-      .select("id, name")
-      .single();
-
-    if (mosqueError || !mosqueRow) {
-      return NextResponse.json(
-        { error: mosqueError?.message ?? "Failed to create mosque." },
-        { status: 500 }
-      );
-    }
-
     const updatedAt = new Date().toISOString();
-    const { error: stageError } = await supabase
-      .from("pipeline_stages")
-      .insert({
-        mosque_id: mosqueRow.id,
-        stage: "onboarding",
-        contact_name: lead.contactName,
-        contact_email: lead.contactEmail,
-        updated_at: updatedAt,
-      });
+    let mosqueRow: { id: string; name: string | null } | null = null;
 
-    if (stageError) {
-      return NextResponse.json(
-        {
-          error: `Mosque created, but failed to create pipeline stage: ${stageError.message}`,
-        },
-        { status: 500 }
-      );
-    }
+    if (lead.mosqueId) {
+      // ── Graduating an existing lead ──
+      // Update the existing mosque row with the Clerk org link instead of
+      // creating a duplicate row.
+      const { data: existing, error: lookupError } = await supabase
+        .from("mosques")
+        .select("id, clerk_org_id")
+        .eq("id", lead.mosqueId)
+        .single();
 
-    const { error: notifError } = await supabase
-      .from("mosque_notification_config")
-      .insert({
-        mosque_id: mosqueRow.id,
-        prayer_notif_enabled: false,
-        program_notif_enabled: false,
-        event_notif_enabled: false,
-        default_reminder_min: 30,
-      });
+      if (lookupError || !existing) {
+        return NextResponse.json(
+          { error: "Mosque not found." },
+          { status: 404 }
+        );
+      }
+      if (existing.clerk_org_id) {
+        return NextResponse.json(
+          { error: "Mosque already has a Clerk organization." },
+          { status: 409 }
+        );
+      }
 
-    if (notifError) {
-      return NextResponse.json(
-        {
-          error: `Mosque and pipeline created, but failed to create notification config: ${notifError.message}`,
-        },
-        { status: 500 }
-      );
+      const { data: updated, error: updateError } = await supabase
+        .from("mosques")
+        .update({
+          clerk_org_id: org.id,
+          onboarding_status: "in_progress",
+        })
+        .eq("id", lead.mosqueId)
+        .select("id, name")
+        .single();
+
+      if (updateError || !updated) {
+        return NextResponse.json(
+          { error: updateError?.message ?? "Failed to update mosque." },
+          { status: 500 }
+        );
+      }
+      mosqueRow = updated;
+
+      // Update existing pipeline stage
+      const { error: stageError } = await supabase
+        .from("pipeline_stages")
+        .update({
+          stage: "onboarding",
+          contact_name: lead.contactName,
+          contact_email: lead.contactEmail,
+          updated_at: updatedAt,
+        })
+        .eq("mosque_id", lead.mosqueId);
+
+      if (stageError) {
+        return NextResponse.json(
+          {
+            error: `Mosque updated, but failed to update pipeline stage: ${stageError.message}`,
+          },
+          { status: 500 }
+        );
+      }
+    } else {
+      // ── Fresh create ──
+      const mosqueId = org.id;
+
+      const { data: inserted, error: mosqueError } = await supabase
+        .from("mosques")
+        .insert({
+          id: mosqueId,
+          slug: mosqueSlug,
+          name: lead.mosqueName,
+          city: lead.city,
+          state: lead.state,
+          onboarding_status: "in_progress",
+          clerk_org_id: org.id,
+        })
+        .select("id, name")
+        .single();
+
+      if (mosqueError || !inserted) {
+        return NextResponse.json(
+          { error: mosqueError?.message ?? "Failed to create mosque." },
+          { status: 500 }
+        );
+      }
+      mosqueRow = inserted;
+
+      const { error: stageError } = await supabase
+        .from("pipeline_stages")
+        .insert({
+          mosque_id: mosqueRow.id,
+          stage: "onboarding",
+          contact_name: lead.contactName,
+          contact_email: lead.contactEmail,
+          updated_at: updatedAt,
+        });
+
+      if (stageError) {
+        return NextResponse.json(
+          {
+            error: `Mosque created, but failed to create pipeline stage: ${stageError.message}`,
+          },
+          { status: 500 }
+        );
+      }
+
+      const { error: notifError } = await supabase
+        .from("mosque_notification_config")
+        .insert({
+          mosque_id: mosqueRow.id,
+          prayer_notif_enabled: false,
+          program_notif_enabled: false,
+          event_notif_enabled: false,
+          default_reminder_min: 30,
+        });
+
+      if (notifError) {
+        return NextResponse.json(
+          {
+            error: `Mosque and pipeline created, but failed to create notification config: ${notifError.message}`,
+          },
+          { status: 500 }
+        );
+      }
     }
 
     if (lead.notes || lead.phone) {

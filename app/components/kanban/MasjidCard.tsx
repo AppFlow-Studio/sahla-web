@@ -9,6 +9,7 @@ type Props = {
   onMoveNext?: () => void;
   onNoteAdded?: (note: string) => void;
   onContactEdited?: (name: string, email: string) => void;
+  onCreateAccount?: () => void;
 };
 
 function formatLocation(city: string, state: string | null | undefined) {
@@ -119,7 +120,9 @@ function badgeClasses(iso: string): string {
 
 const STAGE_ORDER: Stage[] = ["lead", "contacted", "demo", "contract", "onboarding", "live"];
 
-const menuItems = [
+type MenuItem = { id: string; label: string; icon: React.ReactNode };
+
+const baseMenuItems: MenuItem[] = [
   {
     id: "move",
     label: "Move to Next Stage",
@@ -148,9 +151,22 @@ const menuItems = [
       </svg>
     ),
   },
-] as const;
+];
 
-export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdited }: Props) {
+const createAccountItem: MenuItem = {
+  id: "create_account",
+  label: "Create Account",
+  icon: (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <line x1="19" y1="8" x2="19" y2="14" />
+      <line x1="22" y1="11" x2="16" y2="11" />
+    </svg>
+  ),
+};
+
+export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdited, onCreateAccount }: Props) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [isEditingContact, setIsEditingContact] = useState(false);
@@ -176,12 +192,20 @@ export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdi
   const referredBy = (card.referredBy ?? "").trim();
   const relative = formatRelativeShort(card.updatedAt);
   const isLastStage = card.stage === STAGE_ORDER[STAGE_ORDER.length - 1];
+  // Show "Create Account" for leads that don't have a Clerk org yet
+  // (their mosqueId is a UUID, not an org_ prefixed Clerk ID)
+  const hasClerkOrg = String(card.mosqueId).startsWith("org_");
+  const menuItems: MenuItem[] = [
+    ...baseMenuItems,
+    ...(!hasClerkOrg && onCreateAccount ? [createAccountItem] : []),
+  ];
 
   function handleMenuAction(id: string) {
     setIsMenuOpen(false);
     if (id === "move" && onMoveNext) onMoveNext();
     if (id === "note") setIsAddingNote(true);
     if (id === "edit") setIsEditingContact(true);
+    if (id === "create_account" && onCreateAccount) onCreateAccount();
   }
 
   async function handleSaveNote() {

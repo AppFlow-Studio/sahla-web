@@ -108,7 +108,7 @@ function buildMrrHistory(mosques: MosqueData[]) {
 function MiniChart({ data, color = "#00A870" }: { data: { month: string; mrr: number }[]; color?: string }) {
   return (
     <div style={{ height: 64 }}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <AreaChart data={data}>
           <defs>
             <linearGradient id={`mini-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
@@ -536,7 +536,7 @@ export default function RevenueClient({ mosques, monthlyBurn }: { mosques: Mosqu
             </span>
           </div>
           <div className="mt-3" style={{ height: expanded === "mrr" ? 220 : 64, transition: "height 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={mrrHistory}>
                 <defs>
                   <linearGradient id="mrrExpGrad" x1="0" y1="0" x2="0" y2="1">
@@ -608,7 +608,7 @@ export default function RevenueClient({ mosques, monthlyBurn }: { mosques: Mosqu
             </span>
           </div>
           <div className="mt-3" style={{ height: expanded === "arr" ? 220 : 64, transition: "height 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={mrrHistory.map((d) => ({ ...d, mrr: d.mrr * 12 }))}>
                 <defs>
                   <linearGradient id="arrExpGrad" x1="0" y1="0" x2="0" y2="1">
@@ -676,7 +676,7 @@ export default function RevenueClient({ mosques, monthlyBurn }: { mosques: Mosqu
             <p className="mt-1 text-xs text-[#0A261E]/35">{fmt(mrr)} revenue − {fmt(monthlyBurn)} expenses</p>
           </div>
           <div className="mt-3" style={{ height: 120 }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={mrrHistory}>
                 <defs>
                   <linearGradient id="mrrGradientLg" x1="0" y1="0" x2="0" y2="1">

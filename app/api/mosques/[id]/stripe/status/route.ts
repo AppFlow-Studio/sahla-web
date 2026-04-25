@@ -14,18 +14,17 @@ export async function GET(
   }
 
   const { id: mosqueId } = await params;
-
-  if (session.orgId && session.orgId !== mosqueId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const supabase = createAdminSupabaseClient();
 
   const { data: mosque } = await supabase
     .from("mosques")
-    .select("stripe_account_id")
+    .select("stripe_account_id, clerk_org_id")
     .eq("id", mosqueId)
     .single();
+
+  if (session.orgId && session.orgId !== mosqueId && session.orgId !== mosque?.clerk_org_id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   if (!mosque?.stripe_account_id) {
     return NextResponse.json({ status: "not_connected" });

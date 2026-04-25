@@ -1,0 +1,2 @@
+-- Already applied in baseline; this is a reconciliation stub.
+-- Original migration renamed mosque slug column.

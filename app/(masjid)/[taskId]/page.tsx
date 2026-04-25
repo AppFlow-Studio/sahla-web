@@ -1,26 +1,30 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ALL_TASKS, ONBOARDING_CATEGORIES } from "../components/onboarding-tasks";
 import { getMosqueOnboardingData } from "../data";
 import TaskPageTransition from "./TaskPageTransition";
-import MosqueProfilePanel from "./panels/MosqueProfilePanel";
-import AppBrandingPanel from "./panels/AppBrandingPanel";
-import PrayerTimesOnboardingPanel from "./panels/PrayerTimesOnboardingPanel";
-import JummahSetupPanel from "./panels/JummahSetupPanel";
-import SpeakersPanel from "./panels/SpeakersPanel";
-import ProgramsPanel from "./panels/ProgramsPanel";
-import EventsPanel from "./panels/EventsPanel";
-import StripeConnectPanel from "./panels/StripeConnectPanel";
-import InviteAdminsPanel from "./panels/InviteAdminsPanel";
-import DonationsPanel from "./panels/DonationsPanel";
-import BusinessAdsPanel from "./panels/BusinessAdsPanel";
-import PreviewAppPanel from "./panels/PreviewAppPanel";
-import LaunchMaterialsPanel from "./panels/LaunchMaterialsPanel";
-import GoLivePanel from "./panels/GoLivePanel";
 import { createStripeClient } from "@/lib/stripe";
+
+// Lazy-load panels — only the active panel is compiled/loaded per request.
+// This prevents Turbopack from parsing all 13 panels + their deps on every page load.
+const MosqueProfilePanel = dynamic(() => import("./panels/MosqueProfilePanel"));
+const AppBrandingPanel = dynamic(() => import("./panels/AppBrandingPanel"));
+const PrayerTimesOnboardingPanel = dynamic(() => import("./panels/PrayerTimesOnboardingPanel"));
+const JummahSetupPanel = dynamic(() => import("./panels/JummahSetupPanel"));
+const SpeakersPanel = dynamic(() => import("./panels/SpeakersPanel"));
+const ProgramsPanel = dynamic(() => import("./panels/ProgramsPanel"));
+const EventsPanel = dynamic(() => import("./panels/EventsPanel"));
+const StripeConnectPanel = dynamic(() => import("./panels/StripeConnectPanel"));
+const InviteAdminsPanel = dynamic(() => import("./panels/InviteAdminsPanel"));
+const DonationsPanel = dynamic(() => import("./panels/DonationsPanel"));
+const BusinessAdsPanel = dynamic(() => import("./panels/BusinessAdsPanel"));
+const PreviewAppPanel = dynamic(() => import("./panels/PreviewAppPanel"));
+const LaunchMaterialsPanel = dynamic(() => import("./panels/LaunchMaterialsPanel"));
+const GoLivePanel = dynamic(() => import("./panels/GoLivePanel"));
 
 export default async function TaskPage({
   params,
@@ -61,7 +65,7 @@ export default async function TaskPage({
     const { data } = await supabase
       .from("iqamah_config")
       .select("*")
-      .eq("mosque_id", session.orgId);
+      .eq("mosque_id", mosque.id);
     iqamahConfig = data ?? [];
   }
 
@@ -69,7 +73,7 @@ export default async function TaskPage({
     const { data } = await supabase
       .from("jummah")
       .select("*")
-      .eq("mosque_id", session.orgId)
+      .eq("mosque_id", mosque.id)
       .order("prayer_time");
     jummahRecords = data ?? [];
   }
@@ -78,7 +82,7 @@ export default async function TaskPage({
     const { data } = await supabase
       .from("speaker_data")
       .select("*")
-      .eq("mosque_id", session.orgId)
+      .eq("mosque_id", mosque.id)
       .order("created_at", { ascending: false });
     speakersData = data ?? [];
   }
@@ -86,8 +90,8 @@ export default async function TaskPage({
   if (taskId === "programs" || taskId === "events") {
     // Fetch speakers for dropdown + content items
     const [speakersRes, contentRes] = await Promise.all([
-      supabase.from("speaker_data").select("speaker_id, speaker_name").eq("mosque_id", session.orgId),
-      supabase.from("content_items").select("*").eq("mosque_id", session.orgId).eq("type", taskId === "programs" ? "program" : "event").order("created_at", { ascending: false }),
+      supabase.from("speaker_data").select("speaker_id, speaker_name").eq("mosque_id", mosque.id),
+      supabase.from("content_items").select("*").eq("mosque_id", mosque.id).eq("type", taskId === "programs" ? "program" : "event").order("created_at", { ascending: false }),
     ]);
     speakersData = speakersRes.data ?? [];
     if (taskId === "programs") programsData = contentRes.data ?? [];
@@ -124,10 +128,10 @@ export default async function TaskPage({
   let previewData = null;
   if (taskId === "preview_app") {
     const [speakersRes, programsRes, eventsRes, iqamahRes] = await Promise.all([
-      supabase.from("speaker_data").select("speaker_id", { count: "exact", head: true }).eq("mosque_id", session.orgId),
-      supabase.from("content_items").select("id", { count: "exact", head: true }).eq("mosque_id", session.orgId).eq("type", "program"),
-      supabase.from("content_items").select("id", { count: "exact", head: true }).eq("mosque_id", session.orgId).eq("type", "event"),
-      supabase.from("iqamah_config").select("id", { count: "exact", head: true }).eq("mosque_id", session.orgId),
+      supabase.from("speaker_data").select("speaker_id", { count: "exact", head: true }).eq("mosque_id", mosque.id),
+      supabase.from("content_items").select("id", { count: "exact", head: true }).eq("mosque_id", mosque.id).eq("type", "program"),
+      supabase.from("content_items").select("id", { count: "exact", head: true }).eq("mosque_id", mosque.id).eq("type", "event"),
+      supabase.from("iqamah_config").select("id", { count: "exact", head: true }).eq("mosque_id", mosque.id),
     ]);
     previewData = {
       mosque: {
