@@ -5,6 +5,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import Providers from "./providers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { OrganizationJsonLd } from "./components/JsonLd";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -22,8 +23,30 @@ const dmSerif = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Sahla",
-  description: "Community Center App Creation Studio",
+  title: {
+    default: "Sahla — Your Mosque Deserves Its Own App",
+    template: "%s | Sahla",
+  },
+  description:
+    "Sahla builds fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community. White-label mosque app builder with donations, prayer times, and sponsor revenue.",
+  metadataBase: new URL("https://sahla.app"),
+  openGraph: {
+    type: "website",
+    siteName: "Sahla",
+    title: "Sahla — Your Mosque Deserves Its Own App",
+    description:
+      "Fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sahla — Your Mosque Deserves Its Own App",
+    description:
+      "Fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -35,11 +58,14 @@ export default function RootLayout({
     <ClerkProvider
       appearance={{
         variables: {
-          colorPrimary: "#4a8c65",
-          colorBackground: "#1a3a2a",
-          colorText: "#f0ebe3",
-          colorInputBackground: "#040a07",
-          colorInputText: "#f0ebe3",
+          colorPrimary: "#fffbf2",
+          colorBackground: "#0e2b22",
+          colorText: "#fffbf2",
+          colorTextSecondary: "rgba(255,251,242,0.6)",
+          colorInputBackground: "rgba(255,251,242,0.1)",
+          colorInputText: "#fffbf2",
+          colorNeutral: "#fffbf2",
+          colorTextOnPrimaryBackground: "#0A261E",
         },
       }}
     >
@@ -48,6 +74,7 @@ export default function RootLayout({
         className={cn("h-full", "antialiased", inter.variable, dmSerif.variable, "font-sans", geist.variable)}
       >
         <body className="min-h-full flex flex-col">
+          <OrganizationJsonLd />
           <Providers>{children}</Providers>
         </body>
       </html>

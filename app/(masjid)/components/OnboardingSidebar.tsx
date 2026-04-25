@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, LogOut } from "lucide-react";
-import { useClerk } from "@clerk/nextjs";
+import { ArrowLeft, Check, LogIn, LogOut } from "lucide-react";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { ONBOARDING_CATEGORIES } from "./onboarding-tasks";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +17,7 @@ export default function OnboardingSidebar({
 }) {
   const pathname = usePathname();
   const { signOut } = useClerk();
+  const { isSignedIn } = useUser();
 
   const allTasks = ONBOARDING_CATEGORIES.flatMap((c) => c.tasks);
   const totalTasks = allTasks.length;
@@ -124,13 +125,23 @@ export default function OnboardingSidebar({
 
       {/* Footer */}
       <div className="border-t border-sidebar-border px-3 py-3">
-        <button
-          onClick={() => signOut({ redirectUrl: "/" })}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-text-muted transition-colors hover:bg-sidebar-hover-bg hover:text-sidebar-text"
-        >
-          <LogOut size={14} />
-          Sign out
-        </button>
+        {isSignedIn ? (
+          <button
+            onClick={() => signOut({ redirectUrl: "/" })}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-text-muted transition-colors hover:bg-sidebar-hover-bg hover:text-sidebar-text"
+          >
+            <LogOut size={14} />
+            Sign out
+          </button>
+        ) : (
+          <Link
+            href="/login"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-text-muted transition-colors hover:bg-sidebar-hover-bg hover:text-sidebar-text"
+          >
+            <LogIn size={14} />
+            Sign in
+          </Link>
+        )}
       </div>
     </aside>
   );

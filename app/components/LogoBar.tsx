@@ -4,10 +4,9 @@ import { motion, useInView } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
 
 const stats = [
-  { value: 50, suffix: "+", label: "Apps Launched" },
-  { value: 25, suffix: "K", label: "Active Users" },
+  { value: 25, suffix: "K", label: "Active Members" },
   { value: 98, suffix: "%", label: "Uptime" },
-  { value: 4.8, suffix: "", label: "App Store Rating", decimal: true },
+  { value: 4.8, suffix: "", label: "Store Rating", decimal: true },
 ];
 
 function AnimatedNumber({ value, suffix, decimal }: { value: number; suffix: string; decimal?: boolean }) {
@@ -29,7 +28,7 @@ function AnimatedNumber({ value, suffix, decimal }: { value: number; suffix: str
   }, [inView, value, decimal]);
 
   return (
-    <span ref={ref} className="font-[family-name:var(--font-display)] text-4xl text-dark-green lg:text-5xl">
+    <span ref={ref} className="font-[family-name:var(--font-display)] text-[46px] leading-none text-[#d9c4a0]">
       {decimal ? display.toFixed(1) : display}{suffix}
     </span>
   );
@@ -37,44 +36,29 @@ function AnimatedNumber({ value, suffix, decimal }: { value: number; suffix: str
 
 export default function LogoBar() {
   return (
-    <section className="relative z-10 bg-[#fffbf2] py-16">
-      {/* Decorative top border — thin gold line */}
-      <div className="absolute top-0 left-1/2 h-[1px] w-40 -translate-x-1/2" style={{ background: "linear-gradient(90deg, transparent, #B8922A40, transparent)" }} />
-
-      <div className="mx-auto max-w-5xl px-6">
-        <motion.p
-          className="mb-10 text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-dark-green/25"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          Trusted by community centers nationwide
-        </motion.p>
-
-        <div className="flex flex-wrap items-center justify-center gap-6 lg:gap-0">
-          {stats.map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              className="relative flex flex-col items-center px-10 py-4 lg:flex-1"
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: i * 0.1 }}
-            >
-              {/* Vertical separator between stats */}
-              {i > 0 && (
-                <div className="absolute left-0 top-1/2 hidden h-12 w-[1px] -translate-y-1/2 lg:block" style={{ background: "linear-gradient(180deg, transparent, rgba(10,38,30,0.08), transparent)" }} />
-              )}
-              <AnimatedNumber value={stat.value} suffix={stat.suffix} decimal={stat.decimal} />
-              <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.2em] text-dark-green/30">{stat.label}</p>
-            </motion.div>
-          ))}
-        </div>
+    <section className="relative border-t border-b border-[#d9c4a0]/12 bg-dark-green">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-2 px-8 py-10 lg:grid-cols-3">
+        {stats.map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            className="relative flex flex-col items-center px-6 py-3 text-center"
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: i * 0.08 }}
+          >
+            {/* Vertical separator */}
+            {i > 0 && (
+              <div
+                className="absolute left-0 top-[20%] bottom-[20%] hidden w-[1px] lg:block"
+                style={{ background: "linear-gradient(180deg, transparent, rgba(217,196,160,0.14), transparent)" }}
+              />
+            )}
+            <AnimatedNumber value={stat.value} suffix={stat.suffix} decimal={stat.decimal} />
+            <p className="mt-2 text-[10px] font-medium uppercase tracking-[0.25em] text-sand/40">{stat.label}</p>
+          </motion.div>
+        ))}
       </div>
-
-      {/* Decorative bottom border */}
-      <div className="absolute bottom-0 left-1/2 h-[1px] w-40 -translate-x-1/2" style={{ background: "linear-gradient(90deg, transparent, #B8922A40, transparent)" }} />
     </section>
   );
 }

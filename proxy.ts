@@ -27,7 +27,7 @@ const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 const isSelectOrgRoute = createRouteMatcher(["/select-org"]);
 
 const LAUNCH_PATH = "/launch";
-const MASJID_LANDING = "/mosque_profile";
+const MASJID_LANDING = "/dashboard";
 const ADMIN_LANDING = "/overview";
 
 function isAdminPath(pathname: string): boolean {

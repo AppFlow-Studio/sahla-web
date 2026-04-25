@@ -188,6 +188,7 @@ export async function POST(req: Request) {
         name: lead.mosqueName,
         city: lead.city,
         state: lead.state,
+        email: lead.contactEmail,
         onboarding_status: "in_progress",
       })
       .select("id, name")

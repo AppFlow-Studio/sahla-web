@@ -1,31 +1,64 @@
 "use client";
 
+import Link from "next/link";
+
 export default function BottomBar() {
   return (
-    <footer className="relative bg-[#fffbf2]">
-      {/* Decorative top line */}
-      <div className="absolute top-0 left-1/2 h-[1px] w-32 -translate-x-1/2" style={{ background: "linear-gradient(90deg, transparent, rgba(10,38,30,0.08), transparent)" }} />
-
-      <div className="mx-auto max-w-6xl px-6 py-14">
-        <div className="flex flex-col items-center gap-8 md:flex-row md:justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-lg bg-gradient-to-br from-dark-green to-dark-green/90">
-              <span className="text-sm font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>S</span>
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-white/10" />
+    <footer className="border-t border-sand/5 bg-[#050f0b] px-5 py-12 pb-10 sm:px-8 sm:py-20">
+      <div className="mx-auto max-w-[1200px]">
+        {/* Top grid */}
+        <div className="mb-14 grid gap-8 sm:grid-cols-2 sm:gap-12 lg:grid-cols-[2fr_1fr_1fr_1fr]">
+          {/* Intro */}
+          <div>
+            <div className="mb-3.5 flex items-center gap-3">
+              <div className="grid h-9 w-9 place-items-center rounded-[10px] font-[family-name:var(--font-display)] text-base text-sand shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_4px_12px_rgba(26,107,66,0.35)]" style={{ background: "linear-gradient(135deg, #1a6b42, #2d5a3d)" }}>
+                S
+              </div>
+              <span className="font-[family-name:var(--font-display)] text-[22px] tracking-[0.01em] text-sand">Sahla</span>
             </div>
-            <span className="font-[family-name:var(--font-display)] text-lg tracking-wide text-dark-green/70">Sahla</span>
+            <p className="mt-4 max-w-[300px] text-[13.5px] leading-[1.7] text-sand/40">
+              Fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community.
+            </p>
           </div>
 
-          {/* Links */}
-          <div className="flex items-center gap-8">
-            <a href="#showcase" className="text-[13px] text-dark-green/30 transition-colors duration-300 hover:text-dark-green/60">Features</a>
-            <a href="#how-it-works" className="text-[13px] text-dark-green/30 transition-colors duration-300 hover:text-dark-green/60">How It Works</a>
-            <a href="/login" className="text-[13px] text-dark-green/30 transition-colors duration-300 hover:text-dark-green/60">Get Started</a>
+          {/* Product */}
+          <div>
+            <h4 className="mb-[18px] text-[12px] font-semibold uppercase tracking-[0.18em] text-sand/45">Product</h4>
+            <div className="flex flex-col">
+              <Link href="/why-sahla" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Why Sahla</Link>
+              <Link href="/pricing" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Pricing</Link>
+              <Link href="/faq" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">FAQ</Link>
+              <Link href="/customers/mas-si" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Case Study</Link>
+            </div>
           </div>
 
-          {/* Copyright */}
-          <span className="text-[11px] tracking-wide text-dark-green/20">&copy; 2026 Sahla. All rights reserved.</span>
+          {/* Company */}
+          <div>
+            <h4 className="mb-[18px] text-[12px] font-semibold uppercase tracking-[0.18em] text-sand/45">Company</h4>
+            <div className="flex flex-col">
+              <Link href="/about" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">About</Link>
+              <Link href="/contact" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Contact</Link>
+              <Link href="/demo" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Book a Demo</Link>
+            </div>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h4 className="mb-[18px] text-[12px] font-semibold uppercase tracking-[0.18em] text-sand/45">Legal</h4>
+            <div className="flex flex-col">
+              <Link href="/privacy" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Privacy Policy</Link>
+              <Link href="/terms" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Terms of Service</Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-sand/5 pt-7 text-[12px] text-sand/30">
+          <span>&copy; 2026 Sahla. All rights reserved.</span>
+          <div className="flex gap-[22px]">
+            <Link href="/privacy" className="transition-colors duration-200 hover:text-sand/60">Privacy</Link>
+            <Link href="/terms" className="transition-colors duration-200 hover:text-sand/60">Terms</Link>
+          </div>
         </div>
       </div>
     </footer>

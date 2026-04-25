@@ -47,7 +47,7 @@ export default async function TaskPage({
 
   const mosque = await getMosqueOnboardingData(session.orgId);
   if (!mosque) {
-    redirect("/select-org");
+    redirect("/dashboard");
   }
 
   // Fetch task-specific data
