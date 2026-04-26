@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Navbar from "../components/Navbar";
-import DemoContent from "../demo/DemoContent";
+import WaitlistContent from "../waitlist/WaitlistContent";
 import BottomBar from "../components/BottomBar";
 
 export const metadata: Metadata = {
@@ -82,7 +82,7 @@ export default function TermsPage() {
         </div>
       </section>
 
-      <DemoContent />
+      <WaitlistContent />
       <BottomBar />
     </div>
   );

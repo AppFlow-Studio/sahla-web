@@ -16,7 +16,7 @@ const faqs = [
   },
   {
     q: "What does it cost out of pocket each month?",
-    a: "Sahla costs $300/month. But local businesses can sponsor ad space in your app at $50/month each. At just 6 sponsors, the app pays for itself. Many mosques generate surplus revenue.",
+    a: "Sahla costs $300/month. But local businesses can sponsor ad space in your app at $100/month each. At just 3 sponsors, the app pays for itself. Many mosques generate surplus revenue.",
   },
   {
     q: "Can we cancel anytime?",

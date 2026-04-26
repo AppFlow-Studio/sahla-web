@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Geist } from "next/font/google";
+import { Inter, Geist, Fraunces, Newsreader, Mrs_Saint_Delafield } from "next/font/google";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import Providers from "./providers";
@@ -19,6 +19,27 @@ const dmSerif = localFont({
   src: "../public/fonts/DMSerifDisplay-latin.woff2",
   variable: "--font-display",
   weight: "400",
+  display: "swap",
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  axes: ["SOFT", "opsz"],
+  display: "swap",
+});
+
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  variable: "--font-newsreader",
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
+const signatureFont = Mrs_Saint_Delafield({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-signature",
   display: "swap",
 });
 
@@ -71,7 +92,17 @@ export default function RootLayout({
     >
       <html
         lang="en"
-        className={cn("h-full", "antialiased", inter.variable, dmSerif.variable, "font-sans", geist.variable)}
+        className={cn(
+          "h-full",
+          "antialiased",
+          inter.variable,
+          dmSerif.variable,
+          fraunces.variable,
+          newsreader.variable,
+          signatureFont.variable,
+          "font-sans",
+          geist.variable
+        )}
       >
         <body className="min-h-full flex flex-col">
           <OrganizationJsonLd />

@@ -7,7 +7,7 @@ import { Users, Bell, Heart, TrendingUp, Megaphone } from "lucide-react";
 const stats = [
   { Icon: Users, value: "3,000+", label: "Active app users" },
   { Icon: Bell, value: "95%", label: "Push notification reach" },
-  { Icon: Heart, value: "$100K+", label: "Donations processed" },
+  { Icon: Heart, value: "$12K+", label: "Donations processed" },
   { Icon: Megaphone, value: "$13K+", label: "Business ad revenue" },
   { Icon: TrendingUp, value: "50+", label: "Programs managed" },
 ];

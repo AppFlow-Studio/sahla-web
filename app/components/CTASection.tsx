@@ -43,15 +43,15 @@ export default function CTASection() {
         </h2>
 
         <p className="mx-auto mt-[22px] mb-10 max-w-[520px] text-[16px] leading-[1.7] text-sand/45">
-          Join MAS Staten Island and mosques across the country. Book a 15-minute demo and see what Sahla can build for your masjid.
+          Join MAS Staten Island and mosques across the country. Reserve your masjid&apos;s spot — we onboard new mosques in waves.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-3.5">
           <Link
-            href="/demo"
+            href="/waitlist"
             className="group relative overflow-hidden rounded-full bg-sand px-[30px] py-[15px] text-[13px] font-semibold tracking-[0.02em] text-dark-green shadow-[0_20px_40px_-16px_rgba(255,251,242,0.18)] transition-all duration-300 hover:-translate-y-px hover:shadow-[0_24px_50px_-16px_rgba(255,251,242,0.28)]"
           >
-            <span className="relative z-10">Book a Demo</span>
+            <span className="relative z-10">Join the Waitlist</span>
             <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
           </Link>
           <Link

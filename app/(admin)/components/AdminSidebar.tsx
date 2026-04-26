@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useClerk, useUser } from "@clerk/nextjs";
+import { LogIn, LogOut, UserCircle } from "lucide-react";
 
 // Shared context so layout can react to sidebar state
 export const SidebarContext = createContext<{
@@ -84,6 +86,8 @@ const navItems = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const { collapsed, setCollapsed } = useSidebar();
+  const { signOut, openUserProfile } = useClerk();
+  const { isSignedIn, isLoaded } = useUser();
 
   return (
     <motion.aside
@@ -161,6 +165,85 @@ export default function AdminSidebar() {
         })}
       </nav>
 
+      {/* Footer */}
+      <div className="border-t border-sidebar-border px-2 py-3 space-y-1">
+        {isLoaded && isSignedIn ? (
+          <>
+            <button
+              type="button"
+              onClick={() => openUserProfile()}
+              title={collapsed ? "View profile" : undefined}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-text-muted transition-colors hover:bg-sidebar-hover-bg hover:text-sidebar-text ${
+                collapsed ? "justify-center" : ""
+              }`}
+            >
+              <UserCircle className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+              <AnimatePresence mode="wait">
+                {!collapsed && (
+                  <motion.span
+                    key="profile-label"
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: "auto" }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="whitespace-nowrap overflow-hidden"
+                  >
+                    View profile
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </button>
+            <button
+              type="button"
+              onClick={() => signOut({ redirectUrl: "/" })}
+              title={collapsed ? "Sign out" : undefined}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-text-muted transition-colors hover:bg-sidebar-hover-bg hover:text-sidebar-text ${
+                collapsed ? "justify-center" : ""
+              }`}
+            >
+              <LogOut className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+              <AnimatePresence mode="wait">
+                {!collapsed && (
+                  <motion.span
+                    key="signout-label"
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: "auto" }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="whitespace-nowrap overflow-hidden"
+                  >
+                    Sign out
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </button>
+          </>
+        ) : isLoaded ? (
+          <Link
+            href="/login"
+            title={collapsed ? "Sign in" : undefined}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-text-muted transition-colors hover:bg-sidebar-hover-bg hover:text-sidebar-text ${
+              collapsed ? "justify-center" : ""
+            }`}
+          >
+            <LogIn className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+            <AnimatePresence mode="wait">
+              {!collapsed && (
+                <motion.span
+                  key="signin-label"
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "auto" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="whitespace-nowrap overflow-hidden"
+                >
+                  Sign in
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </Link>
+        ) : null}
+      </div>
     </motion.aside>
   );
 }

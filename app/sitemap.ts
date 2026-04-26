@@ -8,7 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/pricing`, changeFrequency: "monthly" as const, priority: 0.9 },
     { url: `${base}/why-sahla`, changeFrequency: "monthly" as const, priority: 0.9 },
     { url: `${base}/about`, changeFrequency: "monthly" as const, priority: 0.7 },
-    { url: `${base}/demo`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${base}/waitlist`, changeFrequency: "monthly" as const, priority: 0.8 },
     { url: `${base}/faq`, changeFrequency: "monthly" as const, priority: 0.7 },
     { url: `${base}/contact`, changeFrequency: "monthly" as const, priority: 0.6 },
     { url: `${base}/customers/mas-si`, changeFrequency: "monthly" as const, priority: 0.8 },

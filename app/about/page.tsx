@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Navbar from "../components/Navbar";
-import DemoContent from "../demo/DemoContent";
+import WaitlistContent from "../waitlist/WaitlistContent";
 import BottomBar from "../components/BottomBar";
 import AboutContent from "./AboutContent";
 
@@ -15,7 +15,7 @@ export default function AboutPage() {
     <div className="relative">
       <Navbar />
       <AboutContent />
-      <DemoContent />
+      <WaitlistContent />
       <BottomBar />
     </div>
   );

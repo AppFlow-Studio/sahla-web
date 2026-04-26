@@ -20,9 +20,21 @@ const ADMIN_PATHS = [
   "/builds",
 ];
 
-const isMarketingHome = createRouteMatcher(["/"]);
+const isMarketingRoute = createRouteMatcher([
+  "/",
+  "/about(.*)",
+  "/contact(.*)",
+  "/customers(.*)",
+  "/waitlist(.*)",
+  "/faq(.*)",
+  "/pricing(.*)",
+  "/privacy(.*)",
+  "/terms(.*)",
+  "/why-sahla(.*)",
+]);
 const isLoginRoute = createRouteMatcher(["/login(.*)"]);
 const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
+const isPublicApiRoute = createRouteMatcher(["/api/waitlist(.*)"]);
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 const isSelectOrgRoute = createRouteMatcher(["/select-org"]);
 
@@ -37,14 +49,14 @@ function isAdminPath(pathname: string): boolean {
 }
 
 export const proxy = clerkMiddleware(async (auth, req) => {
-  if (isWebhookRoute(req) || isLoginRoute(req)) {
+  if (isWebhookRoute(req) || isLoginRoute(req) || isPublicApiRoute(req)) {
     return NextResponse.next();
   }
 
   const session = await auth();
   const url = req.nextUrl.clone();
 
-  if (isMarketingHome(req)) {
+  if (isMarketingRoute(req)) {
     return NextResponse.next();
   }
 

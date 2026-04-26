@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
-import DemoContent from "../demo/DemoContent";
+import WaitlistContent from "../waitlist/WaitlistContent";
 import BottomBar from "../components/BottomBar";
 import { Check } from "lucide-react";
 
@@ -26,8 +26,8 @@ const plans = [
       "Admin dashboard",
       "Onboarding support",
     ],
-    cta: "Book a Demo",
-    href: "/demo",
+    cta: "Join the Waitlist",
+    href: "/waitlist",
     highlight: true,
   },
   {
@@ -43,8 +43,8 @@ const plans = [
       "Priority support",
       "Custom integrations",
     ],
-    cta: "Book a Demo",
-    href: "/demo",
+    cta: "Join the Waitlist",
+    href: "/waitlist",
     highlight: false,
   },
 ];
@@ -227,7 +227,7 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <DemoContent />
+      <WaitlistContent />
       <BottomBar />
     </div>
   );

@@ -315,7 +315,7 @@ export default function PrayerTimesOnboardingPanel({
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      placeholder="e.g., 123 Main St, Brooklyn, NY 11201"
+                      placeholder="e.g., 123 Main St, New York, NY 11201"
                       className="h-11 w-full rounded-lg border border-stone-200 bg-white pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none transition-colors placeholder:text-stone-400 hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
                     />
                   </div>

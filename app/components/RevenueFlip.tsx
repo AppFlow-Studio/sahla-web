@@ -7,7 +7,7 @@ import NumberFlow from "@number-flow/react";
 
 export default function RevenueFlip() {
   const [sponsors, setSponsors] = useState(5);
-  const ratePerSponsor = 50;
+  const ratePerSponsor = 100;
   const subscription = 300;
   const revenue = sponsors * ratePerSponsor;
   const net = subscription - revenue;
@@ -28,7 +28,7 @@ export default function RevenueFlip() {
               Your app pays for itself.
             </h2>
             <p className="mb-6 max-w-[480px] text-[16px] leading-[1.7] text-dark-green/55">
-              Local businesses sponsor ad space in your mosque&apos;s app at $50/month each. You keep 100% of recurring ad revenue — Sahla takes $0. At just 6 sponsors, your app is free. At 7+, it&apos;s generating surplus for your masjid.
+              Local businesses sponsor ad space in your mosque&apos;s app at $100/month each. You keep 100% of recurring ad revenue — Sahla takes $0. At just 3 sponsors, your app is free. At 4+, it&apos;s generating surplus for your masjid.
             </p>
             <p className="mb-8 max-w-[480px] text-[14px] leading-[1.7] text-dark-green/40">
               Most mosque platforms charge $99&ndash;149/month with a fee on every donation. Sahla charges $300/month flat and takes nothing from your donations or recurring ad revenue.

@@ -97,7 +97,7 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
               type="text"
               value={form.name}
               onChange={(e) => updateField("name", e.target.value)}
-              placeholder="e.g., Islamic Center of Brooklyn"
+              placeholder="e.g., Islamic Center of New York"
               className={INPUT_CLASS}
             />
           </div>
@@ -119,7 +119,7 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
               type="text"
               value={form.city}
               onChange={(e) => updateField("city", e.target.value)}
-              placeholder="Brooklyn"
+              placeholder="New York"
               className={INPUT_CLASS}
             />
           </div>

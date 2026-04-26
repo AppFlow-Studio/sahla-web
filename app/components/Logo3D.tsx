@@ -84,7 +84,7 @@ export default function Logo3D() {
   }, []);
 
   return (
-    <div ref={ref} style={{ width: "100%", height: "100%" }}>
+    <div ref={ref} style={{ width: "100%", height: "120%" }}>
       {visible && (
         <SVG3D
           svg={fixedSvg}

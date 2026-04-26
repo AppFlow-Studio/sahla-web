@@ -28,7 +28,7 @@ const categories = [
     faqs: [
       {
         q: "What does it cost out of pocket each month?",
-        a: "Sahla costs $300/month (or $325/month with the CRM add-on). No setup fees, no per-notification charges, no platform cut on donations or ad revenue. Local sponsors at $50/month each can offset or exceed this cost.",
+        a: "Sahla costs $300/month (or $325/month with the CRM add-on). No setup fees, no per-notification charges, no platform cut on donations or ad revenue. Local sponsors at $100/month each can offset or exceed this cost.",
       },
       {
         q: "Do we need an Apple Developer account?",
@@ -40,7 +40,7 @@ const categories = [
       },
       {
         q: "How does the sponsor revenue model work?",
-        a: "Local businesses (halal restaurants, Islamic bookstores, tutors, etc.) pay $50/month for ad placement in your mosque's app. Your mosque keeps 100% of that recurring revenue — Sahla takes $0. At just 6 sponsors, the app pays for itself.",
+        a: "Local businesses (halal restaurants, Islamic bookstores, tutors, etc.) pay $100/month for ad placement in your mosque's app. Your mosque keeps 100% of that recurring revenue — Sahla takes $0. At just 3 sponsors, the app pays for itself.",
       },
     ],
   },
@@ -77,8 +77,8 @@ const categories = [
         a: "No. Sahla is designed for mosque admins, not developers. If you can send an email, you can manage your mosque's app. We handle all the technical work.",
       },
       {
-        q: "Can we see a demo before committing?",
-        a: "Absolutely. Book a free 15-minute demo and we'll walk you through the platform, show you real mosque apps, and answer every question your board has.",
+        q: "Can we see the platform before committing?",
+        a: "Yes. Join the waitlist and we'll reach out as your wave opens — we'll walk you through the platform on a 15-minute call, show you real mosque apps, and answer every question your board has.",
       },
     ],
   },

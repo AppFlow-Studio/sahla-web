@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 type Note = { id: string; mosque_id: string; author_id: string | null; author_name: string | null; content: string; created_at: string };
 type PipelineStage = { id: string; mosque_id: string; stage: string; contact_name: string | null; contact_email: string | null; contact_phone: string | null; notes: unknown; updated_at: string };
 type Mosque = {
-  id: string; name: string; city: string | null; state: string | null; address: string | null;
+  id: string; name: string; city: string | null; state: string | null; country: string | null; address: string | null;
   subscription_status: string | null; onboarding_status: string | null; onboarding_progress: Record<string, boolean> | null;
   launched_at: string | null; created_at: string; updated_at: string; brand_color: string | null;
   calculation_method: number | null; school: number | null;
@@ -271,6 +271,7 @@ function OverviewTab({
               { l: "Email", v: pipeline?.contact_email },
               { l: "Phone", v: pipeline?.contact_phone },
               { l: "City", v: mosque.city },
+              { l: "Country", v: mosque.country },
               { l: "Stage", v: stage, cap: true },
               { l: "Status", v: mosque.subscription_status, cap: true },
               ...(isLive ? [{ l: "Launched", v: fmtDate(mosque.launched_at) }, { l: "Last Activity", v: fmtDate(mosque.updated_at) }] : []),

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth, useClerk } from "@clerk/nextjs";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,10 +17,23 @@ const navLinks = [
 ];
 
 export default function Navbar() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const pathname = usePathname();
+  const { isSignedIn, isLoaded, orgId } = useAuth();
   const { signOut } = useClerk();
   const [scrolled, setScrolled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const isSahlaAdmin =
+    isLoaded &&
+    isSignedIn &&
+    !!orgId &&
+    orgId === process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
+
+  // The /about hero sits on a cream background, so the default white nav
+  // chrome washes out. While the navbar is still transparent (i.e. before
+  // the dark-green scrolled state kicks in) we flip menu/logo/admin colors
+  // to dark-green so they're visible against the page itself.
+  const isLightHero = pathname === "/about" && !scrolled;
 
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 50);
@@ -61,23 +75,42 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:text-white"
+              className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                isLightHero
+                  ? "text-dark-green/70 hover:text-dark-green"
+                  : "text-white/60 hover:text-white"
+              }`}
             >
               <Menu size={20} />
             </button>
 
             <Link href="/" className="transition-opacity duration-300 hover:opacity-80">
-              <img src="/sahla-logo.png" alt="Sahla" className="h-10 w-auto" style={{ filter: "brightness(0) invert(1)" }} />
+              <img
+                src="/sahla-logo.png"
+                alt="Sahla"
+                className="h-10 w-auto"
+                style={{ filter: isLightHero ? "none" : "brightness(0) invert(1)" }}
+              />
             </Link>
           </div>
 
           {/* Right — CTA buttons */}
           <div className="flex items-center gap-3">
-            <Link href="/contact" className="hidden text-[13px] font-medium text-white/50 transition-colors duration-300 hover:text-white sm:block">
-              Get in Contact
-            </Link>
-            <Link href="/demo" className="group relative overflow-hidden rounded-full bg-white px-6 py-2.5 text-[13px] font-semibold text-dark-green transition-all duration-300 hover:shadow-lg hover:shadow-white/15">
-              <span className="relative z-10">Book a Demo</span>
+            {isSahlaAdmin && (
+              <Link
+                href="/overview"
+                className={`hidden items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 sm:inline-flex ${
+                  isLightHero
+                    ? "border border-dark-green/20 text-dark-green hover:bg-dark-green/[0.06]"
+                    : "border border-white/15 text-white hover:bg-white/[0.06]"
+                }`}
+              >
+                Go to App
+                <ArrowRight size={14} />
+              </Link>
+            )}
+            <Link href="/waitlist" className="group relative overflow-hidden rounded-full bg-white px-6 py-2.5 text-[13px] font-semibold text-dark-green transition-all duration-300 hover:shadow-lg hover:shadow-white/15">
+              <span className="relative z-10">Join the Waitlist</span>
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-accent/10 to-transparent transition-transform duration-500 group-hover:translate-x-full" />
             </Link>
           </div>
@@ -145,12 +178,23 @@ export default function Navbar() {
               {/* Bottom */}
               <div className="border-t border-sand/[0.06] px-6 py-6">
                 <Link
-                  href="/demo"
+                  href="/waitlist"
                   onClick={() => setSidebarOpen(false)}
                   className="flex w-full items-center justify-center rounded-full bg-sand px-6 py-3 text-[13px] font-semibold text-dark-green transition-all duration-300 hover:bg-white"
                 >
-                  Book a Demo
+                  Join the Waitlist
                 </Link>
+
+                {isSahlaAdmin && (
+                  <Link
+                    href="/overview"
+                    onClick={() => setSidebarOpen(false)}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-sand/15 px-6 py-3 text-[13px] font-semibold text-sand transition-all duration-300 hover:bg-sand/[0.06]"
+                  >
+                    Go to App
+                    <ArrowRight size={14} />
+                  </Link>
+                )}
 
                 {isLoaded && isSignedIn ? (
                   <button

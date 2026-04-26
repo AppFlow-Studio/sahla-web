@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Navbar from "../components/Navbar";
-import DemoContent from "../demo/DemoContent";
+import WaitlistContent from "../waitlist/WaitlistContent";
 import BottomBar from "../components/BottomBar";
 import ContactContent from "./ContactContent";
 
@@ -13,8 +13,8 @@ export default function ContactPage() {
   return (
     <div className="relative">
       <Navbar />
-      <ContactContent />
-      <DemoContent />
+      {/* <ContactContent /> */}
+      <WaitlistContent />
       <BottomBar />
     </div>
   );
