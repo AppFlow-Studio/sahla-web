@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Geist, Fraunces, Newsreader, Mrs_Saint_Delafield } from "next/font/google";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
@@ -43,31 +43,102 @@ const signatureFont = Mrs_Saint_Delafield({
   display: "swap",
 });
 
+const SITE_URL = "https://sahla.app";
+const SITE_TITLE = "Sahla — Your Mosque Deserves Its Own App";
+const SITE_DESCRIPTION =
+  "Sahla builds fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community. White-label mosque app builder with donations, prayer times, and sponsor revenue.";
+const SOCIAL_DESCRIPTION =
+  "Fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Sahla — Your Mosque Deserves Its Own App",
+    default: SITE_TITLE,
     template: "%s | Sahla",
   },
-  description:
-    "Sahla builds fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community. White-label mosque app builder with donations, prayer times, and sponsor revenue.",
-  metadataBase: new URL("https://sahla.app"),
+  description: SITE_DESCRIPTION,
+  applicationName: "Sahla",
+  authors: [{ name: "Sahla", url: SITE_URL }],
+  creator: "Sahla",
+  publisher: "Sahla",
+  category: "technology",
+  keywords: [
+    "mosque app",
+    "masjid app",
+    "white label mosque app",
+    "iOS mosque app",
+    "Android mosque app",
+    "branded masjid app",
+    "prayer times app",
+    "iqamah",
+    "mosque donations",
+    "Stripe Connect mosque",
+    "mosque CRM",
+    "Islamic app builder",
+    "masjid technology",
+    "Sahla",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
   openGraph: {
     type: "website",
     siteName: "Sahla",
-    title: "Sahla — Your Mosque Deserves Its Own App",
-    description:
-      "Fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community.",
+    url: SITE_URL,
+    title: SITE_TITLE,
+    description: SOCIAL_DESCRIPTION,
+    locale: "en_US",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Sahla — Fully branded iOS and Android apps for mosques.",
+        type: "image/png",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sahla — Your Mosque Deserves Its Own App",
-    description:
-      "Fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community.",
+    title: SITE_TITLE,
+    description: SOCIAL_DESCRIPTION,
+    images: [
+      {
+        url: "/opengraph-image",
+        alt: "Sahla — Fully branded iOS and Android apps for mosques.",
+      },
+    ],
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/sahla-logo.png",
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fffbf2" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a261e" },
+  ],
+  colorScheme: "light dark",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
