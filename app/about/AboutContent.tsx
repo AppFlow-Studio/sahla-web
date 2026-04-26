@@ -50,9 +50,6 @@ export default function AboutContent() {
           I didn&apos;t even know how to code when this started. I wasn&apos;t trying to build a company. I was trying to solve my own problem.
         </p>
         <div className={styles.heroMeta}>
-          <span>
-            Written by <strong>Abubeckr Elcharfa</strong>
-          </span>
           <span>Founder · New York, NY</span>
         </div>
       </section>
