@@ -12,6 +12,7 @@
 //   organizationMembership.created  → Log to activity_log, init user preferences
 //   organizationMembership.updated  → Log role change to activity_log
 //   organizationMembership.deleted  → Log removal, cleanup mosque-scoped user data
+//   organization.deleted      → Unlink mosque (clear clerk_org_id, roll stage back to "contract")
 //   session.created           → Log admin login (for health score admin_activity)
 //
 // Setup:
@@ -106,6 +107,14 @@ interface ClerkSession {
   user_id: string;
   last_active_organization_id: string | null;
   created_at: number;
+}
+
+interface ClerkOrganization {
+  id: string;
+  name?: string | null;
+  slug?: string | null;
+  created_at?: number;
+  deleted?: boolean;
 }
 
 interface WebhookEvent {
@@ -627,6 +636,75 @@ async function handleSessionCreated(session: ClerkSession) {
 }
 
 
+// ── organization.deleted ───────────────────────────────────────────────
+// Clerk fires this when an organization is deleted from the dashboard or via API.
+// We unlink the mosque so the lead can be re-graduated cleanly:
+//   - clear `clerk_org_id`
+//   - reset `onboarding_status` to 'setup'
+//   - roll the pipeline stage back to 'contract' (the stage immediately
+//     before onboarding — keeps history visible without forcing re-qualification)
+//
+// We never auto-delete the mosque row itself — that's a destructive admin call.
+// Sahla HQ org deletions are a no-op (HQ is referenced via sahla_config, not mosques).
+async function handleOrganizationDeleted(org: ClerkOrganization) {
+  const clerkOrgId = org.id;
+
+  if (await isSahlaOrg(clerkOrgId)) {
+    console.log(`Sahla HQ org ${clerkOrgId} deleted — skipping mosque cleanup`);
+    return;
+  }
+
+  // Find the mosque this org was linked to.
+  const { data: mosque } = await supabase
+    .from("mosques")
+    .select("id, name")
+    .or(`clerk_org_id.eq.${clerkOrgId},id.eq.${clerkOrgId}`)
+    .limit(1)
+    .single();
+
+  if (!mosque) {
+    console.log(`Org ${clerkOrgId} deleted but no matching mosque — nothing to unlink`);
+    return;
+  }
+
+  const { error: mosqueError } = await supabase
+    .from("mosques")
+    .update({
+      clerk_org_id: null,
+      onboarding_status: "setup",
+    })
+    .eq("id", mosque.id);
+
+  if (mosqueError) {
+    console.error(`Failed to unlink mosque ${mosque.id} from deleted org:`, mosqueError.message);
+    throw mosqueError;
+  }
+
+  const { error: stageError } = await supabase
+    .from("pipeline_stages")
+    .update({
+      stage: "contract",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("mosque_id", mosque.id);
+
+  if (stageError) {
+    console.warn(`Unlinked mosque but failed to roll back pipeline stage:`, stageError.message);
+  }
+
+  await logActivity({
+    mosque_id: mosque.id,
+    action: "org_deleted",
+    entity_type: "organization",
+    entity_id: clerkOrgId,
+    entity_name: mosque.name ?? null,
+    metadata: { reverted_to_stage: "contract" },
+  });
+
+  console.log(`Mosque ${mosque.name} (${mosque.id}) unlinked from deleted org ${clerkOrgId}`);
+}
+
+
 // ============================================================================
 // MAIN HANDLER
 // ============================================================================
@@ -704,6 +782,13 @@ Deno.serve(async (req: Request) => {
       case "session.created":
         await handleSessionCreated(
           event.data as unknown as ClerkSession
+        );
+        break;
+
+      // Organization lifecycle — clean up the mosque link when an org is deleted.
+      case "organization.deleted":
+        await handleOrganizationDeleted(
+          event.data as unknown as ClerkOrganization
         );
         break;
 

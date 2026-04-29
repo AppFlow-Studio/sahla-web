@@ -20,6 +20,14 @@ import { defaultColumns, type Column, type KanbanCard, type Stage } from "./type
 import MasjidCard from "./MasjidCard";
 import AddLeadModal from "@/app/components/AddLeadModal";
 import CreateAccountModal from "@/app/components/Modal";
+import OnboardingInviteModal from "./OnboardingInviteModal";
+
+type OnboardingPrompt = {
+  mosqueId: string;
+  mosqueName: string;
+  contactName: string | null;
+  contactEmail: string | null;
+};
 
 const VALID_STAGES = new Set<Stage>([
   "lead",
@@ -62,11 +70,16 @@ function DraggableMasjidCard({ card, onMoveNext, onNoteAdded, onContactEdited, o
     data: { card },
   });
 
+  // dnd-kit's internal aria-describedby counter drifts between SSR and CSR.
+  // Skip spreading dnd attributes until after hydration to avoid the mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   return (
     <div
       ref={setNodeRef}
-      {...listeners}
-      {...attributes}
+      {...(mounted ? listeners : {})}
+      {...(mounted ? attributes : {})}
       className={`touch-none ${isDragging ? "opacity-50" : ""}`}
     >
       <MasjidCard card={card} onMoveNext={onMoveNext} onNoteAdded={onNoteAdded} onContactEdited={onContactEdited} onCreateAccount={onCreateAccount} />
@@ -140,6 +153,8 @@ export default function KanbanBoard({ cards }: Props) {
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [isCreateAccountModalOpen, setIsCreateAccountModalOpen] = useState(false);
   const [graduatingMosqueId, setGraduatingMosqueId] = useState<string | null>(null);
+  const [onboardingPrompt, setOnboardingPrompt] =
+    useState<OnboardingPrompt | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
 
@@ -296,6 +311,15 @@ export default function KanbanBoard({ cards }: Props) {
       }
 
       pushToast(`${movingCard.mosqueName} moved to ${newStage}.`, "success");
+
+      if (newStage === "onboarding") {
+        setOnboardingPrompt({
+          mosqueId: mosqueIdPayload,
+          mosqueName: movingCard.mosqueName,
+          contactName: movingCard.contactName || null,
+          contactEmail: movingCard.contactEmail ?? null,
+        });
+      }
     } catch (error) {
       // Revert optimistic change on failure.
       setLocalCards((prev) =>
@@ -428,6 +452,50 @@ export default function KanbanBoard({ cards }: Props) {
         onClose={() => { setIsCreateAccountModalOpen(false); setGraduatingMosqueId(null); }}
         onSuccess={handleAccountCreated}
         existingMosqueId={graduatingMosqueId}
+      />
+      <OnboardingInviteModal
+        open={onboardingPrompt !== null}
+        mosqueName={onboardingPrompt?.mosqueName ?? ""}
+        contactName={onboardingPrompt?.contactName ?? null}
+        contactEmail={onboardingPrompt?.contactEmail ?? null}
+        onSkip={() => setOnboardingPrompt(null)}
+        onSend={async () => {
+          if (!onboardingPrompt) return;
+          const { mosqueId, mosqueName, contactName, contactEmail } = onboardingPrompt;
+          if (!contactEmail) throw new Error("No contact email on file.");
+
+          const res = await fetch("/api/pipeline/create-account", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              mosqueId,
+              mosqueName,
+              contactName: contactName ?? "",
+              contactEmail,
+            }),
+          });
+
+          const body = (await res.json().catch(() => ({}))) as {
+            ok?: boolean;
+            error?: string;
+          };
+
+          if (res.status === 409) {
+            // Mosque already has a Clerk org — treat as info, not error.
+            pushToast(`${mosqueName} already has an active invitation.`, "success");
+            setOnboardingPrompt(null);
+            router.refresh();
+            return;
+          }
+
+          if (!res.ok || body.ok === false) {
+            throw new Error(body.error ?? `Failed to send invitation (${res.status}).`);
+          }
+
+          pushToast(`Invitation sent to ${contactEmail}.`, "success");
+          setOnboardingPrompt(null);
+          router.refresh();
+        }}
       />
 
       {/* Stats bar */}

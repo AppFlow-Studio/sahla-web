@@ -9,7 +9,7 @@ export default async function OnboardingDashboard() {
   const orgId = session.orgId;
 
   if (!orgId) {
-    redirect("/select-org");
+    redirect("/onboarding");
   }
 
   const mosque = await getMosqueOnboardingData(orgId);
