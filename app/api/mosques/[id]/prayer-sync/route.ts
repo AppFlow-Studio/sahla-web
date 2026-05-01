@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { PRAYER_NAMES } from "@/lib/prayer/constants";
-import { parseAlAdhanTime, computeIqamahTime, ALADHAN_KEY_MAP } from "@/lib/prayer/utils";
+import { parseAlAdhanTime, computeIqamahTime, ALADHAN_KEY_MAP, buildAlAdhanQuery } from "@/lib/prayer/utils";
 import type { AlAdhanDayData, IqamahConfig } from "@/lib/prayer/types";
 
 export async function POST(
@@ -20,7 +20,7 @@ export async function POST(
   // 1. Get mosque info
   const { data: mosque, error: mosqueError } = await supabase
     .from("mosques")
-    .select("id, address, calculation_method, school, timezone")
+    .select("id, address, calculation_method, school, timezone, midnight_mode, latitude_adjustment_method, prayer_tune, shafaq")
     .eq("id", mosqueId)
     .single();
 
@@ -37,7 +37,15 @@ export async function POST(
   const month = now.getMonth() + 1;
 
   // 2. Fetch month from AlAdhan
-  const url = `https://api.aladhan.com/v1/calendarByAddress/${year}/${month}?address=${encodeURIComponent(mosque.address)}&method=${mosque.calculation_method || 2}&school=${mosque.school || 0}`;
+  const qs = buildAlAdhanQuery(mosque.address, {
+    method: mosque.calculation_method || 2,
+    school: mosque.school || 0,
+    midnightMode: mosque.midnight_mode,
+    latitudeAdjustmentMethod: mosque.latitude_adjustment_method,
+    tune: mosque.prayer_tune,
+    shafaq: mosque.shafaq,
+  });
+  const url = `https://api.aladhan.com/v1/calendarByAddress/${year}/${month}?${qs}`;
 
   const aladhanRes = await fetch(url);
   if (!aladhanRes.ok) {

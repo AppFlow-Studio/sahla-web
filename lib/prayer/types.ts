@@ -26,6 +26,15 @@ export type TodaysPrayer = {
   iqamah_time: string;
 };
 
+export type AlAdhanParams = {
+  method: number;
+  school: number;
+  midnightMode?: number;
+  latitudeAdjustmentMethod?: number | null;
+  tune?: string | null;
+  shafaq?: string;
+};
+
 export type AlAdhanTimings = {
   Fajr: string;
   Sunrise: string;

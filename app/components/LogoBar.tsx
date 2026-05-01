@@ -6,7 +6,7 @@ import { useRef, useEffect, useState } from "react";
 const stats = [
   { value: 25, suffix: "K", label: "Active Members" },
   { value: 98, suffix: "%", label: "Uptime" },
-  { value: 4.8, suffix: "", label: "Store Rating", decimal: true },
+  { value: 5.0, suffix: "", label: "Store Rating", decimal: true },
 ];
 
 function AnimatedNumber({ value, suffix, decimal }: { value: number; suffix: string; decimal?: boolean }) {

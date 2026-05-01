@@ -42,6 +42,79 @@ function getMosqueId(obj: { metadata?: Record<string, string> }): string | undef
 
 // ─── Notifications ───
 
+function sahlaEmailHtml(body: string, preheader?: string): string {
+  const logoUrl = "https://www.sahla.co/sahla-logo.png";
+  const sans = "-apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif";
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <meta name="supported-color-schemes" content="light only" />
+  <title>Sahla</title>
+  <style>
+    :root{color-scheme:light only;}
+    body,table,td,p,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+    body{margin:0!important;padding:0!important;width:100%!important;}
+    [data-ogsc] body,[data-ogsc] table,[data-ogsc] td{background-color:#fffbf2!important;}
+    u + .body{background-color:#fffbf2!important;}
+    @media(prefers-color-scheme:dark){body,.dark-bg{background-color:#fffbf2!important;}}
+    @media only screen and (max-width:620px){
+      .email-card{width:100%!important;border-radius:0!important;}
+      .email-body{padding-left:24px!important;padding-right:24px!important;}
+      .email-footer{padding-left:24px!important;padding-right:24px!important;}
+    }
+  </style>
+</head>
+<body class="body" style="margin:0;padding:0;background-color:#fffbf2;">
+  ${preheader ? `<div style="display:none;font-size:1px;color:#fffbf2;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${preheader}${"&zwnj;&nbsp;".repeat(30)}</div>` : ""}
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="dark-bg" bgcolor="#fffbf2" style="background-color:#fffbf2;min-width:100%;">
+  <tr>
+  <td align="center" valign="top" bgcolor="#fffbf2" style="background-color:#fffbf2;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;" align="center">
+    <tr><td align="center" style="padding:48px 16px 28px;">
+      <img src="${logoUrl}" alt="Sahla" width="80" height="80" style="display:block;width:80px;height:auto;border:0;outline:none;" />
+    </td></tr>
+    <tr><td align="center" style="padding:0 12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-card" bgcolor="#ffffff" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;">
+        <tr><td class="email-body" style="padding:40px 36px 0;font-family:${sans};font-size:15px;line-height:1.7;color:#0A261E;">
+          ${body}
+        </td></tr>
+        <tr><td class="email-body" style="padding:36px 36px 0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td style="height:1px;font-size:1px;line-height:1px;background-color:rgba(10,38,30,0.08);">&nbsp;</td>
+          </tr></table>
+        </td></tr>
+        <tr><td align="center" class="email-body" style="padding:28px 36px 36px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+            <tr><td align="center" style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:14px;line-height:1.55;color:rgba(10,38,30,0.55);padding-bottom:20px;">
+              <em style="font-style:italic;color:#0A261E;">Sahla</em> means <em style="font-style:italic;color:#0A261E;">&ldquo;easy&rdquo;</em> in Arabic. That&rsquo;s the whole point.
+            </td></tr>
+            <tr><td align="center" style="font-family:'Brush Script MT','Segoe Script','Apple Chancery',cursive;font-size:28px;line-height:1.3;color:#0A261E;padding-bottom:6px;">The Sahla Team</td></tr>
+            <tr><td align="center">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
+                <td width="120" height="1" bgcolor="#B8922A" style="width:120px;height:1px;font-size:1px;line-height:1px;background-color:#B8922A;">&nbsp;</td>
+              </tr></table>
+            </td></tr>
+            <tr><td align="center" style="padding-top:12px;font-family:${sans};font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:rgba(10,38,30,0.3);">New York &middot; 2026</td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </td></tr>
+    <tr><td align="center" class="email-footer" style="padding:24px 16px 48px;font-family:${sans};font-size:11px;color:rgba(10,38,30,0.55);">
+      <a href="https://www.sahla.co" style="color:#0A261E;text-decoration:none;">sahla.co</a>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="mailto:info@sahla.co" style="color:#0A261E;text-decoration:none;">info@sahla.co</a>
+    </td></tr>
+  </table>
+  </td>
+  </tr>
+  </table>
+</body>
+</html>`;
+}
+
 async function sendEmail(to: string, subject: string, html: string) {
   if (!resendApiKey) {
     console.warn("RESEND_API_KEY not set, skipping email");
@@ -225,13 +298,31 @@ async function handleInvoiceFailed(invoice: Stripe.Invoice) {
       .single();
 
     if (mosqueData?.email) {
+      const mosqueName = mosqueData.name || "your mosque";
+      const amountDue = `$${(invoice.amount_due / 100).toFixed(2)}`;
+
       await sendEmail(
         mosqueData.email,
         "Payment failed — action required",
-        `<p>Hi,</p>
-        <p>Your latest payment of <strong>$${(invoice.amount_due / 100).toFixed(2)}</strong> for <strong>${mosqueData.name || "your mosque"}</strong> was unsuccessful.</p>
-        <p>Please update your payment method in the CRM to avoid service interruption. You have a 7-day grace period before your subscription is canceled.</p>
-        <p>— The Sahla Team</p>`
+        sahlaEmailHtml(`
+          <p style="margin:0 0 6px;font-size:10px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#B8922A;">Action Required</p>
+          <h1 style="font-size:22px;font-weight:600;color:#0A261E;margin:0 0 6px;line-height:1.3;">
+            Payment unsuccessful
+          </h1>
+          <p style="margin:0 0 28px;font-size:13px;color:rgba(10,38,30,0.4);">${mosqueName}</p>
+
+          <p style="margin:0 0 14px;color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">
+            Your latest payment of <strong style="color:#0A261E;">${amountDue}</strong> for <strong style="color:#0A261E;">${mosqueName}</strong> was unsuccessful.
+          </p>
+
+          <div style="margin:0 0 20px;background-color:#fffbf2;border-radius:10px;padding:16px 20px;border:1px solid rgba(10,38,30,0.06);">
+            <p style="margin:0;color:rgba(10,38,30,0.7);font-size:14px;line-height:1.6;">Please update your payment method to avoid service interruption. You have a <strong style="color:#0A261E;">7-day grace period</strong> before your subscription is canceled.</p>
+          </div>
+
+          <p style="margin:0;color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">
+            If you have any questions, reply to this email and we'll help sort it out.
+          </p>
+        `, `Payment of ${amountDue} for ${mosqueName} was unsuccessful`)
       );
     }
 

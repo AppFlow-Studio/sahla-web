@@ -1,7 +1,7 @@
 // proxy.ts — Role-Based Routing via Clerk Organizations
 //
 // Routing logic:
-//   Active org = Sahla HQ org → Admin HQ (overview, pipeline, mosques, ...)
+//   Active org = Sahla HQ org → Admin HQ (overview, mosques, revenue, ...)
 //   Active org = any mosque   → Masjid CRM (onboarding tasks at /[taskId])
 //   No active org             → /select-org
 //   Not signed in             → /login (or marketing page at /)
@@ -13,8 +13,8 @@ const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID!;
 
 const ADMIN_PATHS = [
   "/overview",
-  "/pipeline",
   "/mosques",
+  "/pipeline",
   "/revenue",
   "/expenses",
   "/builds",

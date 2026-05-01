@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { sahlaEmailHtml, escapeHtml } from "@/lib/email/template";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -134,18 +135,43 @@ export async function POST(req: Request) {
       to: "info@sahla.co",
       replyTo: email,
       subject: `New Waitlist Signup — ${mosqueName}`,
-      html: `
-        <h2>New Waitlist Signup</h2>
-        <table style="border-collapse:collapse;font-family:sans-serif;font-size:14px;">
-          <tr><td style="padding:6px 12px;font-weight:bold;">Name</td><td style="padding:6px 12px;">${name}</td></tr>
-          <tr><td style="padding:6px 12px;font-weight:bold;">Email</td><td style="padding:6px 12px;"><a href="mailto:${email}">${email}</a></td></tr>
-          ${phone ? `<tr><td style="padding:6px 12px;font-weight:bold;">Phone</td><td style="padding:6px 12px;"><a href="tel:${phone}">${phone}</a></td></tr>` : ""}
-          <tr><td style="padding:6px 12px;font-weight:bold;">Mosque</td><td style="padding:6px 12px;">${mosqueName}</td></tr>
-          ${city ? `<tr><td style="padding:6px 12px;font-weight:bold;">City</td><td style="padding:6px 12px;">${city}</td></tr>` : ""}
-          ${country ? `<tr><td style="padding:6px 12px;font-weight:bold;">Country</td><td style="padding:6px 12px;">${country}</td></tr>` : ""}
-          ${notes ? `<tr><td style="padding:6px 12px;font-weight:bold;">Notes</td><td style="padding:6px 12px;">${notes}</td></tr>` : ""}
-        </table>
-      `,
+      html: sahlaEmailHtml({
+        preheader: `${name} from ${mosqueName} just joined the waitlist`,
+        body: `
+          <p style="margin:0 0 4px;font-size:10px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#B8922A;">New Signup</p>
+          <h1 style="font-size:22px;font-weight:600;color:#0A261E;margin:0 0 24px;line-height:1.3;">${escapeHtml(mosqueName)}</h1>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:10px;overflow:hidden;border:1px solid rgba(10,38,30,0.08);">
+            <tr>
+              <td style="padding:10px 16px;font-weight:600;color:#0A261E;width:90px;border-bottom:1px solid rgba(10,38,30,0.06);font-size:13px;">Name</td>
+              <td style="padding:10px 16px;color:#0A261E;border-bottom:1px solid rgba(10,38,30,0.06);font-size:14px;">${escapeHtml(name)}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 16px;font-weight:600;color:#0A261E;border-bottom:1px solid rgba(10,38,30,0.06);font-size:13px;">Email</td>
+              <td style="padding:10px 16px;border-bottom:1px solid rgba(10,38,30,0.06);font-size:14px;"><a href="mailto:${escapeHtml(email)}" style="color:#1a6b42;text-decoration:none;">${escapeHtml(email)}</a></td>
+            </tr>
+            ${phone ? `<tr>
+              <td style="padding:10px 16px;font-weight:600;color:#0A261E;border-bottom:1px solid rgba(10,38,30,0.06);font-size:13px;">Phone</td>
+              <td style="padding:10px 16px;border-bottom:1px solid rgba(10,38,30,0.06);font-size:14px;"><a href="tel:${escapeHtml(phone)}" style="color:#1a6b42;text-decoration:none;">${escapeHtml(phone)}</a></td>
+            </tr>` : ""}
+            <tr>
+              <td style="padding:10px 16px;font-weight:600;color:#0A261E;${city || country || notes ? "border-bottom:1px solid rgba(10,38,30,0.06);" : ""}font-size:13px;">Mosque</td>
+              <td style="padding:10px 16px;color:#0A261E;${city || country || notes ? "border-bottom:1px solid rgba(10,38,30,0.06);" : ""}font-size:14px;">${escapeHtml(mosqueName)}</td>
+            </tr>
+            ${city ? `<tr>
+              <td style="padding:10px 16px;font-weight:600;color:#0A261E;${country || notes ? "border-bottom:1px solid rgba(10,38,30,0.06);" : ""}font-size:13px;">City</td>
+              <td style="padding:10px 16px;color:#0A261E;${country || notes ? "border-bottom:1px solid rgba(10,38,30,0.06);" : ""}font-size:14px;">${escapeHtml(city)}</td>
+            </tr>` : ""}
+            ${country ? `<tr>
+              <td style="padding:10px 16px;font-weight:600;color:#0A261E;${notes ? "border-bottom:1px solid rgba(10,38,30,0.06);" : ""}font-size:13px;">Country</td>
+              <td style="padding:10px 16px;color:#0A261E;${notes ? "border-bottom:1px solid rgba(10,38,30,0.06);" : ""}font-size:14px;">${escapeHtml(country)}</td>
+            </tr>` : ""}
+            ${notes ? `<tr>
+              <td style="padding:10px 16px;font-weight:600;color:#0A261E;font-size:13px;">Notes</td>
+              <td style="padding:10px 16px;color:#0A261E;font-size:14px;">${escapeHtml(notes)}</td>
+            </tr>` : ""}
+          </table>
+        `,
+      }),
     });
   } catch (err) {
     console.error("Failed to send team notification email:", err);
@@ -176,31 +202,55 @@ function confirmationEmailHtml({
   mosqueName: string;
 }) {
   const firstName = name.split(/\s+/)[0] || name;
-  return `
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fffbf2;padding:32px 16px;color:#0a261e;">
-      <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid rgba(13,38,30,0.06);border-radius:16px;padding:36px;">
-        <div style="margin-bottom:24px;">
-          <span style="display:inline-block;padding:4px 10px;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#1a6b42;background:rgba(26,107,66,0.08);border-radius:999px;">Sahla</span>
-        </div>
-        <h1 style="font-size:24px;line-height:1.3;margin:0 0 16px;color:#0a261e;">You're on the list, ${escapeHtml(firstName)}.</h1>
-        <p style="font-size:15px;line-height:1.7;margin:0 0 16px;color:rgba(13,38,30,0.7);">
-          We've reserved <strong>${escapeHtml(mosqueName)}</strong> for an upcoming onboarding wave.
-          We onboard new mosques in small groups so each community gets the attention it deserves &mdash;
-          you'll hear from us as soon as your spot opens.
-        </p>
-        <p style="font-size:15px;line-height:1.7;margin:0 0 24px;color:rgba(13,38,30,0.7);">
-          In the meantime, if you'd like us to talk to your board, your imam, or anyone else on your team,
-          just reply to this email and let us know who to loop in.
-        </p>
-        <div style="border-top:1px solid rgba(13,38,30,0.08);padding-top:20px;margin-top:24px;">
-          <p style="font-size:13px;line-height:1.6;margin:0;color:rgba(13,38,30,0.5);">
-            &mdash; The Sahla Team<br />
-            <a href="mailto:info@sahla.co" style="color:#1a6b42;text-decoration:none;">info@sahla.co</a>
-          </p>
-        </div>
-      </div>
-    </div>
-  `;
+  return sahlaEmailHtml({
+    preheader: `You're on the Sahla waitlist — we've reserved ${mosqueName}`,
+    body: `
+      <p style="margin:0 0 14px;color:#0A261E;font-size:15px;line-height:1.7;">
+        Asalamu alaykum ${escapeHtml(firstName)},
+      </p>
+      <p style="margin:0 0 28px;color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">
+        Thank you for reserving <strong style="color:#0A261E;">${escapeHtml(mosqueName)}</strong>'s place on the Sahla waitlist.
+        We've received your details and someone from our team will be in touch within three days.
+      </p>
+
+      <p style="margin:0 0 4px;font-size:10px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#0A261E;">What happens next</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+        <tr>
+          <td style="padding:0 0 2px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="100%" height="1" style="height:1px;font-size:1px;line-height:1px;background-color:#B8922A;">&nbsp;</td></tr></table></td>
+        </tr>
+        <tr>
+          <td style="padding:18px 0;border-bottom:1px solid rgba(10,38,30,0.08);">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+              <td valign="top" style="padding-right:16px;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:24px;line-height:1;color:#B8922A;">1</td>
+              <td valign="top" style="color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">
+                We'll reach out to schedule a short call with you &mdash; and anyone from your masjid's board who should be on it.
+              </td>
+            </tr></table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:18px 0;border-bottom:1px solid rgba(10,38,30,0.08);">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+              <td valign="top" style="padding-right:16px;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:24px;line-height:1;color:#B8922A;">2</td>
+              <td valign="top" style="color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">
+                We'll walk through what your mosque's own app could look like, using a live Sahla app as a reference.
+              </td>
+            </tr></table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:18px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+              <td valign="top" style="padding-right:16px;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:24px;line-height:1;color:#B8922A;">3</td>
+              <td valign="top" style="color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">
+                If it's a fit, we'll begin onboarding. Most mosques are live in the App Store within two weeks.
+              </td>
+            </tr></table>
+          </td>
+        </tr>
+      </table>
+    `,
+  });
 }
 
 function confirmationEmailText({
@@ -212,22 +262,20 @@ function confirmationEmailText({
 }) {
   const firstName = name.split(/\s+/)[0] || name;
   return [
-    `You're on the list, ${firstName}.`,
+    `Asalamu alaykum ${firstName},`,
     ``,
-    `We've reserved ${mosqueName} for an upcoming onboarding wave. We onboard new mosques in small groups so each community gets the attention it deserves — you'll hear from us as soon as your spot opens.`,
+    `Thank you for reserving ${mosqueName}'s place on the Sahla waitlist. We've received your details and someone from our team will be in touch within three days.`,
     ``,
-    `If you'd like us to talk to your board, your imam, or anyone else on your team, just reply to this email and let us know who to loop in.`,
+    `WHAT HAPPENS NEXT`,
+    ``,
+    `1. We'll reach out to schedule a short call with you — and anyone from your masjid's board who should be on it.`,
+    ``,
+    `2. We'll walk through what your mosque's own app could look like, using a live Sahla app as a reference.`,
+    ``,
+    `3. If it's a fit, we'll begin onboarding. Most mosques are live in the App Store within two weeks.`,
     ``,
     `— The Sahla Team`,
     `info@sahla.co`,
   ].join("\n");
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}

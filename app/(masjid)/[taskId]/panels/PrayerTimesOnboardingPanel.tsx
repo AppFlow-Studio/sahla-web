@@ -3,12 +3,15 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, MapPin, Check, CheckCircle2, Loader2 } from "lucide-react";
+import { Settings, MapPin, Check, CheckCircle2, Loader2, ChevronDown } from "lucide-react";
 import {
   CALCULATION_METHODS,
   SCHOOLS,
   PRAYER_NAMES,
   PRAYER_DISPLAY_NAMES,
+  MIDNIGHT_MODES,
+  LATITUDE_ADJUSTMENT_METHODS,
+  SHAFAQ_OPTIONS,
 } from "@/lib/prayer/constants";
 import { computeIqamahTime, to12Hour } from "@/lib/prayer/utils";
 import { useToast } from "../../components/ToastProvider";
@@ -34,6 +37,10 @@ type MosqueData = {
   address: string | null;
   calculation_method: number | null;
   school: number | null;
+  midnight_mode: number | null;
+  latitude_adjustment_method: number | null;
+  prayer_tune: string | null;
+  shafaq: string | null;
 };
 
 const DEFAULT_OFFSETS: Record<PrayerName, number> = {
@@ -49,6 +56,12 @@ const IQAMAH_MODE_OPTIONS = [
 
 const CALC_METHOD_OPTIONS = CALCULATION_METHODS.map((m) => ({ value: m.value, label: m.label }));
 const SCHOOL_OPTIONS = SCHOOLS.map((s) => ({ value: s.value, label: s.label }));
+const MIDNIGHT_MODE_OPTIONS = MIDNIGHT_MODES.map((m) => ({ value: m.value, label: m.label }));
+const LAT_ADJ_OPTIONS = [
+  { value: -1, label: "None (auto)" },
+  ...LATITUDE_ADJUSTMENT_METHODS.map((m) => ({ value: m.value, label: m.label })),
+];
+const SHAFAQ_DROPDOWN_OPTIONS = SHAFAQ_OPTIONS.map((s) => ({ value: s.value, label: s.label }));
 
 function Stepper({ step }: { step: Exclude<WizardStep, "view"> }) {
   const allDone = step === "success";
@@ -115,6 +128,11 @@ export default function PrayerTimesOnboardingPanel({
   const [address, setAddress] = useState(mosque.address || "");
   const [method, setMethod] = useState(mosque.calculation_method ?? 2);
   const [school, setSchool] = useState(mosque.school ?? 0);
+  const [midnightMode, setMidnightMode] = useState(mosque.midnight_mode ?? 0);
+  const [latAdjMethod, setLatAdjMethod] = useState(mosque.latitude_adjustment_method ?? -1);
+  const [prayerTune, setPrayerTune] = useState(mosque.prayer_tune ?? "");
+  const [shafaq, setShafaq] = useState(mosque.shafaq ?? "general");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [previewTimings, setPreviewTimings] = useState<PreviewTimings | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -153,6 +171,49 @@ export default function PrayerTimesOnboardingPanel({
     }
   }, []);
 
+  async function fetchDefaults() {
+    if (!address.trim()) {
+      showToast("Address is required", "error");
+      return;
+    }
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ address, method: String(method), school: String(school) });
+      const res = await fetch(`/api/mosques/${mosque.id}/prayer-preview?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+
+      // Pre-fill settings from AlAdhan meta defaults
+      if (data.meta) {
+        const meta = data.meta;
+        if (meta.method?.id != null) setMethod(meta.method.id);
+        if (meta.school === "HANAFI") setSchool(1);
+        else if (meta.school === "STANDARD") setSchool(0);
+        if (meta.midnightMode === "JAFARI") setMidnightMode(1);
+        else setMidnightMode(0);
+        const latAdj: Record<string, number> = {
+          MIDDLE_OF_THE_NIGHT: 1,
+          ONE_SEVENTH: 2,
+          ANGLE_BASED: 3,
+        };
+        setLatAdjMethod(latAdj[meta.latitudeAdjustmentMethod] ?? -1);
+        if (meta.offset) {
+          const tuneOrder = ["Imsak", "Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Sunset", "Isha", "Midnight"];
+          const tuneStr = tuneOrder.map((k) => meta.offset[k] ?? 0).join(",");
+          // Only set if there are non-zero values
+          if (tuneOrder.some((k) => meta.offset[k] !== 0)) setPrayerTune(tuneStr);
+          else setPrayerTune("");
+        }
+      }
+
+      setStep(2);
+    } catch {
+      showToast("Failed to fetch defaults. Check the address.", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function fetchPreview() {
     if (!address.trim()) {
       showToast("Address is required", "error");
@@ -161,6 +222,10 @@ export default function PrayerTimesOnboardingPanel({
     setLoading(true);
     try {
       const params = new URLSearchParams({ address, method: String(method), school: String(school) });
+      if (midnightMode !== 0) params.set("midnightMode", String(midnightMode));
+      if (latAdjMethod >= 0) params.set("latitudeAdjustmentMethod", String(latAdjMethod));
+      if (prayerTune.trim()) params.set("tune", prayerTune.trim());
+      if (shafaq !== "general") params.set("shafaq", shafaq);
       const res = await fetch(`/api/mosques/${mosque.id}/prayer-preview?${params}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
@@ -208,7 +273,16 @@ export default function PrayerTimesOnboardingPanel({
       const configRes = await fetch(`/api/mosques/${mosque.id}/iqamah-config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ configs, calculationMethod: method, school, address }),
+        body: JSON.stringify({
+          configs,
+          calculationMethod: method,
+          school,
+          address,
+          midnightMode,
+          latitudeAdjustmentMethod: latAdjMethod >= 0 ? latAdjMethod : null,
+          prayerTune: prayerTune.trim() || null,
+          shafaq,
+        }),
       });
       if (!configRes.ok) throw new Error("Failed to save config");
 
@@ -323,11 +397,12 @@ export default function PrayerTimesOnboardingPanel({
               </div>
               <div className="flex justify-end">
                 <button
-                  onClick={() => address.trim() ? setStep(2) : showToast("Address is required", "error")}
-                  disabled={!address.trim()}
-                  className={address.trim() ? BTN_PRIMARY : BTN_PRIMARY_DISABLED}
+                  onClick={fetchDefaults}
+                  disabled={!address.trim() || loading}
+                  className={address.trim() && !loading ? BTN_PRIMARY : BTN_PRIMARY_DISABLED}
                 >
-                  Next
+                  {loading && <Loader2 size={14} className="animate-spin" />}
+                  {loading ? "Detecting Settings..." : "Next"}
                 </button>
               </div>
             </div>
@@ -367,6 +442,81 @@ export default function PrayerTimesOnboardingPanel({
                     <p className="mt-2 text-[11px] text-stone-400">
                       Standard (Shafi) is used by most mosques. Hanafi calculates a later Asr time.
                     </p>
+                  </div>
+
+                  {/* Advanced Settings */}
+                  <div className="border-t border-stone-100 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="flex w-full items-center gap-2 text-[13px] font-medium text-stone-500 transition-colors hover:text-stone-700"
+                    >
+                      <ChevronDown
+                        size={14}
+                        className={cn("transition-transform", showAdvanced && "rotate-180")}
+                      />
+                      Advanced Settings
+                    </button>
+
+                    {showAdvanced && (
+                      <div className="mt-4 space-y-5">
+                        <div>
+                          <p className="mb-1 text-[14px] font-semibold text-stone-900">Midnight Mode</p>
+                          <p className="mb-3 text-[12px] text-stone-500">
+                            How the midnight time is calculated between sunset and sunrise.
+                          </p>
+                          <Dropdown
+                            value={midnightMode}
+                            onChange={(v) => setMidnightMode(Number(v))}
+                            options={MIDNIGHT_MODE_OPTIONS}
+                            className="w-full"
+                            minWidth={0}
+                          />
+                        </div>
+
+                        <div>
+                          <p className="mb-1 text-[14px] font-semibold text-stone-900">High Latitude Adjustment</p>
+                          <p className="mb-3 text-[12px] text-stone-500">
+                            For mosques at high latitudes where twilight may persist. Most mosques can leave this on auto.
+                          </p>
+                          <Dropdown
+                            value={latAdjMethod}
+                            onChange={(v) => setLatAdjMethod(Number(v))}
+                            options={LAT_ADJ_OPTIONS}
+                            className="w-full"
+                            minWidth={0}
+                          />
+                        </div>
+
+                        <div>
+                          <p className="mb-1 text-[14px] font-semibold text-stone-900">Shafaq</p>
+                          <p className="mb-3 text-[12px] text-stone-500">
+                            Twilight type used for Isha calculation (relevant for Moonsighting Committee method).
+                          </p>
+                          <Dropdown
+                            value={shafaq}
+                            onChange={(v) => setShafaq(String(v))}
+                            options={SHAFAQ_DROPDOWN_OPTIONS}
+                            className="w-full"
+                            minWidth={0}
+                          />
+                        </div>
+
+                        <div>
+                          <p className="mb-1 text-[14px] font-semibold text-stone-900">Prayer Time Adjustments</p>
+                          <p className="mb-3 text-[12px] text-stone-500">
+                            Comma-separated minute offsets for: Imsak, Fajr, Sunrise, Dhuhr, Asr, Maghrib, Sunset, Isha, Midnight. Leave empty for no adjustments.
+                          </p>
+                          <input
+                            type="text"
+                            value={prayerTune}
+                            onChange={(e) => setPrayerTune(e.target.value)}
+                            placeholder="e.g., 0,2,0,0,0,3,0,-1,0"
+                            className="h-11 w-full rounded-lg border border-stone-200 bg-white px-4 text-sm text-stone-900 shadow-sm outline-none transition-colors placeholder:text-stone-400 hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

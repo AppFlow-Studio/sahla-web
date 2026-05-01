@@ -44,11 +44,19 @@ export async function POST(
     calculationMethod,
     school,
     address,
+    midnightMode,
+    latitudeAdjustmentMethod,
+    prayerTune,
+    shafaq,
   }: {
     configs: IqamahConfig[];
     calculationMethod: number;
     school: number;
     address?: string;
+    midnightMode?: number;
+    latitudeAdjustmentMethod?: number | null;
+    prayerTune?: string | null;
+    shafaq?: string;
   } = body;
 
   if (!configs || !Array.isArray(configs) || configs.length !== 5) {
@@ -66,6 +74,10 @@ export async function POST(
     school: school,
   };
   if (address) updateFields.address = address;
+  if (midnightMode !== undefined) updateFields.midnight_mode = midnightMode;
+  if (latitudeAdjustmentMethod !== undefined) updateFields.latitude_adjustment_method = latitudeAdjustmentMethod;
+  if (prayerTune !== undefined) updateFields.prayer_tune = prayerTune;
+  if (shafaq !== undefined) updateFields.shafaq = shafaq;
 
   const { data: mosqueData, error: mosqueError } = await supabase
     .from("mosques")

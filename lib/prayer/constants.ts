@@ -37,3 +37,20 @@ export const SCHOOLS = [
   { value: 0, label: "Shafi (Standard)" },
   { value: 1, label: "Hanafi" },
 ] as const;
+
+export const MIDNIGHT_MODES = [
+  { value: 0, label: "Standard (Mid Sunset to Sunrise)" },
+  { value: 1, label: "Jafari (Mid Sunset to Fajr)" },
+] as const;
+
+export const LATITUDE_ADJUSTMENT_METHODS = [
+  { value: 1, label: "Middle of the Night" },
+  { value: 2, label: "One Seventh" },
+  { value: 3, label: "Angle Based" },
+] as const;
+
+export const SHAFAQ_OPTIONS = [
+  { value: "general", label: "General (default)" },
+  { value: "ahmer", label: "Ahmer (red twilight)" },
+  { value: "abyad", label: "Abyad (white twilight)" },
+] as const;
