@@ -169,27 +169,11 @@ export async function POST(req: Request) {
     const mosqueSlug = createSlug(lead.mosqueName);
     const client = await clerkClient();
 
-    const org = await createClerkOrganization(
-      client,
-      lead.mosqueName,
-      mosqueSlug,
-      actorClerkUserId
-    );
-
-    await client.organizations.createOrganizationInvitation({
-      organizationId: org.id,
-      emailAddress: lead.contactEmail,
-      role: "org:admin",
-      inviterUserId: actorClerkUserId,
-    });
-
-    const updatedAt = new Date().toISOString();
-    let mosqueRow: { id: string; name: string | null } | null = null;
-
+    // ── Pre-flight: detect conflict BEFORE creating Clerk side effects ──
+    // If we're graduating an existing lead, make sure the mosque exists and
+    // doesn't already have a Clerk org. Doing this after Clerk org creation
+    // (the previous order) leaked orphan orgs + invitations on every retry.
     if (lead.mosqueId) {
-      // ── Graduating an existing lead ──
-      // Update the existing mosque row with the Clerk org link instead of
-      // creating a duplicate row.
       const { data: existing, error: lookupError } = await supabase
         .from("mosques")
         .select("id, clerk_org_id")
@@ -208,7 +192,50 @@ export async function POST(req: Request) {
           { status: 409 }
         );
       }
+    }
 
+    const org = await createClerkOrganization(
+      client,
+      lead.mosqueName,
+      mosqueSlug,
+      actorClerkUserId
+    );
+
+    // Where the invited admin lands after accepting the invitation.
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(req.url).origin;
+    const redirectUrl = `${baseUrl}/onboarding`;
+
+    await client.organizations.createOrganizationInvitation({
+      organizationId: org.id,
+      emailAddress: lead.contactEmail,
+      role: "org:admin",
+      inviterUserId: actorClerkUserId,
+      redirectUrl,
+    });
+
+    // Clerk requires a `createdBy` on org creation, which auto-adds the actor
+    // as a member. Remove them so the mosque's org is empty until the invited
+    // admin accepts. Log and continue on failure — the invitation still goes out.
+    try {
+      await client.organizations.deleteOrganizationMembership({
+        organizationId: org.id,
+        userId: actorClerkUserId,
+      });
+    } catch (membershipError) {
+      console.warn(
+        `Failed to remove Sahla actor from new mosque org ${org.id}:`,
+        membershipError instanceof Error ? membershipError.message : membershipError
+      );
+    }
+
+    const updatedAt = new Date().toISOString();
+    let mosqueRow: { id: string; name: string | null } | null = null;
+
+    if (lead.mosqueId) {
+      // ── Graduating an existing lead ──
+      // Conflict already checked above. Update the existing mosque row with
+      // the Clerk org link instead of creating a duplicate row.
       const { data: updated, error: updateError } = await supabase
         .from("mosques")
         .update({

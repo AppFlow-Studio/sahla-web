@@ -37,6 +37,7 @@ const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
 const isPublicApiRoute = createRouteMatcher(["/api/waitlist(.*)"]);
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 const isSelectOrgRoute = createRouteMatcher(["/select-org"]);
+const isOnboardingEntryRoute = createRouteMatcher(["/onboarding"]);
 
 const LAUNCH_PATH = "/launch";
 const MASJID_LANDING = "/dashboard";
@@ -57,6 +58,12 @@ export const proxy = clerkMiddleware(async (auth, req) => {
   const url = req.nextUrl.clone();
 
   if (isMarketingRoute(req)) {
+    // Signed-in users skip the marketing page — route them through /launch
+    // which handles HQ-vs-mosque-vs-no-org routing.
+    if (session.userId) {
+      url.pathname = LAUNCH_PATH;
+      return NextResponse.redirect(url);
+    }
     return NextResponse.next();
   }
 
@@ -68,7 +75,7 @@ export const proxy = clerkMiddleware(async (auth, req) => {
   // /launch is a virtual route — it always redirects, never renders.
   if (url.pathname === LAUNCH_PATH) {
     if (!session.orgId) {
-      url.pathname = "/select-org";
+      url.pathname = "/onboarding";
       return NextResponse.redirect(url);
     }
     url.pathname =
@@ -76,12 +83,12 @@ export const proxy = clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(url);
   }
 
-  if (isSelectOrgRoute(req)) {
+  if (isSelectOrgRoute(req) || isOnboardingEntryRoute(req)) {
     return NextResponse.next();
   }
 
   if (!session.orgId) {
-    url.pathname = "/select-org";
+    url.pathname = "/onboarding";
     return NextResponse.redirect(url);
   }
 

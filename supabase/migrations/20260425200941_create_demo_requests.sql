@@ -11,4 +11,3 @@ create table public.demo_requests (
 
 -- RLS: only service role can insert (from the API route)
 alter table public.demo_requests enable row level security;
-;

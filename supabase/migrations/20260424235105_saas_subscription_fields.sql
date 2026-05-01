@@ -36,4 +36,4 @@ SELECT cron.schedule(
   WHERE subscription_status = 'past_due'
     AND current_period_end < now() - INTERVAL '7 days';
   $$
-);;
+);
