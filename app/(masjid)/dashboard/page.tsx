@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { ONBOARDING_CATEGORIES, ALL_TASKS } from "./components/onboarding-tasks";
-import { getMosqueOnboardingData } from "./data";
-import OnboardingDashboardClient from "./OnboardingDashboardClient";
+import { ONBOARDING_CATEGORIES, ALL_TASKS } from "../components/onboarding-tasks";
+import { getMosqueOnboardingData } from "../data";
+import OnboardingDashboardClient from "../OnboardingDashboardClient";
 
 export default async function OnboardingDashboard() {
   const session = await auth();

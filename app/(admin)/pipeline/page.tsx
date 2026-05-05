@@ -1,10 +1,9 @@
 import KanbanBoard from "@/app/components/kanban/KanbanBoard";
 import type { KanbanCard, Stage } from "@/app/components/kanban/types";
-import { createClerkSupabaseClient } from "@/lib/supabase/server";
-// For P1 we can keep this as a server component and
-// pass plain data into the client KanbanBoard.
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+
 export default async function PipelinePage() {
-  const supabase = await createClerkSupabaseClient();
+  const supabase = createAdminSupabaseClient();
   const VALID_STAGES = new Set<Stage>([
     "lead",
     "contacted",

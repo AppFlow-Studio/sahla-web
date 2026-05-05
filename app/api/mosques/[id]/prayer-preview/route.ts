@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { parseAlAdhanTime } from "@/lib/prayer/utils";
+import { parseAlAdhanTime, buildAlAdhanQuery } from "@/lib/prayer/utils";
 import type { PrayerName } from "@/lib/prayer/types";
 
 const PRAYER_MAP: Record<string, PrayerName> = {
@@ -26,6 +26,10 @@ export async function GET(
   const address = searchParams.get("address");
   const method = searchParams.get("method") || "2";
   const school = searchParams.get("school") || "0";
+  const midnightMode = searchParams.get("midnightMode");
+  const latitudeAdjustmentMethod = searchParams.get("latitudeAdjustmentMethod");
+  const tune = searchParams.get("tune");
+  const shafaq = searchParams.get("shafaq");
 
   if (!address) {
     return NextResponse.json({ error: "Address is required" }, { status: 400 });
@@ -36,7 +40,15 @@ export async function GET(
   const mm = String(today.getMonth() + 1).padStart(2, "0");
   const yyyy = today.getFullYear();
 
-  const url = `https://api.aladhan.com/v1/timingsByAddress/${dd}-${mm}-${yyyy}?address=${encodeURIComponent(address)}&method=${method}&school=${school}`;
+  const qs = buildAlAdhanQuery(address, {
+    method: Number(method),
+    school: Number(school),
+    midnightMode: midnightMode != null ? Number(midnightMode) : undefined,
+    latitudeAdjustmentMethod: latitudeAdjustmentMethod != null ? Number(latitudeAdjustmentMethod) : undefined,
+    tune,
+    shafaq: shafaq || undefined,
+  });
+  const url = `https://api.aladhan.com/v1/timingsByAddress/${dd}-${mm}-${yyyy}?${qs}`;
 
   const res = await fetch(url);
   if (!res.ok) {

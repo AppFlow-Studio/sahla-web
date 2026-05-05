@@ -1,7 +1,7 @@
 // proxy.ts — Role-Based Routing via Clerk Organizations
 //
 // Routing logic:
-//   Active org = Sahla HQ org → Admin HQ (overview, pipeline, mosques, ...)
+//   Active org = Sahla HQ org → Admin HQ (overview, mosques, revenue, ...)
 //   Active org = any mosque   → Masjid CRM (onboarding tasks at /[taskId])
 //   No active org             → /select-org
 //   Not signed in             → /login (or marketing page at /)
@@ -13,22 +13,34 @@ const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID!;
 
 const ADMIN_PATHS = [
   "/overview",
-  "/pipeline",
   "/mosques",
+  "/pipeline",
   "/revenue",
   "/expenses",
   "/builds",
 ];
 
-const isMarketingHome = createRouteMatcher(["/"]);
+const isMarketingRoute = createRouteMatcher([
+  "/",
+  "/about(.*)",
+  "/contact(.*)",
+  "/customers(.*)",
+  "/waitlist(.*)",
+  "/faq(.*)",
+  "/pricing(.*)",
+  "/privacy(.*)",
+  "/terms(.*)",
+  "/why-sahla(.*)",
+]);
 const isLoginRoute = createRouteMatcher(["/login(.*)"]);
 const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
+const isPublicApiRoute = createRouteMatcher(["/api/waitlist(.*)"]);
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 const isSelectOrgRoute = createRouteMatcher(["/select-org"]);
 const isOnboardingEntryRoute = createRouteMatcher(["/onboarding"]);
 
 const LAUNCH_PATH = "/launch";
-const MASJID_LANDING = "/mosque_profile";
+const MASJID_LANDING = "/dashboard";
 const ADMIN_LANDING = "/overview";
 
 function isAdminPath(pathname: string): boolean {
@@ -38,17 +50,17 @@ function isAdminPath(pathname: string): boolean {
 }
 
 export const proxy = clerkMiddleware(async (auth, req) => {
-  if (isWebhookRoute(req) || isLoginRoute(req)) {
+  if (isWebhookRoute(req) || isLoginRoute(req) || isPublicApiRoute(req)) {
     return NextResponse.next();
   }
 
   const session = await auth();
   const url = req.nextUrl.clone();
 
-  if (isMarketingHome(req)) {
+  if (isMarketingRoute(req)) {
     // HQ admins go straight to their workspace.
-    // Mosque admins (and signed-out visitors) are allowed to view the marketing
-    // page — the page itself swaps the primary CTA based on auth + onboarding
+    // Mosque admins (and signed-out visitors) are allowed to view marketing
+    // pages — the page itself swaps the primary CTA based on auth + onboarding
     // state (e.g. "Finish Onboarding" for mosque admins mid-setup).
     if (!session.userId) return NextResponse.next();
     if (session.orgId === SAHLA_HQ_ORG_ID) {

@@ -79,6 +79,7 @@ export async function POST(req: Request) {
       name: mosqueName,
       city,
       state,
+      email: contactEmail,
       onboarding_status: "pipeline",
     })
     .select("id, name")

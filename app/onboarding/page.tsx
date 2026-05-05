@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useOrganizationList, useAuth } from "@clerk/nextjs";
 
-const TARGET_PATH = "/mosque_profile";
+const TARGET_PATH = "/dashboard";
 
 export default function OnboardingPage() {
   const { isLoaded: authLoaded, isSignedIn, orgId } = useAuth();

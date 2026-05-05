@@ -2,7 +2,24 @@ import type {
   PrayerName,
   IqamahConfig,
   AlAdhanDayData,
+  AlAdhanParams,
 } from "./types";
+
+/**
+ * Builds AlAdhan API query string from mosque prayer settings.
+ */
+export function buildAlAdhanQuery(address: string, params: AlAdhanParams): string {
+  const qs = new URLSearchParams({
+    address,
+    method: String(params.method),
+    school: String(params.school),
+  });
+  if (params.midnightMode != null) qs.set("midnightMode", String(params.midnightMode));
+  if (params.latitudeAdjustmentMethod != null) qs.set("latitudeAdjustmentMethod", String(params.latitudeAdjustmentMethod));
+  if (params.tune) qs.set("tune", params.tune);
+  if (params.shafaq && params.shafaq !== "general") qs.set("shafaq", params.shafaq);
+  return qs.toString();
+}
 
 export const ALADHAN_KEY_MAP: Record<PrayerName, string> = {
   fajr: "Fajr",

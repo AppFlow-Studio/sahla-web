@@ -1,8 +1,14 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 
 export default function ScrollCTA() {
+  const { scrollY } = useScroll();
+
+  // Fade out and slide down as user starts scrolling
+  const opacity = useTransform(scrollY, [0, 200], [1, 0]);
+  const y = useTransform(scrollY, [0, 200], [0, 30]);
+
   const handleClick = () => {
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
@@ -14,6 +20,7 @@ export default function ScrollCTA() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut", delay: 0.9 }}
+      style={{ opacity, y }}
     >
       <span className="text-sm text-tan-light/50">Scroll to explore</span>
       <div className="flex h-10 w-10 items-center justify-center rounded-full border border-dark-green/15 transition-colors hover:border-dark-green/30 hover:bg-dark-green/5">
