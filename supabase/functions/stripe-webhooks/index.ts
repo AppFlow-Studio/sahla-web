@@ -7,8 +7,9 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")!;
-const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SIGNING_SECRET")!;
-const stripe = new Stripe(stripeSecretKey);
+const webhookSecretConnect = Deno.env.get("STRIPE_WEBHOOK_SIGNING_SECRET")!;
+const webhookSecretPlatform = Deno.env.get("STRIPE_WEBHOOK_SIGNING_SECRET_PLATFORM");
+const stripe = new Stripe(stripeSecretKey, { apiVersion: "2026-03-25.dahlia" });
 
 const resendApiKey = Deno.env.get("RESEND_API_KEY");
 const slackWebhookUrl = Deno.env.get("SLACK_WEBHOOK_URL");
@@ -186,23 +187,43 @@ async function handleAccountUpdated(account: Stripe.Account) {
     mosqueId = mosque.id;
   }
 
+  // Fetch current mosque state for onboarding progress + first-time detection
+  const { data: mosque } = await supabase
+    .from("mosques")
+    .select("name, onboarding_progress, stripe_onboarding_completed_at")
+    .eq("id", mosqueId)
+    .single();
+
+  // Notify Slack on first-time Connect completion
+  const isFirstCompletion = account.charges_enabled && !mosque?.stripe_onboarding_completed_at;
+  if (isFirstCompletion) {
+    await notifySlack(
+      `Stripe Connected: *${mosque?.name || mosqueId}* just completed Connect onboarding`
+    );
+  }
+
+  // Sync Connect status fields to mosques table
+  await supabase
+    .from("mosques")
+    .update({
+      stripe_charges_enabled: account.charges_enabled ?? false,
+      stripe_payouts_enabled: account.payouts_enabled ?? false,
+      ...(isFirstCompletion
+        ? { stripe_onboarding_completed_at: new Date().toISOString() }
+        : {}),
+    })
+    .eq("id", mosqueId);
+
   // Mark onboarding step if charges are now enabled
-  if (account.charges_enabled) {
-    const { data: mosque } = await supabase
-      .from("mosques")
-      .select("onboarding_progress")
-      .eq("id", mosqueId)
-      .single();
-    if (mosque) {
-      const progress = (mosque.onboarding_progress as Record<string, boolean>) || {};
-      if (!progress.stripe_connect) {
-        progress.stripe_connect = true;
-        await supabase
-          .from("mosques")
-          .update({ onboarding_progress: progress })
-          .eq("id", mosqueId);
-        console.log(`Marked stripe_connect complete for mosque ${mosqueId}`);
-      }
+  if (account.charges_enabled && mosque) {
+    const progress = (mosque.onboarding_progress as Record<string, boolean>) || {};
+    if (!progress.stripe_connect) {
+      progress.stripe_connect = true;
+      await supabase
+        .from("mosques")
+        .update({ onboarding_progress: progress })
+        .eq("id", mosqueId);
+      console.log(`Marked stripe_connect complete for mosque ${mosqueId}`);
     }
   }
 
@@ -225,6 +246,13 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
       project_donated_to: paymentIntent.metadata?.project
         ? [paymentIntent.metadata.project]
         : ["general_fund"],
+      user_id: paymentIntent.metadata?.user_id || null,
+      stripe_payment_intent_id: paymentIntent.id,
+      stripe_customer_id: typeof paymentIntent.customer === "string"
+        ? paymentIntent.customer
+        : null,
+      status: "succeeded",
+      currency: paymentIntent.currency,
     });
   }
 
@@ -452,6 +480,78 @@ async function handleSaasSubscriptionDeleted(subscription: Stripe.Subscription) 
   console.log(`SaaS subscription CANCELED for mosque ${mosqueId}`);
 }
 
+async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
+  const mosqueId = paymentIntent.metadata?.mosque_id;
+  if (!mosqueId) return;
+
+  const type = paymentIntent.metadata?.type;
+
+  if (type === "donation") {
+    // Upsert: a pending row may exist if the PI was created before failure
+    const { data: existing } = await supabase
+      .from("donations")
+      .select("id")
+      .eq("stripe_payment_intent_id", paymentIntent.id)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from("donations")
+        .update({ status: "failed" })
+        .eq("id", existing.id);
+    } else {
+      await supabase.from("donations").insert({
+        mosque_id: mosqueId,
+        amountGiven: paymentIntent.amount / 100,
+        project_donated_to: paymentIntent.metadata?.project
+          ? [paymentIntent.metadata.project]
+          : ["general_fund"],
+        user_id: paymentIntent.metadata?.user_id || null,
+        stripe_payment_intent_id: paymentIntent.id,
+        stripe_customer_id: typeof paymentIntent.customer === "string"
+          ? paymentIntent.customer
+          : null,
+        status: "failed",
+        currency: paymentIntent.currency,
+      });
+    }
+  }
+
+  await logActivity(mosqueId, "payment_failed", "payment", paymentIntent.id, {
+    amount: paymentIntent.amount / 100,
+    type: type || "unknown",
+  });
+}
+
+async function handleChargeRefunded(charge: Stripe.Charge) {
+  const piId = typeof charge.payment_intent === "string"
+    ? charge.payment_intent
+    : charge.payment_intent?.id;
+
+  if (!piId) return;
+
+  const { data: donation } = await supabase
+    .from("donations")
+    .select("id, mosque_id")
+    .eq("stripe_payment_intent_id", piId)
+    .single();
+
+  if (!donation) {
+    console.log(`No donation found for refunded charge PI ${piId}`);
+    return;
+  }
+
+  await supabase
+    .from("donations")
+    .update({ status: "refunded" })
+    .eq("id", donation.id);
+
+  await logActivity(donation.mosque_id, "donation_refunded", "payment", charge.id, {
+    amount_refunded: (charge.amount_refunded ?? 0) / 100,
+    payment_intent: piId,
+  });
+}
+
 async function logActivity(
   mosqueId: string,
   action: string,
@@ -490,11 +590,18 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  let event: Stripe.Event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
-  } catch (err) {
-    console.error("Webhook signature verification failed:", err);
+  // Try both signing secrets: Connect (donations) and Platform (SaaS subscriptions)
+  let event: Stripe.Event | undefined;
+  for (const secret of [webhookSecretConnect, webhookSecretPlatform].filter(Boolean) as string[]) {
+    try {
+      event = await stripe.webhooks.constructEventAsync(body, sig, secret);
+      break;
+    } catch {
+      // Try next secret
+    }
+  }
+  if (!event) {
+    console.error("Webhook signature verification failed against all secrets");
     return new Response(JSON.stringify({ error: "Invalid signature" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
@@ -519,6 +626,12 @@ Deno.serve(async (req: Request) => {
         break;
       case "payment_intent.succeeded":
         await handlePaymentSucceeded(event.data.object as Stripe.PaymentIntent);
+        break;
+      case "payment_intent.payment_failed":
+        await handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
+        break;
+      case "charge.refunded":
+        await handleChargeRefunded(event.data.object as Stripe.Charge);
         break;
       case "invoice.paid":
         await handleInvoicePaid(event.data.object as Stripe.Invoice);

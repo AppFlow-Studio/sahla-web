@@ -49,10 +49,6 @@ export default function Hero() {
             className="mb-7 inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.03] px-[18px] py-2 backdrop-blur-sm"
             {...fade(0.1)}
           >
-            <div className="relative h-[7px] w-[7px]">
-              <div className="absolute inset-0 rounded-full bg-emerald-400" />
-              <div className="absolute inset-0 rounded-full bg-emerald-400" style={{ animation: "ping 2s ease-out infinite" }} />
-            </div>
             <span className="text-[11px] font-medium tracking-[0.18em] uppercase text-sand/70">Trusted by 3,000+ users</span>
           </motion.div>
 
@@ -70,20 +66,11 @@ export default function Hero() {
               }}
             >
               — not a page inside someone else&apos;s.
-              <span
-                className="absolute left-0 right-0 -bottom-1 h-[1px]"
-                style={{
-                  background: "linear-gradient(90deg, #d4af37, transparent)",
-                  transformOrigin: "left",
-                  animation: "drawLine 1.2s cubic-bezier(.16,1,.3,1) 0.8s forwards",
-                  transform: "scaleX(0)",
-                }}
-              />
             </span>
           </motion.h1>
 
           <motion.p
-            className="mb-8 max-w-[50ch] text-[15px] leading-[1.7] text-sand/50"
+            className="mb-8 max-w-[50ch] text-[15px] leading-[1.7] text-sand/70"
             {...fade(0.35)}
           >
             Sahla builds fully branded iOS and Android apps for mosques. Your name in the App Store. Your colors. Your community. And the opportunity to fund it through local advertisers — every dollar goes to your mosque.

@@ -95,7 +95,7 @@ export default function Features() {
           <h2 className="mt-4 font-[family-name:var(--font-display)] text-[clamp(36px,4.5vw,60px)] text-sand">
             Everything your mosque needs.
           </h2>
-          <p className="mx-auto mt-[18px] max-w-[520px] text-[15px] leading-[1.65] text-sand/45">
+          <p className="mx-auto mt-[18px] max-w-[520px] text-[15px] leading-[1.65] text-sand/70">
             Eight core features, all wrapped in your masjid&rsquo;s brand.
           </p>
         </div>
@@ -123,7 +123,7 @@ export default function Features() {
                 </div>
 
                 <h3 className="mb-2 text-[15px] font-semibold tracking-[-0.005em] text-sand">{f.title}</h3>
-                <p className="text-[13px] leading-[1.65] text-sand/42">{f.description}</p>
+                <p className="text-[13px] leading-[1.65] text-sand/70">{f.description}</p>
               </div>
             </Link>
           ))}
