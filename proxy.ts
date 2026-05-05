@@ -46,10 +46,13 @@ export const proxy = clerkMiddleware(async (auth, req) => {
   const url = req.nextUrl.clone();
 
   if (isMarketingHome(req)) {
-    // Signed-in users skip the marketing page — route them through /launch
-    // which handles HQ-vs-mosque-vs-no-org routing.
-    if (session.userId) {
-      url.pathname = LAUNCH_PATH;
+    // HQ admins go straight to their workspace.
+    // Mosque admins (and signed-out visitors) are allowed to view the marketing
+    // page — the page itself swaps the primary CTA based on auth + onboarding
+    // state (e.g. "Finish Onboarding" for mosque admins mid-setup).
+    if (!session.userId) return NextResponse.next();
+    if (session.orgId === SAHLA_HQ_ORG_ID) {
+      url.pathname = ADMIN_LANDING;
       return NextResponse.redirect(url);
     }
     return NextResponse.next();

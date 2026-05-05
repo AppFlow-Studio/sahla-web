@@ -108,7 +108,7 @@ type BuildAction = {
 type Props = {
   totalMosques: number;
   totalUsers: number;
-  onboardingStatusCounts: { pipeline: number; in_progress: number; live: number };
+  onboardingStatusCounts: { pipeline: number; in_progress: number; ready: number; live: number };
   pipelineCounts: PipelineCounts;
   subscriptionCounts: SubscriptionCounts;
   taskCompletionRates: Record<string, TaskCompletion>;
@@ -521,7 +521,13 @@ export default function OverviewClient({
         <MetricCard
           label="Live Mosques"
           value={onboardingStatusCounts.live}
-          sub={`${onboardingStatusCounts.in_progress} onboarding · ${onboardingStatusCounts.pipeline} pipeline`}
+          sub={[
+            `${onboardingStatusCounts.in_progress} onboarding`,
+            ...(onboardingStatusCounts.ready > 0
+              ? [`${onboardingStatusCounts.ready} ready to launch`]
+              : []),
+            `${onboardingStatusCounts.pipeline} pipeline`,
+          ].join(" · ")}
           accent="text-emerald-600"
           i={2}
         />

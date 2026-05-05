@@ -1,61 +1,46 @@
-"use client";
+import { auth } from "@clerk/nextjs/server";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import HomeClient from "./HomeClient";
 
-import { motion } from "framer-motion";
-import Navbar from "./components/Navbar";
-import Hero from "./components/Hero";
-import ScrollCTA from "./components/ScrollCTA";
-import AppShowcase from "./components/AppShowcase";
-import BottomBar from "./components/BottomBar";
+const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 
-const drift = (x: number, y: number, duration: number) => ({
-  animate: { x: [0, x, -x * 0.6, 0], y: [0, -y, y * 0.8, 0] },
-  transition: { duration, repeat: Infinity, ease: "easeInOut" },
-});
+type Cta = { label: string; href: string };
 
-export default function Home() {
-  return (
-    <div className="relative bg-night">
-      <Navbar />
+const DEFAULT_CTA: Cta = { label: "Get Started", href: "/login" };
 
-      {/* Hero Section */}
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
-        {/* Soft gradient orbs */}
-        <div className="pointer-events-none absolute inset-0 z-0">
-          <motion.div
-            className="absolute -top-[20%] -right-[10%] h-[70vh] w-[60vw] rounded-full"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, rgba(26,107,66,0.08) 0%, transparent 60%)",
-            }}
-            {...drift(25, 20, 22)}
-          />
-          <motion.div
-            className="absolute -bottom-[10%] -left-[15%] h-[60vh] w-[50vw] rounded-full"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, rgba(184,146,42,0.06) 0%, transparent 60%)",
-            }}
-            {...drift(-20, 25, 26)}
-          />
-          <motion.div
-            className="absolute top-[30%] left-[40%] h-[40vh] w-[40vw] rounded-full"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, rgba(26,107,66,0.04) 0%, transparent 50%)",
-            }}
-            {...drift(15, -18, 30)}
-          />
-        </div>
+async function resolveCta(): Promise<Cta> {
+  const session = await auth();
 
-        <Hero />
-        <ScrollCTA />
-      </section>
+  if (!session.userId) return DEFAULT_CTA;
 
-      {/* App Showcase Section */}
-      <AppShowcase />
+  // HQ admins shouldn't reach this page (proxy redirects them) — guard anyway.
+  if (session.orgId && session.orgId === SAHLA_HQ_ORG_ID) {
+    return { label: "Open Admin", href: "/overview" };
+  }
 
-      {/* Footer */}
-      <BottomBar />
-    </div>
-  );
+  // Signed in but no active org — push them through the smart router so they
+  // can pick / auto-select their masjid org and resume.
+  if (!session.orgId) {
+    return { label: "Continue Setup", href: "/onboarding" };
+  }
+
+  // Mosque admin — look up onboarding status to decide between resume vs open.
+  const supabase = createAdminSupabaseClient();
+  const { data: mosque } = await supabase
+    .from("mosques")
+    .select("onboarding_status")
+    .or(`clerk_org_id.eq.${session.orgId},id.eq.${session.orgId}`)
+    .limit(1)
+    .single();
+
+  if (mosque?.onboarding_status === "in_progress") {
+    return { label: "Finish Onboarding", href: "/onboarding" };
+  }
+
+  return { label: "Open App", href: "/launch" };
+}
+
+export default async function Home() {
+  const cta = await resolveCta();
+  return <HomeClient cta={cta} />;
 }

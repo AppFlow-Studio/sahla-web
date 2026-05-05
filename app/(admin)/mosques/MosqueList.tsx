@@ -119,11 +119,12 @@ function Sparkline({ points }: { points: number[] }) {
 }
 
 function getBucket(mosque: Mosque): Bucket | null {
-  const { stage } = getLatestStage(mosque);
-  if (stage === "live") return "live";
-  if (stage === "onboarding") {
-    return getOnboardingPct(mosque.onboarding_progress) >= 100 ? "ready" : "onboarding";
-  }
+  // Source of truth: mosques.onboarding_status. Set by the Stripe webhook
+  // ("ready" on payment) and the admin "Mark as Live" action ("live").
+  const status = mosque.onboarding_status;
+  if (status === "live") return "live";
+  if (status === "ready") return "ready";
+  if (status === "in_progress") return "onboarding";
   return null;
 }
 

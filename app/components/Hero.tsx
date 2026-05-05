@@ -8,7 +8,15 @@ const fade = (delay: number) => ({
   transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1], delay },
 });
 
-export default function Hero() {
+type HeroProps = {
+  ctaLabel?: string;
+  ctaHref?: string;
+};
+
+export default function Hero({
+  ctaLabel = "Get Started",
+  ctaHref = "/login",
+}: HeroProps) {
   return (
     <div className="relative z-10 flex flex-col items-center gap-5 px-4">
       <motion.div
@@ -41,10 +49,10 @@ export default function Hero() {
           See It in Action
         </a>
         <a
-          href="/login"
+          href={ctaHref}
           className="rounded-full border border-dark-green/15 px-7 py-3 text-sm font-medium tracking-wide text-dark-green transition-all duration-300 hover:border-dark-green/30 hover:bg-dark-green/5"
         >
-          Get Started
+          {ctaLabel}
         </a>
       </motion.div>
     </div>

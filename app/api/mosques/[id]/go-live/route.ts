@@ -18,12 +18,21 @@ export async function POST(
   // Verify mosque exists and get data
   const { data: mosque, error: mosqueError } = await supabase
     .from("mosques")
-    .select("id, name, onboarding_progress")
+    .select("id, name, onboarding_progress, onboarding_status")
     .eq("id", mosqueId)
     .single();
 
   if (mosqueError || !mosque) {
     return NextResponse.json({ error: "Mosque not found" }, { status: 404 });
+  }
+
+  // Don't let an already-paid mosque kick off another Stripe Checkout. Once
+  // they're "ready" the Sahla team takes over; "live" means we already shipped.
+  if (mosque.onboarding_status === "ready" || mosque.onboarding_status === "live") {
+    return NextResponse.json(
+      { error: "This mosque has already gone live." },
+      { status: 409 }
+    );
   }
 
   const progress = (mosque.onboarding_progress as Record<string, boolean>) ?? {};

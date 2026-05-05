@@ -672,6 +672,9 @@ async function handleOrganizationDeleted(org: ClerkOrganization) {
     .update({
       clerk_org_id: null,
       onboarding_status: "setup",
+      // Reset the leave-onboarding email guard so a re-invited masjid gets a
+      // fresh one-time resume email if they leave the new onboarding mid-flow.
+      resume_email_sent_at: null,
     })
     .eq("id", mosque.id);
 

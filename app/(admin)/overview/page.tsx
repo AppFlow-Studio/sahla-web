@@ -54,7 +54,7 @@ export default async function OverviewPage() {
   const allMosques = mosques ?? [];
 
   /* onboarding status buckets */
-  const onboardingStatusCounts = { pipeline: 0, in_progress: 0, live: 0 };
+  const onboardingStatusCounts = { pipeline: 0, in_progress: 0, ready: 0, live: 0 };
   for (const m of allMosques) {
     const s = m.onboarding_status as keyof typeof onboardingStatusCounts;
     if (s in onboardingStatusCounts) onboardingStatusCounts[s]++;
@@ -94,7 +94,7 @@ export default async function OverviewPage() {
     "preview_app", "launch_materials", "go_live",
   ];
   const obMosques = allMosques.filter(
-    (m) => m.onboarding_status === "in_progress" || m.onboarding_status === "live"
+    (m) => m.onboarding_status === "in_progress" || m.onboarding_status === "ready" || m.onboarding_status === "live"
   );
   const obTotal = obMosques.length;
   const taskCompletionRates: Record<string, { completed: number; total: number }> = {};
@@ -143,7 +143,7 @@ export default async function OverviewPage() {
     }
 
     // Has prayer config but no todays_prayers rows (stale/broken sync)
-    if ((m.onboarding_status === "live" || m.onboarding_status === "in_progress") && progress.prayer_times && !mosquesWithPrayers.has(id)) {
+    if ((m.onboarding_status === "live" || m.onboarding_status === "ready" || m.onboarding_status === "in_progress") && progress.prayer_times && !mosquesWithPrayers.has(id)) {
       alerts.push({ severity: "warning", message: `${name} has prayer config but no today's prayer data — sync may be failing`, mosqueId: id });
     }
 
@@ -158,7 +158,7 @@ export default async function OverviewPage() {
 
   /* prayer system status */
   const activeMosques = allMosques.filter(
-    (m) => m.onboarding_status === "live" || m.onboarding_status === "in_progress"
+    (m) => m.onboarding_status === "live" || m.onboarding_status === "ready" || m.onboarding_status === "in_progress"
   );
   const mosquesWithPrayerConfig = new Set<string>();
   const iqamahCountByMosque = new Map<string, number>();
