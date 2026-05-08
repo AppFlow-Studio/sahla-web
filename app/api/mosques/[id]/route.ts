@@ -1,6 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
+
+const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 
 const ALLOWED_FIELDS = [
   "name", "address", "city", "state", "phone", "email", "timezone",
@@ -119,6 +121,12 @@ export async function DELETE(
   if (!session.userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (!SAHLA_HQ_ORG_ID || session.orgId !== SAHLA_HQ_ORG_ID) {
+    return NextResponse.json(
+      { error: "Forbidden — Sahla HQ membership required" },
+      { status: 403 }
+    );
+  }
 
   const { id: mosqueId } = await params;
   if (!mosqueId?.trim()) {
@@ -127,10 +135,9 @@ export async function DELETE(
 
   const supabase = createAdminSupabaseClient();
 
-  // Verify mosque exists
   const { data: mosque, error: readError } = await supabase
     .from("mosques")
-    .select("id, name")
+    .select("id, name, onboarding_status, clerk_org_id")
     .eq("id", mosqueId)
     .single();
 
@@ -138,16 +145,46 @@ export async function DELETE(
     return NextResponse.json({ error: "Mosque not found." }, { status: 404 });
   }
 
-  // Delete from all child tables first (FK constraints)
+  // Refuse to delete paying customers via this admin action — they should
+  // be archived through a real churn flow, not nuked from the kanban menu.
+  if (mosque.onboarding_status === "ready" || mosque.onboarding_status === "live") {
+    return NextResponse.json(
+      {
+        error: `Cannot delete a ${mosque.onboarding_status} mosque from the pipeline. Reach out to engineering if this is intentional.`,
+      },
+      { status: 409 }
+    );
+  }
+
+  // If a Clerk org is linked, delete it first. This also fires the
+  // organization.deleted webhook, which would no-op against the row we're
+  // about to delete.
+  if (mosque.clerk_org_id) {
+    try {
+      const client = await clerkClient();
+      await client.organizations.deleteOrganization(mosque.clerk_org_id);
+    } catch (err) {
+      // Org may already be gone in Clerk (manual deletion). Swallow 404-ish
+      // errors and proceed; surface anything else as a 500.
+      const message = err instanceof Error ? err.message : "Unknown Clerk error";
+      const isNotFound = /not found|404/i.test(message);
+      if (!isNotFound) {
+        console.error(`Failed to delete Clerk org ${mosque.clerk_org_id}:`, message);
+        return NextResponse.json(
+          { error: `Failed to delete Clerk organization: ${message}` },
+          { status: 500 }
+        );
+      }
+    }
+  }
+
   for (const table of CHILD_TABLES) {
     const { error } = await supabase.from(table).delete().eq("mosque_id", mosqueId);
     if (error) {
       console.error(`Failed to delete from ${table}:`, error.message);
-      // Continue — some tables may have no rows for this mosque
     }
   }
 
-  // Delete the mosque itself
   const { error: deleteError } = await supabase
     .from("mosques")
     .delete()

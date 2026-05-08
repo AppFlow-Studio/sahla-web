@@ -64,7 +64,7 @@ const STAGE_DROP_BORDER_CLASS: Record<Stage, string> = {
 
 const STAGE_ORDER: Stage[] = ["lead", "contacted", "demo", "contract", "onboarding", "live"];
 
-function DraggableMasjidCard({ card, onMoveNext, onNoteAdded, onContactEdited, onCreateAccount }: { card: KanbanCard; onMoveNext: () => void; onNoteAdded: (note: string) => void; onContactEdited: (name: string, email: string) => void; onCreateAccount?: () => void }) {
+function DraggableMasjidCard({ card, onMoveNext, onNoteAdded, onContactEdited, onCreateAccount, onDelete }: { card: KanbanCard; onMoveNext: () => void; onNoteAdded: (note: string) => void; onContactEdited: (name: string, email: string) => void; onCreateAccount?: () => void; onDelete?: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: String(card.id),
     data: { card },
@@ -82,7 +82,7 @@ function DraggableMasjidCard({ card, onMoveNext, onNoteAdded, onContactEdited, o
       {...(mounted ? attributes : {})}
       className={`touch-none ${isDragging ? "opacity-50" : ""}`}
     >
-      <MasjidCard card={card} onMoveNext={onMoveNext} onNoteAdded={onNoteAdded} onContactEdited={onContactEdited} onCreateAccount={onCreateAccount} />
+      <MasjidCard card={card} onMoveNext={onMoveNext} onNoteAdded={onNoteAdded} onContactEdited={onContactEdited} onCreateAccount={onCreateAccount} onDelete={onDelete} />
     </div>
   );
 }
@@ -95,6 +95,7 @@ function DroppableColumn({
   onNoteAdded,
   onContactEdited,
   onCreateAccount,
+  onDelete,
 }: {
   column: Column;
   columnCards: KanbanCard[];
@@ -103,6 +104,7 @@ function DroppableColumn({
   onNoteAdded: (card: KanbanCard, note: string) => void;
   onContactEdited: (card: KanbanCard, name: string, email: string) => void;
   onCreateAccount: (card: KanbanCard) => void;
+  onDelete: (card: KanbanCard) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
@@ -136,7 +138,7 @@ function DroppableColumn({
         ) : (
           <div ref={animateRef} className="flex w-full flex-col gap-[5px] self-start">
             {columnCards.map((card) => (
-              <DraggableMasjidCard key={String(card.id)} card={card} onMoveNext={() => onMoveNext(card)} onNoteAdded={(note) => onNoteAdded(card, note)} onContactEdited={(name, email) => onContactEdited(card, name, email)} onCreateAccount={() => onCreateAccount(card)} />
+              <DraggableMasjidCard key={String(card.id)} card={card} onMoveNext={() => onMoveNext(card)} onNoteAdded={(note) => onNoteAdded(card, note)} onContactEdited={(name, email) => onContactEdited(card, name, email)} onCreateAccount={() => onCreateAccount(card)} onDelete={() => onDelete(card)} />
             ))}
           </div>
         )}
@@ -422,6 +424,38 @@ export default function KanbanBoard({ cards }: Props) {
     setIsCreateAccountModalOpen(true);
   }
 
+  async function handleDelete(card: KanbanCard) {
+    const mosqueIdPayload = String(card.mosqueId ?? card.id).trim();
+    if (!mosqueIdPayload) {
+      pushToast("Missing mosque id — cannot delete.", "error");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${card.mosqueName}? This removes the mosque, its pipeline state, notes, activity, and any linked Clerk org. Cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    const cardId = String(card.id);
+    const snapshot = localCards;
+    setLocalCards((prev) => prev.filter((c) => String(c.id) !== cardId));
+
+    try {
+      const res = await fetch(`/api/mosques/${mosqueIdPayload}`, {
+        method: "DELETE",
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        throw new Error(body.error ?? `Failed to delete (${res.status}).`);
+      }
+      pushToast(`${card.mosqueName} deleted.`, "success");
+    } catch (error) {
+      setLocalCards(snapshot);
+      const message = error instanceof Error ? error.message : "Failed to delete mosque.";
+      pushToast(message, "error");
+    }
+  }
+
   function handleAccountCreated(mosqueName: string) {
     setIsCreateAccountModalOpen(false);
     setGraduatingMosqueId(null);
@@ -584,6 +618,7 @@ export default function KanbanBoard({ cards }: Props) {
                 onNoteAdded={handleNoteAdded}
                 onContactEdited={handleContactEdited}
                 onCreateAccount={handleCreateAccountForCard}
+                onDelete={handleDelete}
               />
             ))}
           </div>
