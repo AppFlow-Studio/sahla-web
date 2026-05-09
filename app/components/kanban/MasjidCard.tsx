@@ -10,6 +10,7 @@ type Props = {
   onNoteAdded?: (note: string) => void;
   onContactEdited?: (name: string, email: string) => void;
   onCreateAccount?: () => void;
+  onDelete?: () => void;
 };
 
 function formatLocation(city: string, state: string | null | undefined) {
@@ -166,7 +167,18 @@ const createAccountItem: MenuItem = {
   ),
 };
 
-export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdited, onCreateAccount }: Props) {
+const deleteItem: MenuItem = {
+  id: "delete",
+  label: "Delete",
+  icon: (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  ),
+};
+
+export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdited, onCreateAccount, onDelete }: Props) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [isEditingContact, setIsEditingContact] = useState(false);
@@ -198,6 +210,7 @@ export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdi
   const menuItems: MenuItem[] = [
     ...baseMenuItems,
     ...(!hasClerkOrg && onCreateAccount ? [createAccountItem] : []),
+    ...(onDelete ? [deleteItem] : []),
   ];
 
   function handleMenuAction(id: string) {
@@ -206,6 +219,7 @@ export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdi
     if (id === "note") setIsAddingNote(true);
     if (id === "edit") setIsEditingContact(true);
     if (id === "create_account" && onCreateAccount) onCreateAccount();
+    if (id === "delete" && onDelete) onDelete();
   }
 
   async function handleSaveNote() {
@@ -304,6 +318,7 @@ export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdi
                   <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-xl border border-green/10 bg-white py-1 shadow-lg">
                     {menuItems.map((item) => {
                       const disabled = item.id === "move" && isLastStage;
+                      const isDanger = item.id === "delete";
                       return (
                         <button
                           key={item.id}
@@ -312,6 +327,8 @@ export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdi
                           className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] transition-colors ${
                             disabled
                               ? "cursor-not-allowed text-green/25"
+                              : isDanger
+                              ? "cursor-pointer text-red-600 hover:bg-red-50"
                               : "cursor-pointer text-green hover:bg-tan/60"
                           }`}
                           onClick={() => {

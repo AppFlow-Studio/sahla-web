@@ -88,12 +88,16 @@ interface Mosque {
   calculation_method: number;
   school: number;
   timezone: string;
+  midnight_mode: number | null;
+  latitude_adjustment_method: number | null;
+  prayer_tune: string | null;
+  shafaq: string | null;
 }
 
 async function getActiveMosques(mosqueId?: string): Promise<Mosque[]> {
   let query = supabase
     .from("mosques")
-    .select("id, address, calculation_method, school, timezone")
+    .select("id, address, calculation_method, school, timezone, midnight_mode, latitude_adjustment_method, prayer_tune, shafaq")
     .in("subscription_status", ["active", "trial"]);
 
   if (mosqueId) {
@@ -117,7 +121,16 @@ async function fetchMonth(mosques: Mosque[]) {
 
   for (const mosque of mosques) {
     try {
-      const url = `https://api.aladhan.com/v1/calendarByAddress/${year}/${month}?address=${encodeURIComponent(mosque.address)}&method=${mosque.calculation_method || 2}&school=${mosque.school || 0}`;
+      const qs = new URLSearchParams({
+        address: mosque.address,
+        method: String(mosque.calculation_method || 2),
+        school: String(mosque.school || 0),
+      });
+      if (mosque.midnight_mode != null) qs.set("midnightMode", String(mosque.midnight_mode));
+      if (mosque.latitude_adjustment_method != null) qs.set("latitudeAdjustmentMethod", String(mosque.latitude_adjustment_method));
+      if (mosque.prayer_tune) qs.set("tune", mosque.prayer_tune);
+      if (mosque.shafaq && mosque.shafaq !== "general") qs.set("shafaq", mosque.shafaq);
+      const url = `https://api.aladhan.com/v1/calendarByAddress/${year}/${month}?${qs.toString()}`;
 
       const res = await fetch(url);
       if (!res.ok) {

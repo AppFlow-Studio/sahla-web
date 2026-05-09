@@ -97,7 +97,7 @@ export default function WaitlistContent() {
               <h1 className="mb-6 font-[family-name:var(--font-display)] text-[clamp(36px,4.5vw,56px)] leading-[1.06] text-sand">
                 Reserve your mosque&apos;s spot.
               </h1>
-              <p className="mb-10 max-w-[480px] text-[16px] leading-[1.7] text-sand/50">
+              <p className="mb-10 max-w-[480px] text-[16px] leading-[1.7] text-sand/70">
                 We&apos;re onboarding new mosques in waves so each community gets the attention it deserves. Add your masjid to the list — we&apos;ll reach out as your wave opens.
               </p>
 
@@ -111,7 +111,7 @@ export default function WaitlistContent() {
                     <div className="flex h-[38px] w-[38px] items-center justify-center rounded-xl bg-[#1a6b42]/20">
                       <item.Icon size={18} strokeWidth={1.7} className="text-[#4a8c65]" />
                     </div>
-                    <span className="text-[14px] text-sand/60">{item.text}</span>
+                    <span className="text-[14px] text-sand/70">{item.text}</span>
                   </div>
                 ))}
               </div>

@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 
 const TIER_CONFIG: Record<string, { envKey: string; name: string }> = {
   core: { envKey: "STRIPE_PRICE_CORE", name: "Sahla Core" },
+  core_crm: { envKey: "STRIPE_PRICE_CORE_CRM", name: "Sahla Core + CRM" },
   complete: { envKey: "STRIPE_PRICE_COMPLETE", name: "Sahla Complete" },
 };
 
@@ -23,7 +24,7 @@ export async function POST(
 
   if (!TIER_CONFIG[tier]) {
     return NextResponse.json(
-      { error: `Invalid tier: ${tier}. Must be one of: core, complete` },
+      { error: `Invalid tier: ${tier}. Must be one of: ${Object.keys(TIER_CONFIG).join(", ")}` },
       { status: 400 }
     );
   }
@@ -41,12 +42,21 @@ export async function POST(
   // Verify mosque exists and get data
   const { data: mosque, error: mosqueError } = await supabase
     .from("mosques")
-    .select("id, name, email, onboarding_progress, saas_stripe_customer_id")
+    .select("id, name, email, onboarding_progress, onboarding_status, saas_stripe_customer_id")
     .eq("id", mosqueId)
     .single();
 
   if (mosqueError || !mosque) {
     return NextResponse.json({ error: "Mosque not found" }, { status: 404 });
+  }
+
+  // Don't let an already-paid mosque kick off another Stripe Checkout. Once
+  // they're "ready" the Sahla team takes over; "live" means we already shipped.
+  if (mosque.onboarding_status === "ready" || mosque.onboarding_status === "live") {
+    return NextResponse.json(
+      { error: "This mosque has already gone live." },
+      { status: 409 }
+    );
   }
 
   const progress = (mosque.onboarding_progress as Record<string, boolean>) ?? {};

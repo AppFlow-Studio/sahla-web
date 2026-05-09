@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock, MoreHorizontal, Users, Activity, BookOpen, Calendar, Mail, Phone, ArrowRight } from "lucide-react";
+import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock, MoreHorizontal, Users, Activity, BookOpen, Calendar, Mail, Phone, ArrowRight, Rocket } from "lucide-react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { StatusBadge, STAGE_COLORS } from "../../components/StatusBadge";
 import PrayerTimesPanel from "./PrayerTimesPanel";
@@ -49,9 +50,35 @@ function showToast(msg: string, type: "success" | "error") { type === "success" 
 type ContentCounts = { programs: number; events: number };
 
 export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStage, iqamahConfig, contentCounts }: { mosque: Mosque; notes: Note[]; pipelineStage: PipelineStage | null; iqamahConfig: IqamahConfig[]; contentCounts: ContentCounts }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
+  const [markingLive, setMarkingLive] = useState(false);
   const stage = pipelineStage?.stage || "lead";
   const color = mosque.brand_color || nameToColor(mosque.name || "M");
+
+  // Sahla team flips a "ready" mosque to "live" once the app binary is shipped.
+  // The mosque is "ready" when payment cleared (set by the stripe-webhooks
+  // edge function on checkout.session.completed for saas_subscription).
+  async function handleMarkLive() {
+    if (markingLive) return;
+    if (!confirm(`Mark ${mosque.name ?? "this mosque"} as Live? This signals the app binary is shipped.`)) {
+      return;
+    }
+    setMarkingLive(true);
+    try {
+      const res = await fetch(`/api/mosques/${mosque.id}/mark-live`, { method: "POST" });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; alreadyLive?: boolean };
+      if (!res.ok || body.ok === false) {
+        throw new Error(body.error ?? `Failed to mark live (${res.status}).`);
+      }
+      toast.success(body.alreadyLive ? `${mosque.name} is already live.` : `${mosque.name} is now live.`);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to mark live.");
+    } finally {
+      setMarkingLive(false);
+    }
+  }
 
   return (
     <div>
@@ -71,7 +98,20 @@ export default function MosqueDetail({ mosque, notes: initialNotes, pipelineStag
             </p>
           </div>
         </div>
-        <StatusBadge stage={stage} size="md" />
+        <div className="flex items-center gap-3">
+          {mosque.onboarding_status === "ready" && (
+            <button
+              type="button"
+              onClick={handleMarkLive}
+              disabled={markingLive}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-lime-600 px-3.5 py-2 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-lime-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Rocket size={14} strokeWidth={2.25} />
+              {markingLive ? "Marking live…" : "Mark as Live"}
+            </button>
+          )}
+          <StatusBadge stage={stage} size="md" />
+        </div>
       </div>
 
       {/* ── Tabs ── */}

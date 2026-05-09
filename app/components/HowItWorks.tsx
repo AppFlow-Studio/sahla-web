@@ -59,7 +59,7 @@ export default function HowItWorks() {
           <h2 className="mt-4 font-[family-name:var(--font-display)] text-[clamp(32px,4vw,52px)] text-sand">
             Three steps to your mosque&apos;s app.
           </h2>
-          <p className="mx-auto mt-4 max-w-[520px] text-[15px] leading-[1.65] text-sand/45">
+          <p className="mx-auto mt-4 max-w-[520px] text-[15px] leading-[1.65] text-sand/70">
             From onboarding to the App Store in days, not months.
           </p>
         </div>
@@ -99,7 +99,7 @@ export default function HowItWorks() {
                     <step.Icon size={18} strokeWidth={1.8} style={{ color: step.accent }} />
                     <h3 className="text-[17px] font-semibold text-sand">{step.title}</h3>
                   </div>
-                  <p className="max-w-[480px] text-[14px] leading-[1.7] text-sand/45">{step.description}</p>
+                  <p className="max-w-[480px] text-[14px] leading-[1.7] text-sand/70">{step.description}</p>
                 </div>
               </div>
             ))}

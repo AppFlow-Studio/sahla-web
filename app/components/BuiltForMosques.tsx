@@ -81,7 +81,7 @@ export default function BuiltForMosques() {
               <HeroIcon size={24} strokeWidth={1.7} style={{ color: hero.accent }} />
             </div>
             <h3 className="mb-3 text-[22px] font-semibold text-sand">{hero.title}</h3>
-            <p className="max-w-[420px] text-[15px] leading-[1.7] text-sand/45">{hero.description}</p>
+            <p className="max-w-[420px] text-[15px] leading-[1.7] text-sand/70">{hero.description}</p>
             <div
               className="absolute inset-x-0 bottom-0 h-[2px] origin-left scale-x-0 transition-transform duration-500 group-hover:scale-x-100"
               style={{ background: `linear-gradient(90deg, ${hero.accent}, transparent)` }}
@@ -107,7 +107,7 @@ export default function BuiltForMosques() {
                   </div>
                   <div>
                     <h3 className="mb-2 text-[17px] font-semibold text-sand">{p.title}</h3>
-                    <p className="text-[14px] leading-[1.7] text-sand/45">{p.description}</p>
+                    <p className="text-[14px] leading-[1.7] text-sand/70">{p.description}</p>
                   </div>
                 </div>
                 <div

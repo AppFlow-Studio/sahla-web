@@ -24,7 +24,7 @@ export default function BottomBar() {
                
               <span className="font-[family-name:var(--font-display)] text-[22px] tracking-[0.01em] text-sand">Sahla</span>
             </div>
-            <p className="mt-4 max-w-[300px] text-[13.5px] leading-[1.7] text-sand/40">
+            <p className="mt-4 max-w-[300px] text-[13.5px] leading-[1.7] text-sand/70">
               Fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community.
             </p>
           </div>

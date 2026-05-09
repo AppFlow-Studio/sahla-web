@@ -1,7 +1,7 @@
 // proxy.ts — Role-Based Routing via Clerk Organizations
 //
 // Routing logic:
-//   Active org = Sahla HQ org → Admin HQ (overview, pipeline, mosques, ...)
+//   Active org = Sahla HQ org → Admin HQ (overview, mosques, revenue, ...)
 //   Active org = any mosque   → Masjid CRM (onboarding tasks at /[taskId])
 //   No active org             → /select-org
 //   Not signed in             → /login (or marketing page at /)
@@ -13,12 +13,30 @@ const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID!;
 
 const ADMIN_PATHS = [
   "/overview",
-  "/pipeline",
   "/mosques",
+  "/pipeline",
   "/revenue",
   "/expenses",
   "/builds",
 ];
+
+// CRM routes — eventually tier-gated to mosques on `core_crm`. During the UI
+// build phase we let HQ admins preview these too so they can QA without
+// switching orgs. Tighten in the backend pass.
+const CRM_PATHS = [
+  "/home",
+  "/people",
+  "/content",
+  "/money",
+  "/setup",
+  "/settings",
+];
+
+function isCrmPath(pathname: string): boolean {
+  return CRM_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
 
 const isMarketingRoute = createRouteMatcher([
   "/",
@@ -37,6 +55,7 @@ const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
 const isPublicApiRoute = createRouteMatcher(["/api/waitlist(.*)"]);
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 const isSelectOrgRoute = createRouteMatcher(["/select-org"]);
+const isOnboardingEntryRoute = createRouteMatcher(["/onboarding"]);
 
 const LAUNCH_PATH = "/launch";
 const MASJID_LANDING = "/dashboard";
@@ -57,6 +76,15 @@ export const proxy = clerkMiddleware(async (auth, req) => {
   const url = req.nextUrl.clone();
 
   if (isMarketingRoute(req)) {
+    // HQ admins go straight to their workspace.
+    // Mosque admins (and signed-out visitors) are allowed to view marketing
+    // pages — the page itself swaps the primary CTA based on auth + onboarding
+    // state (e.g. "Finish Onboarding" for mosque admins mid-setup).
+    if (!session.userId) return NextResponse.next();
+    if (session.orgId === SAHLA_HQ_ORG_ID) {
+      url.pathname = ADMIN_LANDING;
+      return NextResponse.redirect(url);
+    }
     return NextResponse.next();
   }
 
@@ -68,7 +96,7 @@ export const proxy = clerkMiddleware(async (auth, req) => {
   // /launch is a virtual route — it always redirects, never renders.
   if (url.pathname === LAUNCH_PATH) {
     if (!session.orgId) {
-      url.pathname = "/select-org";
+      url.pathname = "/onboarding";
       return NextResponse.redirect(url);
     }
     url.pathname =
@@ -76,12 +104,12 @@ export const proxy = clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(url);
   }
 
-  if (isSelectOrgRoute(req)) {
+  if (isSelectOrgRoute(req) || isOnboardingEntryRoute(req)) {
     return NextResponse.next();
   }
 
   if (!session.orgId) {
-    url.pathname = "/select-org";
+    url.pathname = "/onboarding";
     return NextResponse.redirect(url);
   }
 
@@ -94,6 +122,11 @@ export const proxy = clerkMiddleware(async (auth, req) => {
   }
 
   if (isApiRoute(req)) {
+    return NextResponse.next();
+  }
+
+  // Allow HQ + mosque admins to preview the CRM while it's being built.
+  if (isCrmPath(url.pathname)) {
     return NextResponse.next();
   }
 
