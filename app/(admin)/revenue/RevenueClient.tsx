@@ -5,6 +5,8 @@ import { AnimateNumber } from "motion-number";
 import {
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -12,7 +14,17 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const MRR_PER_MOSQUE = 250;
+const TIER_MRR: Record<string, number> = {
+  core: 300,
+  core_crm: 300,
+  complete: 325,
+};
+const DEFAULT_MRR = 300;
+
+function mrrForMosque(m: MosqueData): number {
+  if (m.subscriptionStatus !== "active") return 0;
+  return TIER_MRR[m.subscriptionTier ?? ""] ?? DEFAULT_MRR;
+}
 
 type MosqueData = {
   id: string;
@@ -20,8 +32,22 @@ type MosqueData = {
   city: string;
   state: string;
   subscriptionStatus: string;
+  subscriptionTier: string | null;
   launchedAt: string | null;
   health: string;
+  stripeConnected: boolean;
+};
+
+type DonationRecord = {
+  id: number;
+  mosqueId: string;
+  mosqueName: string;
+  amount: number;
+  project: string;
+  date: string;
+  status: string;
+  stripePaymentIntentId: string | null;
+  currency: string;
 };
 
 type SortKey = "name" | "mrr" | "since" | "status" | "health";
@@ -83,20 +109,22 @@ function buildMrrHistory(mosques: MosqueData[]) {
   }
 
   const launches = paying
-    .map((m) => new Date(m.launchedAt!))
-    .sort((a, b) => a.getTime() - b.getTime());
+    .map((m) => ({ date: new Date(m.launchedAt!), mrr: mrrForMosque(m) }))
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  const earliest = new Date(launches[0].getFullYear(), launches[0].getMonth(), 1);
+  const earliest = new Date(launches[0].date.getFullYear(), launches[0].date.getMonth(), 1);
   const now = new Date();
   const end = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const months: { month: string; mrr: number }[] = [];
   const cursor = new Date(earliest);
   while (cursor <= end) {
-    const count = launches.filter((l) => l <= cursor).length;
+    const total = launches
+      .filter((l) => l.date <= cursor)
+      .reduce((sum, l) => sum + l.mrr, 0);
     months.push({
       month: cursor.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
-      mrr: count * MRR_PER_MOSQUE,
+      mrr: total,
     });
     cursor.setMonth(cursor.getMonth() + 1);
   }
@@ -135,14 +163,20 @@ function Badge({ label, className }: { label: string; className: string }) {
 
 /* ── Payments Card ── */
 
-const PAYMENT_STATUSES = [
-  { label: "Succeeded", amount: 2400, color: "#8B5CF6" },
-  { label: "Uncaptured", amount: 0, color: "#3B82F6" },
-  { label: "Refunded", amount: 0, color: "#06B6D4" },
-  { label: "Failed", amount: 150, color: "#F97316" },
-];
+export type PaymentStats = {
+  succeeded: number;
+  uncaptured: number;
+  refunded: number;
+  failed: number;
+};
 
-function PaymentsCard() {
+function PaymentsCard({ stats }: { stats: PaymentStats }) {
+  const PAYMENT_STATUSES = [
+    { label: "Succeeded", amount: stats.succeeded, color: "#8B5CF6" },
+    { label: "Uncaptured", amount: stats.uncaptured, color: "#3B82F6" },
+    { label: "Refunded", amount: stats.refunded, color: "#06B6D4" },
+    { label: "Failed", amount: stats.failed, color: "#F97316" },
+  ];
   const total = PAYMENT_STATUSES.reduce((s, p) => s + p.amount, 0);
 
   return (
@@ -412,9 +446,367 @@ function FilterBar({
   );
 }
 
+/* ── Donations Section ── */
+
+function buildDonationsByMonth(donations: DonationRecord[]) {
+  const map = new Map<string, number>();
+  for (const d of donations) {
+    const dt = new Date(d.date);
+    const key = dt.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    map.set(key, (map.get(key) ?? 0) + d.amount);
+  }
+  // Sort chronologically
+  const entries = [...map.entries()].sort((a, b) => {
+    const da = new Date(a[0]);
+    const db = new Date(b[0]);
+    return da.getTime() - db.getTime();
+  });
+  return entries.map(([month, total]) => ({ month, total }));
+}
+
+function DonationsSection({ donations, mosques }: { donations: DonationRecord[]; mosques: MosqueData[] }) {
+  const [excludedMosques, setExcludedMosques] = useState<Set<string>>(new Set());
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterSearch, setFilterSearch] = useState("");
+  const filterRef = useRef<HTMLDivElement>(null);
+  const filterInputRef = useRef<HTMLInputElement>(null);
+
+  // Mosques that have at least one donation
+  const mosquesWithDonations = useMemo(() => {
+    const ids = new Set(donations.map((d) => d.mosqueId));
+    return mosques.filter((m) => ids.has(m.id));
+  }, [donations, mosques]);
+
+  const filtered = useMemo(() => {
+    if (excludedMosques.size === 0) return donations;
+    return donations.filter((d) => !excludedMosques.has(d.mosqueId));
+  }, [donations, excludedMosques]);
+
+  const chartData = useMemo(() => buildDonationsByMonth(filtered), [filtered]);
+  const totalDonations = useMemo(() => filtered.reduce((s, d) => s + d.amount, 0), [filtered]);
+  const donationCount = filtered.length;
+
+  const activeCount = mosquesWithDonations.length - excludedMosques.size;
+  const selectedLabel = excludedMosques.size === 0
+    ? "All Mosques"
+    : `${activeCount} of ${mosquesWithDonations.length} Mosques`;
+
+  const toggleMosque = useCallback((id: string) => {
+    setExcludedMosques((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => setExcludedMosques(new Set()), []);
+  const deselectAll = useCallback(() => {
+    setExcludedMosques(new Set(mosquesWithDonations.map((m) => m.id)));
+  }, [mosquesWithDonations]);
+
+  const searchedMosques = useMemo(() => {
+    if (!filterSearch.trim()) return mosquesWithDonations;
+    const q = filterSearch.toLowerCase();
+    return mosquesWithDonations.filter(
+      (m) => m.name.toLowerCase().includes(q) || m.city.toLowerCase().includes(q) || m.state.toLowerCase().includes(q)
+    );
+  }, [mosquesWithDonations, filterSearch]);
+
+  // Close dropdown on outside click / escape
+  useEffect(() => {
+    const close = (e: MouseEvent) => { if (filterRef.current && !filterRef.current.contains(e.target as Node)) setFilterOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setFilterOpen(false); };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
+  }, []);
+
+  useEffect(() => {
+    if (filterOpen) setTimeout(() => filterInputRef.current?.focus(), 0);
+  }, [filterOpen]);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-[#0A261E]/8 bg-white">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-[#0A261E]/8 px-6 py-4">
+        <div>
+          <p className="text-sm font-medium text-[#0A261E]">Donations</p>
+          <p className="mt-0.5 text-xs text-[#0A261E]/40">
+            {selectedLabel} &middot; {donationCount} transaction{donationCount !== 1 ? "s" : ""} &middot; {fmt(totalDonations)} total
+          </p>
+        </div>
+
+        {/* Multi-select mosque filter */}
+        <div className="relative" ref={filterRef}>
+          <button
+            onClick={() => setFilterOpen(!filterOpen)}
+            className="flex items-center gap-2 rounded-full border border-[#0A261E]/10 bg-white px-3.5 py-2 text-[13px] font-medium text-[#0A261E] transition-all hover:border-[#0A261E]/20 hover:shadow-sm"
+            style={{ minWidth: 180 }}
+          >
+            <svg className="h-3.5 w-3.5 shrink-0 text-[#0A261E]/40" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+            </svg>
+            <span className="truncate">{selectedLabel}</span>
+            {excludedMosques.size > 0 && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#B8922A]/15 px-1.5 text-[10px] font-semibold text-[#B8922A]">
+                {activeCount}
+              </span>
+            )}
+            <svg className={`ml-auto h-3.5 w-3.5 shrink-0 text-[#0A261E]/30 transition-transform ${filterOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+
+          {/* Dropdown */}
+          {filterOpen && (
+            <div className="absolute right-0 top-full z-30 mt-2 w-[320px] overflow-hidden rounded-xl border border-[#0A261E]/8 bg-white shadow-lg">
+              {/* Search */}
+              <div className="border-b border-[#0A261E]/6 p-2.5">
+                <div className="relative">
+                  <svg className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#0A261E]/30" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                  </svg>
+                  <input
+                    ref={filterInputRef}
+                    value={filterSearch}
+                    onChange={(e) => setFilterSearch(e.target.value)}
+                    placeholder="Search mosques..."
+                    className="w-full rounded-lg border border-[#0A261E]/8 bg-[#fffbf2] py-1.5 pl-8 pr-3 text-[13px] text-[#0A261E] placeholder:text-[#0A261E]/30 outline-none focus:border-[#B8922A]/40"
+                  />
+                </div>
+              </div>
+
+              {/* Select all / Deselect all */}
+              <div className="flex items-center justify-between border-b border-[#0A261E]/6 px-3 py-2">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-[#0A261E]/35">
+                  {searchedMosques.length} mosque{searchedMosques.length !== 1 ? "s" : ""}
+                </span>
+                <div className="flex gap-2">
+                  <button onClick={selectAll} className="text-[11px] font-medium text-[#B8922A] hover:text-[#96780F]">Select All</button>
+                  <span className="text-[#0A261E]/15">|</span>
+                  <button onClick={deselectAll} className="text-[11px] font-medium text-[#0A261E]/40 hover:text-[#0A261E]/60">Clear</button>
+                </div>
+              </div>
+
+              {/* Mosque list */}
+              <div className="max-h-[260px] overflow-y-auto py-1">
+                {searchedMosques.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-[#0A261E]/35">No mosques found</p>
+                ) : (
+                  searchedMosques.map((m) => {
+                    const isActive = !excludedMosques.has(m.id);
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => toggleMosque(m.id)}
+                        className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-[#0A261E]/[0.03]"
+                      >
+                        {/* Checkbox */}
+                        <div className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded border transition-all ${isActive ? "border-[#B8922A] bg-[#B8922A]" : "border-[#0A261E]/20 bg-white"}`}
+                          style={{ width: 18, height: 18, borderRadius: 5 }}
+                        >
+                          {isActive && (
+                            <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                            </svg>
+                          )}
+                        </div>
+                        {/* Avatar */}
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0A261E] text-[10px] font-semibold text-[#fffbf2]">
+                          {m.name.charAt(0)}
+                        </div>
+                        {/* Info */}
+                        <div className="min-w-0 flex-1">
+                          <p className={`truncate text-[13px] ${isActive ? "font-medium text-[#0A261E]" : "text-[#0A261E]/45"}`}>{m.name}</p>
+                          <p className="text-[11px] text-[#0A261E]/35">{m.city}{m.state !== "—" ? `, ${m.state}` : ""}</p>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className="px-6 pt-5 pb-2">
+        {chartData.length > 0 ? (
+          <div style={{ height: 260 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <BarChart data={chartData} barCategoryGap="40%">
+                <defs>
+                  <linearGradient id="donBarGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#B8922A" stopOpacity={0.7} />
+                    <stop offset="100%" stopColor="#B8922A" stopOpacity={0.25} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: "#9C9CA6", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#9C9CA6", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${v}`} width={50} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#fff", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 8, fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+                  formatter={(value) => [fmt(Number(value)), "Donations"]}
+                />
+                <Bar dataKey="total" fill="url(#donBarGrad)" radius={[6, 6, 0, 0]} maxBarSize={80} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div style={{ height: 260, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <p className="text-sm text-[#0A261E]/30">No donation data yet</p>
+          </div>
+        )}
+      </div>
+
+      {/* Transaction table */}
+      {filtered.length > 0 && (
+        <div className="border-t border-[#0A261E]/8">
+          <div className="overflow-x-auto" style={{ maxHeight: 360 }}>
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 bg-white">
+                <tr className="border-b border-[#0A261E]/8 text-xs uppercase tracking-wider text-[#0A261E]/35">
+                  <th className="px-6 py-3 font-medium">Date</th>
+                  <th className="px-6 py-3 font-medium">Mosque</th>
+                  <th className="px-6 py-3 font-medium">Project</th>
+                  <th className="px-6 py-3 font-medium">Status</th>
+                  <th className="px-6 py-3 font-medium text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.slice(0, 50).map((d) => {
+                  const donStatusConfig: Record<string, { label: string; className: string }> = {
+                    succeeded: { label: "Succeeded", className: "bg-emerald-50 text-emerald-700" },
+                    pending: { label: "Pending", className: "bg-amber-50 text-amber-700" },
+                    failed: { label: "Failed", className: "bg-red-50 text-red-700" },
+                    refunded: { label: "Refunded", className: "bg-neutral-100 text-neutral-500" },
+                  };
+                  const ds = donStatusConfig[d.status] ?? donStatusConfig.pending;
+                  return (
+                    <tr key={d.id} className="border-b border-[#0A261E]/4 transition-colors last:border-0 hover:bg-[#f5f0e8]">
+                      <td className="px-6 py-3 text-[#0A261E]/60">
+                        {new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className="font-medium text-[#0A261E]">{d.mosqueName}</span>
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className="inline-block rounded-full bg-[#fffbf2] px-2.5 py-0.5 text-xs font-medium text-[#B8922A] border border-[#B8922A]/15">
+                          {d.project.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3">
+                        <Badge label={ds.label} className={ds.className} />
+                      </td>
+                      <td className="px-6 py-3 text-right font-mono font-medium text-[#0A261E]">
+                        {d.amount.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {filtered.length > 50 && (
+            <div className="border-t border-[#0A261E]/6 px-6 py-3 text-center text-xs text-[#0A261E]/35">
+              Showing 50 of {filtered.length} transactions
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Connect Overview ── */
+
+function ConnectOverview({ mosques, donations }: { mosques: MosqueData[]; donations: DonationRecord[] }) {
+  const connected = mosques.filter((m) => m.stripeConnected);
+  const succeeded = donations.filter((d) => d.status === "succeeded");
+  const failed = donations.filter((d) => d.status === "failed");
+  const refunded = donations.filter((d) => d.status === "refunded");
+  const totalVolume = succeeded.reduce((s, d) => s + d.amount, 0);
+  const avgDonation = succeeded.length > 0 ? totalVolume / succeeded.length : 0;
+
+  // Per-mosque donation volume (top 5)
+  const perMosque = new Map<string, { name: string; total: number; count: number }>();
+  for (const d of succeeded) {
+    const existing = perMosque.get(d.mosqueId);
+    if (existing) {
+      existing.total += d.amount;
+      existing.count++;
+    } else {
+      perMosque.set(d.mosqueId, { name: d.mosqueName, total: d.amount, count: 1 });
+    }
+  }
+  const topMosques = [...perMosque.values()]
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-[#0A261E]/8 bg-white">
+      <div className="border-b border-[#0A261E]/8 px-6 py-4">
+        <p className="text-sm font-medium text-[#0A261E]">Stripe Connect — Donations</p>
+        <p className="mt-0.5 text-xs text-[#0A261E]/40">
+          Community donations flowing through connected mosque accounts
+        </p>
+      </div>
+
+      {/* Metrics row */}
+      <div className="grid grid-cols-2 gap-px bg-[#0A261E]/6 sm:grid-cols-4">
+        {[
+          { label: "Connected Accounts", value: `${connected.length}`, sub: `of ${mosques.length} mosques` },
+          { label: "Donation Volume", value: fmt(totalVolume), sub: `${succeeded.length} transactions` },
+          { label: "Avg Donation", value: fmt(avgDonation), sub: succeeded.length > 0 ? "per transaction" : "no data" },
+          { label: "Failed / Refunded", value: `${failed.length} / ${refunded.length}`, sub: succeeded.length > 0 ? `${((failed.length / (succeeded.length + failed.length)) * 100).toFixed(1)}% fail rate` : "no data" },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-white px-5 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#0A261E]/35">{stat.label}</p>
+            <p className="mt-1 font-mono text-lg font-semibold text-[#0A261E]">{stat.value}</p>
+            <p className="mt-0.5 text-[11px] text-[#0A261E]/40">{stat.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Top mosques by donation volume */}
+      {topMosques.length > 0 && (
+        <div className="border-t border-[#0A261E]/8">
+          <div className="px-6 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#0A261E]/35">Top Mosques by Donation Volume</p>
+          </div>
+          <div className="px-6 pb-4 space-y-2.5">
+            {topMosques.map((m, i) => {
+              const pct = topMosques[0].total > 0 ? (m.total / topMosques[0].total) * 100 : 0;
+              return (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0A261E] text-[9px] font-semibold text-[#fffbf2]">
+                    {m.name.charAt(0)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="truncate text-[13px] font-medium text-[#0A261E]">{m.name}</span>
+                      <span className="ml-3 shrink-0 font-mono text-[13px] font-semibold text-[#0A261E]">{fmt(m.total)}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[#0A261E]/[0.04]">
+                      <div className="h-full rounded-full bg-[#B8922A]/60" style={{ width: `${pct}%`, transition: "width 0.3s" }} />
+                    </div>
+                    <p className="mt-0.5 text-[10px] text-[#0A261E]/35">{m.count} donation{m.count !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Main ── */
 
-export default function RevenueClient({ mosques, monthlyBurn }: { mosques: MosqueData[]; monthlyBurn: number }) {
+export default function RevenueClient({ mosques, monthlyBurn, paymentStats, donations }: { mosques: MosqueData[]; monthlyBurn: number; paymentStats: PaymentStats; donations: DonationRecord[] }) {
   const [filters, setFilters] = useState<FilterState>(emptyFilter);
   const [timeRange, setTimeRange] = useState<TimeRange>("6M");
   const [sortKey, setSortKey] = useState<SortKey>("mrr");
@@ -430,7 +822,7 @@ export default function RevenueClient({ mosques, monthlyBurn }: { mosques: Mosqu
   }, [mosques, filters]);
 
   const paying = filtered.filter((m) => m.subscriptionStatus === "active");
-  const mrr = paying.length * MRR_PER_MOSQUE;
+  const mrr = paying.reduce((sum, m) => sum + mrrForMosque(m), 0);
   const arr = mrr * 12;
   const netRevenue = mrr - monthlyBurn;
 
@@ -444,10 +836,12 @@ export default function RevenueClient({ mosques, monthlyBurn }: { mosques: Mosqu
   const tableRows = useMemo(() =>
     filtered.filter((m) => m.subscriptionStatus !== "setup").map((m) => ({
       id: m.id, name: m.name, city: m.city,
-      mrr: m.subscriptionStatus === "active" ? MRR_PER_MOSQUE : 0,
+      mrr: mrrForMosque(m),
+      tier: m.subscriptionTier ?? "—",
       since: m.launchedAt ? new Date(m.launchedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "—",
       status: m.subscriptionStatus as "active" | "past_due" | "canceled",
       health: m.health,
+      stripeConnected: m.stripeConnected,
     })), [filtered]);
 
   const handleSort = (key: SortKey) => {
@@ -658,7 +1052,7 @@ export default function RevenueClient({ mosques, monthlyBurn }: { mosques: Mosqu
               <AnimateNumber transition={{ duration: 0.8 }}>{paying.length}</AnimateNumber>
             </span>
           </div>
-          <div className="mt-3"><MiniChart data={mrrHistory.map((d) => ({ ...d, mrr: d.mrr / MRR_PER_MOSQUE }))} color="#B8922A" /></div>
+          <div className="mt-3"><MiniChart data={mrrHistory.map((d) => ({ ...d, mrr: paying.length > 0 ? Math.round(d.mrr / (mrr / paying.length)) : 0 }))} color="#B8922A" /></div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-[#0A261E]/35">
             <span>{mrrHistory[0]?.month}</span><span>{mrrHistory[mrrHistory.length - 1]?.month}</span>
           </div>
@@ -694,8 +1088,14 @@ export default function RevenueClient({ mosques, monthlyBurn }: { mosques: Mosqu
           </div>
         </div>
 
-        <PaymentsCard />
+        <PaymentsCard stats={paymentStats} />
       </div>
+
+      {/* Connect Overview */}
+      <ConnectOverview mosques={mosques} donations={donations} />
+
+      {/* Donations */}
+      <DonationsSection donations={donations} mosques={mosques} />
 
       {/* Subscription details — only when a mosque is selected */}
       {filters.mosqueId && sorted.length > 0 && (
@@ -708,9 +1108,11 @@ export default function RevenueClient({ mosques, monthlyBurn }: { mosques: Mosqu
               <thead>
                 <tr className="border-b border-[#0A261E]/8 text-xs uppercase tracking-wider text-[#0A261E]/35">
                   <th className="px-5 py-3 font-medium">Mosque</th>
+                  <th className="px-5 py-3 font-medium">Tier</th>
                   <th className="px-5 py-3 font-medium">MRR</th>
                   <th className="px-5 py-3 font-medium">Since</th>
                   <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">Connect</th>
                   <th className="px-5 py-3 font-medium">Health</th>
                 </tr>
               </thead>
@@ -718,15 +1120,23 @@ export default function RevenueClient({ mosques, monthlyBurn }: { mosques: Mosqu
                 {sorted.map((row) => {
                   const sc = statusConfig[row.status] ?? statusConfig.canceled;
                   const hc = healthConfig[row.health] ?? healthConfig["No Data"];
+                  const tierLabel = row.tier === "complete" ? "Complete" : row.tier === "core_crm" ? "Core+CRM" : row.tier === "core" ? "Core" : "—";
                   return (
                     <tr key={row.id} className="border-b border-[#0A261E]/8 transition-colors last:border-0 hover:bg-[#f5f0e8]">
                       <td className="px-5 py-3">
                         <span className="font-medium text-[#0A261E]">{row.name}</span>
                         <span className="ml-2 text-[#0A261E]/35">{row.city}</span>
                       </td>
+                      <td className="px-5 py-3 text-xs text-[#0A261E]/60">{tierLabel}</td>
                       <td className="px-5 py-3 font-mono text-[#0A261E]">{fmt(row.mrr)}</td>
                       <td className="px-5 py-3 text-[#0A261E]/60">{row.since}</td>
                       <td className="px-5 py-3"><Badge label={sc.label} className={sc.className} /></td>
+                      <td className="px-5 py-3">
+                        <Badge
+                          label={row.stripeConnected ? "Connected" : "Not Set Up"}
+                          className={row.stripeConnected ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}
+                        />
+                      </td>
                       <td className="px-5 py-3"><Badge label={row.health} className={hc.className} /></td>
                     </tr>
                   );

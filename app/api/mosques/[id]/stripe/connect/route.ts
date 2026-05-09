@@ -19,7 +19,7 @@ export async function POST(
   // Check if mosque already has a Stripe account
   const { data: mosque } = await supabase
     .from("mosques")
-    .select("stripe_account_id, name, clerk_org_id")
+    .select("stripe_account_id, name, slug, clerk_org_id")
     .eq("id", mosqueId)
     .single();
 
@@ -37,6 +37,13 @@ export async function POST(
   if (!accountId) {
     const account = await stripe.accounts.create({
       type: "standard",
+      business_profile: {
+        mcc: "8661",
+        name: mosque.name || undefined,
+        url: mosque.slug
+          ? `https://sahla.co/${mosque.slug}`
+          : "https://sahla.co",
+      },
       metadata: { mosque_id: mosqueId },
     });
     accountId = account.id;

@@ -27,6 +27,7 @@ export const STAGE_LABELS: Record<Stage, string> = {
 export type PipelineStage = {
   stage: string;
   contact_name: string | null;
+  contact_email?: string | null;
   updated_at?: string | null;
 };
 
@@ -38,6 +39,9 @@ export type KanbanMosque = {
   brand_color: string | null;
   onboarding_status: string | null;
   onboarding_progress: Record<string, unknown> | null;
+  stripe_account_id?: string | null;
+  subscription_status?: string | null;
+  launched_at?: string | null;
   created_at: string | null;
   pipeline_stages: PipelineStage[] | PipelineStage | null;
 };

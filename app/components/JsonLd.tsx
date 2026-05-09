@@ -39,7 +39,7 @@ export function SoftwareApplicationJsonLd() {
     },
     aggregateRating: {
       "@type": "AggregateRating",
-      ratingValue: "4.8",
+      ratingValue: "5.0",
       ratingCount: "3000",
     },
   };

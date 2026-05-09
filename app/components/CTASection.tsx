@@ -42,7 +42,7 @@ export default function CTASection() {
           >their app.</em>
         </h2>
 
-        <p className="mx-auto mt-[22px] mb-10 max-w-[520px] text-[16px] leading-[1.7] text-sand/45">
+        <p className="mx-auto mt-[22px] mb-10 max-w-[520px] text-[16px] leading-[1.7] text-sand/70">
           Join MAS Staten Island and mosques across the country. Reserve your masjid&apos;s spot — we onboard new mosques in waves.
         </p>
 

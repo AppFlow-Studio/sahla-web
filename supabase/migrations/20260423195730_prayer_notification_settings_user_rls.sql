@@ -22,4 +22,4 @@ CREATE POLICY "prayer_notification_settings_user_update" ON prayer_notification_
 DROP POLICY IF EXISTS "prayer_notification_settings_user_delete" ON prayer_notification_settings;
 CREATE POLICY "prayer_notification_settings_user_delete" ON prayer_notification_settings
   FOR DELETE TO public
-  USING (user_id = requesting_user_id());;
+  USING (user_id = requesting_user_id());

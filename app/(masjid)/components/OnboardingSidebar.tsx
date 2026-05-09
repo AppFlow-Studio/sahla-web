@@ -8,6 +8,20 @@ import { useClerk, useUser } from "@clerk/nextjs";
 import { ONBOARDING_CATEGORIES } from "./onboarding-tasks";
 import { cn } from "@/lib/utils";
 
+/**
+ * Fire-and-forget ping to the leave-notify endpoint so the masjid admin gets
+ * a one-time "resume your setup" email. Safe to call repeatedly — the
+ * endpoint is idempotent (atomic claim on resume_email_sent_at).
+ */
+function pingLeaveNotify() {
+  if (typeof navigator === "undefined" || !navigator.sendBeacon) return;
+  try {
+    navigator.sendBeacon("/api/onboarding/leave-notify");
+  } catch {
+    // Beacons are best-effort — ignore failures.
+  }
+}
+
 export default function OnboardingSidebar({
   mosqueName,
   progress,
@@ -30,6 +44,7 @@ export default function OnboardingSidebar({
       <div className="border-b border-sidebar-border px-5 py-5">
         <Link
           href="/"
+          onClick={pingLeaveNotify}
           className="mb-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-sidebar-text-muted transition-colors hover:text-sidebar-text"
         >
           <ArrowLeft size={12} />
@@ -127,7 +142,10 @@ export default function OnboardingSidebar({
       <div className="border-t border-sidebar-border px-3 py-3">
         {isSignedIn ? (
           <button
-            onClick={() => signOut({ redirectUrl: "/" })}
+            onClick={() => {
+              pingLeaveNotify();
+              signOut({ redirectUrl: "/" });
+            }}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-text-muted transition-colors hover:bg-sidebar-hover-bg hover:text-sidebar-text"
           >
             <LogOut size={14} />
