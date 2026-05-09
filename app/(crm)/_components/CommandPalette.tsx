@@ -23,6 +23,7 @@ import {
   Palette,
   Clock,
   LifeBuoy,
+  Sparkles,
 } from "lucide-react";
 import { CRM_NAV } from "../_lib/nav";
 
@@ -164,6 +165,18 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
               <CommandItem value="sahla support help" onSelect={() => go("/settings/sahla-support")}>
                 <LifeBuoy size={14} />
                 Message Sahla support
+              </CommandItem>
+              <CommandItem
+                value="replay onboarding tour"
+                onSelect={() => {
+                  if (typeof window !== "undefined") {
+                    window.localStorage.removeItem("sahla.crm.tour_seen.v1");
+                    window.location.reload();
+                  }
+                }}
+              >
+                <Sparkles size={14} />
+                Replay welcome tour
               </CommandItem>
             </CommandGroup>
           </CommandList>
