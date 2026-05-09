@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://sahla.app";
+  const base = "https://sahla.co";
 
   const staticPages = [
     { url: base, changeFrequency: "weekly" as const, priority: 1.0 },

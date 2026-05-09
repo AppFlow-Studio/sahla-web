@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/api/", "/login", "/select-org", "/launch"],
       },
     ],
-    sitemap: "https://sahla.app/sitemap.xml",
+    sitemap: "https://sahla.co/sitemap.xml",
   };
 }

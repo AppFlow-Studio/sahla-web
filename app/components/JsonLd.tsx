@@ -3,13 +3,13 @@ export function OrganizationJsonLd() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Sahla",
-    url: "https://sahla.app",
-    logo: "https://sahla.app/sahla-logo.png",
+    url: "https://sahla.co",
+    logo: "https://sahla.co/sahla-logo.png",
     description:
       "Sahla builds fully branded iOS and Android apps for mosques. White-label mosque app builder with donations, prayer times, and sponsor revenue.",
     contactPoint: {
       "@type": "ContactPoint",
-      email: "hello@sahla.app",
+      email: "hello@sahla.co",
       contactType: "sales",
     },
   };

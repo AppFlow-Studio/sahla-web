@@ -123,7 +123,7 @@ export default function OpengraphImage() {
               color: "rgba(255,251,242,0.7)",
             }}
           >
-            sahla.app
+            sahla.co
           </div>
         </div>
       </div>

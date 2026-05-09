@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 const contactInfo = [
-  { Icon: Mail, label: "Email", value: "hello@sahla.app", href: "mailto:hello@sahla.app" },
+  { Icon: Mail, label: "Email", value: "hello@sahla.co", href: "mailto:hello@sahla.co" },
   { Icon: Phone, label: "Phone", value: "(929) 555-0123", href: "tel:+19295550123" },
   { Icon: Clock, label: "Support Hours", value: "Mon–Fri, 9am–6pm ET", href: null },
 ];

@@ -167,7 +167,7 @@ Status: ${COPY_STATUS_LINE}`;
         contactName: body.contactName ?? trimmedContactName,
         contactEmail: body.contactEmail ?? trimmedContactEmail,
         orgId: body.orgId ?? "",
-        portalUrl: body.portalUrl ?? "crm.sahla.app",
+        portalUrl: body.portalUrl ?? "crm.sahla.co",
         inviteStatus: body.inviteStatus ?? "Invite sent via Clerk",
       };
       setSuccessData(nextSuccess);
@@ -206,7 +206,7 @@ Status: ${COPY_STATUS_LINE}`;
                     Create Mosque Account
                   </h2>
                   <p className="mt-2 text-base text-slate-500">
-                    This creates a login for the mosque admin to access crm.sahla.app.
+                    This creates a login for the mosque admin to access crm.sahla.co.
                   </p>
                 </div>
 
@@ -220,10 +220,10 @@ Status: ${COPY_STATUS_LINE}`;
                   This creates a login for the mosque admin. They&apos;ll use these credentials to
                   sign into{" "}
                   <a
-                    href="https://crm.sahla.app"
+                    href="https://crm.sahla.co"
                     className="font-medium text-green-800 underline underline-offset-2"
                   >
-                    crm.sahla.app
+                    crm.sahla.co
                   </a>{" "}
                   and start the onboarding flow.
                 </div>
