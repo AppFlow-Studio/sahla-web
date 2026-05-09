@@ -80,7 +80,7 @@ CREATE TABLE sahla_config (
   id text NOT NULL DEFAULT 'singleton',
   org_id text NOT NULL,
   org_name text DEFAULT 'Sahla HQ',
-  support_email text DEFAULT 'support@sahla.app',
+  support_email text DEFAULT 'support@sahla.co',
   platform_fee_pct numeric DEFAULT 0,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()

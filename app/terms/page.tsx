@@ -76,7 +76,7 @@ export default function TermsPage() {
 
             <div>
               <h2 className="mb-3 font-[family-name:var(--font-display)] text-[22px] text-dark-green">11. Contact</h2>
-              <p>Questions about these terms? Contact us at <a href="mailto:legal@sahla.app" className="text-[#1a6b42] underline underline-offset-4">legal@sahla.app</a>.</p>
+              <p>Questions about these terms? Contact us at <a href="mailto:legal@sahla.co" className="text-[#1a6b42] underline underline-offset-4">legal@sahla.co</a>.</p>
             </div>
           </div>
         </div>

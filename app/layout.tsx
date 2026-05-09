@@ -43,7 +43,7 @@ const signatureFont = Mrs_Saint_Delafield({
   display: "swap",
 });
 
-const SITE_URL = "https://sahla.app";
+const SITE_URL = "https://sahla.co";
 const SITE_TITLE = "Sahla — Your Mosque Deserves Its Own App";
 const SITE_DESCRIPTION =
   "Sahla builds fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community. White-label mosque app builder with donations, prayer times, and sponsor revenue.";
