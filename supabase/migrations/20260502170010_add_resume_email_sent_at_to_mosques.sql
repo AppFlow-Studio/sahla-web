@@ -6,4 +6,4 @@
 -- Applied to staging: 2026-05-02
 
 ALTER TABLE mosques
-  ADD COLUMN IF NOT EXISTS resume_email_sent_at timestamptz;
+  ADD COLUMN IF NOT EXISTS resume_email_sent_at timestamptz;;
