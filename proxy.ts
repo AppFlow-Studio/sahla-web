@@ -20,6 +20,24 @@ const ADMIN_PATHS = [
   "/builds",
 ];
 
+// CRM routes — eventually tier-gated to mosques on `core_crm`. During the UI
+// build phase we let HQ admins preview these too so they can QA without
+// switching orgs. Tighten in the backend pass.
+const CRM_PATHS = [
+  "/home",
+  "/people",
+  "/content",
+  "/money",
+  "/setup",
+  "/settings",
+];
+
+function isCrmPath(pathname: string): boolean {
+  return CRM_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
+
 const isMarketingRoute = createRouteMatcher([
   "/",
   "/about(.*)",
@@ -104,6 +122,11 @@ export const proxy = clerkMiddleware(async (auth, req) => {
   }
 
   if (isApiRoute(req)) {
+    return NextResponse.next();
+  }
+
+  // Allow HQ + mosque admins to preview the CRM while it's being built.
+  if (isCrmPath(url.pathname)) {
     return NextResponse.next();
   }
 
