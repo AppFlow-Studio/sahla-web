@@ -1,16 +1,9 @@
-import PlaceholderPage from "../../_components/PlaceholderPage";
+import MembersClient from "./MembersClient";
+
+export const metadata = {
+  title: "Members · Mosque CRM",
+};
 
 export default function MembersPage() {
-  return (
-    <PlaceholderPage
-      section="People"
-      title="Members"
-      description="Everyone who has signed in to your mosque app — sortable, searchable, with masked emails."
-      bullets={[
-        "Sortable columns — name, last active, RSVP count",
-        "Click email to reveal (masked by default for privacy)",
-        "Filter by signup date or push-notification status",
-      ]}
-    />
-  );
+  return <MembersClient />;
 }
