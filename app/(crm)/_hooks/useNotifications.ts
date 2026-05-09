@@ -10,12 +10,22 @@ import {
 
 type Listener = () => void;
 
+type Snapshot = {
+  templates: NotificationTemplate[];
+  history: NotificationHistoryItem[];
+};
+
 let templates: NotificationTemplate[] = [...seedTemplates];
 let history: NotificationHistoryItem[] = [...seedHistory];
 const listeners = new Set<Listener>();
 
+// Cached snapshot — useSyncExternalStore + getServerSnapshot must return the
+// same reference across calls until the underlying state changes, otherwise
+// React detects "new state" every render and trips into an infinite loop.
+let cached: Snapshot = { templates, history };
+
 function snapshot() {
-  return { templates, history };
+  return cached;
 }
 
 function subscribe(cb: Listener) {
@@ -26,6 +36,7 @@ function subscribe(cb: Listener) {
 function emit() {
   templates = [...templates];
   history = [...history];
+  cached = { templates, history };
   for (const l of listeners) l();
 }
 

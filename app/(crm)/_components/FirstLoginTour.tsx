@@ -18,6 +18,11 @@ import { useMosque } from "../_lib/mock-mosque";
 const STORAGE_KEY = "sahla.crm.tour_seen.v1";
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+// During the UI build phase we want to see the tour on every reload so we can
+// iterate on the design quickly. Flip this to true to bring back the
+// "show once per browser" behavior backed by localStorage.
+const REMEMBER_DISMISSAL = false;
+
 type Step = {
   id: string;
   eyebrow: string;
@@ -34,14 +39,14 @@ export default function FirstLoginTour() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (window.localStorage.getItem(STORAGE_KEY)) return;
+    if (REMEMBER_DISMISSAL && window.localStorage.getItem(STORAGE_KEY)) return;
     // Tiny delay so the shell has a chance to paint first
     const t = setTimeout(() => setOpen(true), 350);
     return () => clearTimeout(t);
   }, []);
 
   function complete() {
-    if (typeof window !== "undefined") {
+    if (REMEMBER_DISMISSAL && typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, new Date().toISOString());
     }
     setOpen(false);

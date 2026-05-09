@@ -17,7 +17,7 @@ export default function Sidebar() {
   const mosque = useMosque();
 
   return (
-    <aside className="hidden h-screen w-[272px] shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-[#0A261E] text-[#fffbf2] md:flex">
+    <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 flex-col self-start overflow-hidden border-r border-white/[0.06] bg-[#0A261E] text-[#fffbf2] md:flex">
       {/* Mosque header */}
       <div className="px-5 pt-6 pb-5">
         <div className="flex items-center gap-3">
