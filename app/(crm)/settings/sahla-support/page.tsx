@@ -1,16 +1,9 @@
-import PlaceholderPage from "../../_components/PlaceholderPage";
+import SupportClient from "./SupportClient";
+
+export const metadata = {
+  title: "Sahla Support · Mosque CRM",
+};
 
 export default function SahlaSupportPage() {
-  return (
-    <PlaceholderPage
-      section="Settings"
-      title="Sahla Support"
-      description="Direct line to the Sahla team — chat about anything, request features, report bugs."
-      bullets={[
-        "Threaded chat with the Sahla team",
-        "Attach screenshots and short videos",
-        "Get a real human on a call within 24h",
-      ]}
-    />
-  );
+  return <SupportClient />;
 }
