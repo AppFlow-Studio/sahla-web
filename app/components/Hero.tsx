@@ -16,8 +16,8 @@ type HeroProps = {
 };
 
 export default function Hero({
-  ctaLabel = "Get Started",
-  ctaHref = "/login",
+  ctaLabel = "Book a Demo",
+  ctaHref = "/contact",
 }: HeroProps) {
   return (
     <section className="relative overflow-hidden bg-dark-green" style={{ minHeight: "85vh" }}>

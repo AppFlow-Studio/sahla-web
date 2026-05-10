@@ -3,7 +3,7 @@
  * For internal lead capture without Clerk, use POST /api/pipeline/lead.
  */
 import { NextResponse } from "next/server";
-import { createClerkSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 
@@ -63,7 +63,7 @@ function normalize(body: CreateAccountBody): Normalized {
 }
 
 async function insertNote(
-  supabase: Awaited<ReturnType<typeof createClerkSupabaseClient>>,
+  supabase: ReturnType<typeof createAdminSupabaseClient>,
   mosqueId: string,
   noteText: string
 ) {
@@ -165,7 +165,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = await createClerkSupabaseClient();
+    const supabase = createAdminSupabaseClient();
     const mosqueSlug = createSlug(lead.mosqueName);
     const client = await clerkClient();
 
