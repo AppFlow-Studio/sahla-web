@@ -9,6 +9,7 @@ import { Menu, X, ArrowRight, LogIn, LogOut } from "lucide-react";
 
 const navLinks = [
   { label: "Why Sahla", href: "/why-sahla" },
+  { label: "Global", href: "/global" },
   { label: "Pricing", href: "/pricing" },
   { label: "Case Study", href: "/customers/mas-si" },
   { label: "FAQ", href: "/faq" },
@@ -33,7 +34,7 @@ export default function Navbar() {
   // chrome washes out. While the navbar is still transparent (i.e. before
   // the dark-green scrolled state kicks in) we flip menu/logo/admin colors
   // to dark-green so they're visible against the page itself.
-  const isLightHero = pathname === "/about" && !scrolled;
+  const isLightHero = (pathname === "/about" || pathname === "/global") && !scrolled;
 
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 50);
