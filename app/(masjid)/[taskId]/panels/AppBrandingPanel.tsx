@@ -4,13 +4,26 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Upload, X } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
+import { usePreview } from "../../components/OnboardingPreviewContext";
 import { cn } from "@/lib/utils";
 import { INPUT_CLASS, BTN_PRIMARY, BTN_PRIMARY_DISABLED, BTN_GHOST } from "@/lib/ui-classes";
 
-const COLOR_PRESETS = [
-  "#0D7C5F", "#10B981", "#3B82F6", "#6366F1",
-  "#8B5CF6", "#EC4899", "#EF4444", "#F59E0B",
-  "#06B6D4", "#14B8A6",
+const PRESET_BRAND_COLORS = [
+  "#0A261E", "#0D3B3B", "#1B3A4B", "#1F3C5C", "#2D4A22",
+  "#1A3328", "#14332B", "#2C1810", "#3B1F2B", "#1A1A2E",
+  "#2E1A47", "#4A3728", "#1C1C1C", "#2A2D34", "#3D2B1F",
+  "#0B1D33", "#23395D", "#1B4D3E", "#2F4538", "#3C2415",
+  "#4B0082", "#191970", "#2F2F2F", "#3B3B3B", "#004D40",
+  "#1A237E", "#311B92", "#BF360C", "#880E4F", "#01579B",
+];
+
+const PRESET_ACCENT_COLORS = [
+  "#B8922A", "#D4AF37", "#DAA520", "#C8A951", "#A67B2E",
+  "#E2C275", "#C9B06B", "#8B7536", "#AA8C2C", "#76622E",
+  "#FFFFFF", "#F5F0E1", "#E8DCC8", "#D4C9B0", "#C2B59B",
+  "#C0392B", "#E74C3C", "#D35400", "#E67E22", "#F39C12",
+  "#27AE60", "#2ECC71", "#1ABC9C", "#16A085", "#2980B9",
+  "#3498DB", "#8E44AD", "#9B59B6", "#E91E63", "#FF6B6B",
 ];
 
 type MosqueData = {
@@ -18,16 +31,19 @@ type MosqueData = {
   app_name: string | null;
   logo_url: string | null;
   brand_color: string | null;
+  accent_color: string | null;
   name: string | null;
 };
 
 export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
   const router = useRouter();
   const { showToast } = useToast();
+  const { updatePreview } = usePreview();
   const [saving, setSaving] = useState(false);
 
   const [appName, setAppName] = useState(mosque.app_name || "");
-  const [brandColor, setBrandColor] = useState(mosque.brand_color || "#0D7C5F");
+  const [brandColor, setBrandColor] = useState(mosque.brand_color || "#0A261E");
+  const [accentColor, setAccentColor] = useState(mosque.accent_color || "#B8922A");
   const [logoUrl, setLogoUrl] = useState(mosque.logo_url || "");
   const [uploading, setUploading] = useState(false);
 
@@ -52,6 +68,7 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
       if (!res.ok) throw new Error("Upload failed");
       const { url } = await res.json();
       setLogoUrl(url);
+      updatePreview({ logoUrl: url });
       showToast("Logo uploaded", "success");
     } catch {
       showToast("Failed to upload logo", "error");
@@ -73,6 +90,7 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
         body: JSON.stringify({
           app_name: appName,
           brand_color: brandColor,
+          accent_color: accentColor,
           logo_url: logoUrl || null,
           ...(markComplete ? { markComplete: "app_branding" } : {}),
         }),
@@ -105,7 +123,7 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
             <input
               type="text"
               value={appName}
-              onChange={(e) => setAppName(e.target.value.slice(0, 10))}
+              onChange={(e) => { const v = e.target.value.slice(0, 10); setAppName(v); updatePreview({ appName: v }); }}
               placeholder="e.g., ICB App"
               className={cn(INPUT_CLASS, "pr-14")}
             />
@@ -121,7 +139,7 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
         <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
           <p className="text-[14px] font-semibold text-stone-900">App Logo</p>
           <p className="mt-0.5 text-[12px] text-stone-500">
-            Square image, at least 512×512px. PNG or JPG.
+            Square image, at least 512x512px. PNG or JPG.
           </p>
         </div>
         <div className="flex items-center gap-5 px-6 py-5">
@@ -148,7 +166,7 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
             </label>
             {logoUrl && (
               <button
-                onClick={() => setLogoUrl("")}
+                onClick={() => { setLogoUrl(""); updatePreview({ logoUrl: null }); }}
                 className="rounded-lg p-2 text-stone-400 transition-colors hover:bg-stone-50 hover:text-red-500"
               >
                 <X size={16} />
@@ -163,78 +181,81 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
         <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
           <p className="text-[14px] font-semibold text-stone-900">Brand Color</p>
           <p className="mt-0.5 text-[12px] text-stone-500">
-            Used for buttons, headers, and accents in the app.
+            The primary color used for headers, buttons, and backgrounds in the app.
           </p>
         </div>
         <div className="px-6 py-5">
-          <div className="mb-4 flex flex-wrap gap-2.5">
-            {COLOR_PRESETS.map((color) => {
-              const isSelected = brandColor === color;
-              return (
-                <button
-                  key={color}
-                  onClick={() => setBrandColor(color)}
-                  className="relative h-9 w-9 rounded-lg transition-transform hover:scale-105"
-                  style={{ backgroundColor: color }}
-                >
-                  {isSelected && (
-                    <span className="absolute inset-0 flex items-center justify-center">
-                      <Check size={16} className="text-white drop-shadow-sm" strokeWidth={3} />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[12px] font-medium text-stone-500">Custom:</span>
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="color"
+              value={brandColor}
+              onChange={(e) => { setBrandColor(e.target.value); updatePreview({ brandColor: e.target.value }); }}
+              className="h-8 w-8 cursor-pointer rounded-lg border border-stone-200 p-0.5"
+            />
             <input
               type="text"
               value={brandColor}
-              onChange={(e) => setBrandColor(e.target.value)}
-              placeholder="#0D7C5F"
-              className="h-9 w-28 rounded-lg border border-stone-200 bg-white px-3 font-mono text-[12px] text-stone-900 shadow-sm outline-none transition-colors hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
+              onChange={(e) => { setBrandColor(e.target.value); updatePreview({ brandColor: e.target.value }); }}
+              placeholder="#0A261E"
+              className="w-24 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-[12px] font-mono text-stone-700 outline-none focus:border-stone-400"
             />
-            <div
-              className="h-9 w-9 rounded-lg border border-stone-200"
-              style={{ backgroundColor: brandColor }}
-            />
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
+            {PRESET_BRAND_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => { setBrandColor(c); updatePreview({ brandColor: c }); }}
+                className="h-7 w-7 rounded-full border-2 transition-transform hover:scale-110"
+                style={{
+                  backgroundColor: c,
+                  borderColor: brandColor === c ? "white" : "transparent",
+                  boxShadow: brandColor === c ? `0 0 0 2px ${c}` : "0 0 0 1px rgba(0,0,0,0.08)",
+                }}
+              />
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Live Preview */}
+      {/* Accent Color */}
       <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
         <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
-          <p className="text-[14px] font-semibold text-stone-900">Preview</p>
+          <p className="text-[14px] font-semibold text-stone-900">Accent Color</p>
+          <p className="mt-0.5 text-[12px] text-stone-500">
+            Used for highlights, active states, and decorative elements.
+          </p>
         </div>
-        <div className="flex gap-6 px-6 py-5">
-          <div className="text-center">
-            <div
-              className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-lg font-semibold text-white shadow-md"
-              style={{ background: logoUrl ? `url(${logoUrl}) center/cover` : brandColor }}
-            >
-              {!logoUrl && displayLetter}
-            </div>
-            <p className="mt-2 text-[11px] text-stone-500">{appName || "App Name"}</p>
+        <div className="px-6 py-5">
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="color"
+              value={accentColor}
+              onChange={(e) => { setAccentColor(e.target.value); updatePreview({ accentColor: e.target.value }); }}
+              className="h-8 w-8 cursor-pointer rounded-lg border border-stone-200 p-0.5"
+            />
+            <input
+              type="text"
+              value={accentColor}
+              onChange={(e) => { setAccentColor(e.target.value); updatePreview({ accentColor: e.target.value }); }}
+              placeholder="#B8922A"
+              className="w-24 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-[12px] font-mono text-stone-700 outline-none focus:border-stone-400"
+            />
           </div>
-
-          <div className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <div
-                className="flex h-6 w-6 items-center justify-center rounded-md text-[9px] font-semibold text-white"
-                style={{ backgroundColor: brandColor }}
-              >
-                {displayLetter}
-              </div>
-              <span className="text-[11px] font-medium text-stone-700">
-                {appName || "Your App"}
-              </span>
-              <span className="ml-auto text-[10px] text-stone-400">now</span>
-            </div>
-            <p className="mt-1 text-[12px] text-stone-600">
-              Iqamah for Maghrib in 10 minutes
-            </p>
+          <div className="flex gap-1.5 flex-wrap">
+            {PRESET_ACCENT_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => { setAccentColor(c); updatePreview({ accentColor: c }); }}
+                className="h-7 w-7 rounded-full border-2 transition-transform hover:scale-110"
+                style={{
+                  backgroundColor: c,
+                  borderColor: accentColor === c ? "white" : "transparent",
+                  boxShadow: accentColor === c ? `0 0 0 2px ${c}` : "0 0 0 1px rgba(0,0,0,0.08)",
+                }}
+              />
+            ))}
           </div>
         </div>
       </div>

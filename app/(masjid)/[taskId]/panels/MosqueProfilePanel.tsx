@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
+import { usePreview } from "../../components/OnboardingPreviewContext";
 import { Dropdown } from "@/app/(admin)/components/Dropdown";
 import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY, BTN_PRIMARY_DISABLED, BTN_GHOST } from "@/lib/ui-classes";
 
@@ -30,6 +31,7 @@ const FIELDS = ["name", "address", "city", "state", "phone", "email", "timezone"
 export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
   const router = useRouter();
   const { showToast } = useToast();
+  const { updatePreview } = usePreview();
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
@@ -44,6 +46,9 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
 
   function updateField(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (field === "name") {
+      updatePreview({ appName: value });
+    }
   }
 
   const filledCount = FIELDS.filter((f) => form[f].trim() !== "").length;

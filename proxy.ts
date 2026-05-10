@@ -43,6 +43,7 @@ const isMarketingRoute = createRouteMatcher([
   "/about(.*)",
   "/contact(.*)",
   "/customers(.*)",
+  "/global(.*)",
   "/waitlist(.*)",
   "/faq(.*)",
   "/pricing(.*)",

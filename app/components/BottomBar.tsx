@@ -37,6 +37,7 @@ export default function BottomBar() {
               <Link href="/pricing" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Pricing</Link>
               <Link href="/faq" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">FAQ</Link>
               <Link href="/customers/mas-si" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Case Study</Link>
+              <Link href="/global" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Global</Link>
             </div>
           </div>
 

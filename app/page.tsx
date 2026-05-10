@@ -25,11 +25,11 @@ const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 
 type Cta = { label: string; href: string };
 
-const DEFAULT_CTA: Cta = { label: "Get Started", href: "/login" };
+const DEFAULT_CTA: Cta = { label: "Book a Demo", href: "/contact" };
 
 /**
  * Resolves the secondary Hero CTA based on visitor state. Logged-out =
- * "Get Started" → /login. Signed-in mosque admins mid-onboarding see
+ * "Book a Demo" → /contact. Signed-in mosque admins mid-onboarding see
  * "Finish Onboarding"; finished mosques see "Open App"; unaffiliated users
  * see "Continue Setup". HQ admins shouldn't reach this page (proxy redirects
  * them), but we guard anyway.
