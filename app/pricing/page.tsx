@@ -26,7 +26,7 @@ const plans = [
       "Admin dashboard",
       "Onboarding support",
     ],
-    cta: "Join the Waitlist",
+    cta: "Reserve Now",
     href: "/waitlist",
     highlight: true,
   },
@@ -43,7 +43,7 @@ const plans = [
       "Priority support",
       "Custom integrations",
     ],
-    cta: "Join the Waitlist",
+    cta: "Reserve Now",
     href: "/waitlist",
     highlight: false,
   },
@@ -68,7 +68,7 @@ export default function PricingPage() {
     <div className="relative">
       <Navbar />
 
-      <section className="bg-dark-green pt-36 pb-20">
+      <section className="bg-[#fffbf2] pt-36 pb-20">
         <div className="mx-auto max-w-[1200px] px-8">
           <motion.div
             className="mb-16 text-center"
@@ -76,53 +76,44 @@ export default function PricingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
-            <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#d9c4a0]">Pricing</p>
-            <h1 className="font-[family-name:var(--font-display)] text-[clamp(40px,5vw,64px)] leading-[1.06] text-sand">
+            <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40">Pricing</p>
+            <h1 className="font-[family-name:var(--font-hero)] text-[clamp(40px,5vw,64px)] leading-[1.06] text-dark-green">
               Simple, transparent pricing.
             </h1>
-            <p className="mx-auto mt-5 max-w-[540px] text-[16px] leading-[1.7] text-sand/45">
+            <p className="mx-auto mt-5 max-w-[540px] text-[16px] leading-[1.7] text-dark-green/50">
               One plan. No hidden fees. And a revenue model that can make your app pay for itself.
             </p>
           </motion.div>
 
           {/* Plans */}
-          <div className="mx-auto grid max-w-[900px] gap-6 lg:grid-cols-2">
+          <div className="mx-auto grid max-w-[900px] gap-12 lg:grid-cols-2 lg:divide-x lg:divide-dark-green/[0.06] lg:gap-0">
             {plans.map((plan, i) => (
               <motion.div
                 key={plan.name}
-                className="relative overflow-hidden rounded-[24px] border p-8"
-                style={{
-                  borderColor: plan.highlight ? "rgba(212,175,55,0.3)" : "rgba(255,251,242,0.06)",
-                  background: plan.highlight
-                    ? "linear-gradient(180deg, rgba(212,175,55,0.06), rgba(255,251,242,0.02))"
-                    : "linear-gradient(180deg, rgba(255,251,242,0.025), rgba(255,251,242,0.01))",
-                }}
+                className={`relative p-2 sm:p-4 ${i === 1 ? "lg:pl-12" : ""}`}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: i * 0.1 }}
               >
-                {plan.highlight && (
-                  <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #d4af37, transparent)" }} />
-                )}
-                <p className="mb-2 text-[12px] font-semibold tracking-[0.2em] uppercase text-[#d9c4a0]">{plan.name}</p>
+                <p className="mb-2 text-[12px] font-semibold tracking-[0.2em] uppercase text-dark-green/40">{plan.name}</p>
                 <div className="mb-4 flex items-baseline gap-1">
-                  <span className="font-[family-name:var(--font-display)] text-[56px] leading-none text-sand">${plan.price}</span>
-                  <span className="text-[16px] text-sand/40">{plan.period}</span>
+                  <span className="font-[family-name:var(--font-hero)] text-[56px] leading-none text-dark-green">${plan.price}</span>
+                  <span className="text-[16px] text-dark-green/40">{plan.period}</span>
                 </div>
-                <p className="mb-8 text-[14px] leading-[1.6] text-sand/45">{plan.description}</p>
+                <p className="mb-8 text-[14px] leading-[1.6] text-dark-green/50">{plan.description}</p>
 
                 <ul className="mb-8 space-y-3">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-3">
                       <Check size={16} className="mt-0.5 shrink-0 text-[#4a8c65]" />
-                      <span className="text-[14px] text-sand/65">{f}</span>
+                      <span className="text-[14px] text-dark-green/65">{f}</span>
                     </li>
                   ))}
                 </ul>
 
                 <Link
                   href={plan.href}
-                  className="block w-full rounded-full bg-sand py-3.5 text-center text-[13px] font-semibold text-dark-green transition-all duration-300 hover:bg-sand/90"
+                  className="block w-full rounded-full bg-dark-green py-3.5 text-center text-[13px] font-semibold text-sand transition-all duration-300 hover:bg-dark-green/90"
                 >
                   {plan.cta}
                 </Link>
@@ -141,7 +132,7 @@ export default function PricingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="font-[family-name:var(--font-display)] text-[clamp(28px,3.5vw,42px)] text-dark-green">
+            <h2 className="font-[family-name:var(--font-hero)] text-[clamp(28px,3.5vw,42px)] text-dark-green">
               What you don&apos;t pay.
             </h2>
           </motion.div>
@@ -149,7 +140,7 @@ export default function PricingPage() {
             {noCharge.map((item, i) => (
               <motion.div
                 key={i}
-                className="flex items-start gap-3 rounded-[14px] border border-dark-green/[0.06] bg-white px-6 py-4"
+                className="flex items-start gap-3 py-4"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -172,58 +163,79 @@ export default function PricingPage() {
       </section>
 
       {/* Revenue calculator */}
-      <section className="bg-dark-green py-[80px]">
-        <div className="mx-auto max-w-[600px] px-8">
-          <motion.div
-            className="overflow-hidden rounded-[24px] border border-sand/[0.08] p-8"
-            style={{ background: "linear-gradient(180deg, rgba(255,251,242,0.03), rgba(255,251,242,0.01))" }}
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <p className="mb-6 text-[12px] font-semibold tracking-[0.2em] uppercase text-[#d9c4a0]">Revenue Calculator</p>
+      <section className="bg-[#fffbf2] py-[80px]">
+        <div className="mx-auto max-w-[1200px] px-8">
+          <div className="grid items-center gap-16 lg:grid-cols-2">
+            {/* Left — copy */}
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40">The Revenue Flip</p>
+              <h2 className="mb-5 font-[family-name:var(--font-hero)] text-[clamp(32px,4vw,52px)] leading-[1.08] text-dark-green">
+                Your app pays for itself.
+              </h2>
+              <p className="mb-6 max-w-[480px] text-[16px] leading-[1.7] text-dark-green/50">
+                Local businesses sponsor ad space in your mosque&apos;s app at ${ratePerSponsor}/month each. You keep 100% of recurring ad revenue — Sahla takes $0. At just {Math.ceil(subscription / ratePerSponsor)} sponsors, your app is free.
+              </p>
+              <p className="max-w-[480px] text-[14px] leading-[1.7] text-dark-green/35">
+                Most mosque platforms charge $99&ndash;149/month with a fee on every donation. Sahla charges ${subscription}/month flat and takes nothing from your donations or recurring ad revenue.
+              </p>
+            </motion.div>
+
+            {/* Right — calculator */}
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.1 }}
+            >
             <div className="mb-8">
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-[14px] text-sand/60">Local sponsors</span>
-                <span className="font-[family-name:var(--font-display)] text-[28px] text-sand">{sponsors}</span>
+                <span className="text-[14px] text-dark-green/60">Local sponsors</span>
+                <span className="font-[family-name:var(--font-hero)] text-[28px] text-dark-green">{sponsors}</span>
               </div>
               <input
                 type="range" min={0} max={15} value={sponsors}
                 onChange={(e) => setSponsors(Number(e.target.value))}
-                className="w-full accent-[#1a6b42]"
+                className="revenue-slider w-full"
+                style={{ "--fill": `${(sponsors / 15) * 100}%` } as React.CSSProperties}
               />
-              <div className="mt-1 flex justify-between text-[11px] text-sand/30">
+              <div className="mt-1 flex justify-between text-[11px] text-dark-green/25">
                 <span>0</span><span>15</span>
               </div>
             </div>
-            <div className="space-y-4 border-t border-sand/[0.06] pt-6">
+            <div className="space-y-4 border-t border-dark-green/[0.04] pt-6">
               <div className="flex justify-between">
-                <span className="text-[14px] text-sand/60">Subscription</span>
-                <span className="text-[16px] font-semibold text-sand">${subscription}/mo</span>
+                <span className="text-[14px] text-dark-green/60">Subscription</span>
+                <span className="text-[16px] font-semibold text-dark-green">${subscription}/mo</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[14px] text-sand/60">Sponsor revenue</span>
-                <span className="text-[16px] font-semibold text-[#4a8c65]">-${revenue}/mo</span>
+                <span className="text-[14px] text-dark-green/60">Sponsor revenue ({sponsors} x ${ratePerSponsor})</span>
+                <span className="text-[16px] font-semibold text-[#1a6b42]">-${revenue}/mo</span>
               </div>
-              <div className="border-t border-sand/[0.06] pt-4">
+              <div className="border-t border-dark-green/[0.04] pt-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-[15px] font-semibold text-sand">Net cost</span>
+                  <span className="text-[15px] font-semibold text-dark-green">Net cost to mosque</span>
                   <span
-                    className="font-[family-name:var(--font-display)] text-[32px] leading-none"
-                    style={{ color: net <= 0 ? "#4a8c65" : "#fffbf2" }}
+                    className="font-[family-name:var(--font-hero)] text-[32px] leading-none"
+                    style={{ color: net <= 0 ? "#1a6b42" : "#0A261E" }}
                   >
                     {net <= 0 ? `+$${Math.abs(net)}` : `$${net}`}
-                    <span className="text-[14px] font-normal text-sand/40">/mo</span>
+                    <span className="text-[14px] font-normal text-dark-green/40">/mo</span>
                   </span>
                 </div>
                 {net <= 0 && (
-                  <p className="mt-2 text-right text-[13px] font-medium text-[#4a8c65]">
+                  <p className="mt-2 text-right text-[13px] font-medium text-[#1a6b42]">
                     {net === 0 ? "Your app is free!" : "Your app generates surplus for the masjid."}
                   </p>
                 )}
               </div>
             </div>
           </motion.div>
+          </div>
         </div>
       </section>
 

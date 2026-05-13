@@ -35,10 +35,10 @@ export default function WhySahlaContent() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-dark-green pt-36 pb-20">
+      <section className="bg-[#fffbf2] pt-36 pb-20">
         <div className="mx-auto max-w-[800px] px-8 text-center">
           <motion.p
-            className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#d9c4a0]"
+            className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -46,7 +46,7 @@ export default function WhySahlaContent() {
             Why Sahla
           </motion.p>
           <motion.h1
-            className="mb-6 font-[family-name:var(--font-display)] text-[clamp(40px,5vw,64px)] leading-[1.06] text-sand"
+            className="mb-6 font-[family-name:var(--font-hero)] text-[clamp(40px,5vw,64px)] leading-[1.06] text-dark-green"
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -54,7 +54,7 @@ export default function WhySahlaContent() {
             Your mosque, in your community&apos;s pocket.
           </motion.h1>
           <motion.p
-            className="mx-auto max-w-[580px] text-[16px] leading-[1.7] text-sand/50"
+            className="mx-auto max-w-[580px] text-[16px] leading-[1.7] text-dark-green/50"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
@@ -64,11 +64,13 @@ export default function WhySahlaContent() {
         </div>
       </section>
 
+      <hr className="mx-auto max-w-[1200px] border-dark-green/[0.06]" />
+
       {/* Comparison table */}
       <section className="bg-[#fffbf2] py-[80px]">
         <div className="mx-auto max-w-[1000px] px-8">
           <motion.h2
-            className="mb-12 text-center font-[family-name:var(--font-display)] text-[clamp(28px,3.5vw,42px)] text-dark-green"
+            className="mb-12 text-center font-[family-name:var(--font-hero)] text-[clamp(28px,3.5vw,42px)] text-dark-green"
             initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -77,22 +79,22 @@ export default function WhySahlaContent() {
           </motion.h2>
 
           {/* Table header */}
-          <div className="mb-4 hidden grid-cols-[1.2fr_1fr_1fr] gap-4 lg:grid">
-            <div />
-            <div className="rounded-t-[12px] bg-dark-green/[0.03] px-5 py-3 text-center text-[12px] font-semibold tracking-[0.15em] uppercase text-dark-green/40">
+          <div className="mb-2 hidden grid-cols-[1.2fr_1fr_1fr] gap-4 border-b border-dark-green/[0.08] pb-3 lg:grid">
+            <div className="text-[12px] font-semibold uppercase tracking-[0.15em] text-dark-green/30" />
+            <div className="text-center text-[12px] font-semibold tracking-[0.15em] uppercase text-dark-green/30">
               Shared Apps
             </div>
-            <div className="rounded-t-[12px] bg-[#1a6b42]/[0.06] px-5 py-3 text-center text-[12px] font-semibold tracking-[0.15em] uppercase text-[#1a6b42]">
+            <div className="text-center text-[12px] font-semibold tracking-[0.15em] uppercase text-[#1a6b42]">
               Sahla
             </div>
           </div>
 
           {/* Table rows */}
-          <div className="space-y-3">
+          <div className="divide-y divide-dark-green/[0.04]">
             {comparison.map((row, i) => (
               <motion.div
                 key={i}
-                className="grid gap-4 rounded-[16px] border border-dark-green/[0.06] bg-white p-5 lg:grid-cols-[1.2fr_1fr_1fr] lg:items-center"
+                className="grid gap-4 py-6 lg:grid-cols-[1.2fr_1fr_1fr] lg:items-center"
                 initial={{ opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -102,7 +104,7 @@ export default function WhySahlaContent() {
 
                 <div className="flex items-start gap-2.5">
                   <X size={16} className="mt-0.5 shrink-0 text-red-400/70" />
-                  <span className="text-[14px] leading-[1.6] text-dark-green/50">{row.shared}</span>
+                  <span className="text-[14px] leading-[1.6] text-dark-green/40">{row.shared}</span>
                 </div>
 
                 <div className="flex items-start gap-2.5">
@@ -115,11 +117,13 @@ export default function WhySahlaContent() {
         </div>
       </section>
 
+      <hr className="mx-auto max-w-[1200px] border-dark-green/[0.06]" />
+
       {/* Identity section */}
-      <section className="bg-dark-green py-[80px]">
+      <section className="bg-[#fffbf2] py-[80px]">
         <div className="mx-auto max-w-[720px] px-8 text-center">
           <motion.h2
-            className="mb-5 font-[family-name:var(--font-display)] text-[clamp(28px,3.5vw,42px)] text-sand"
+            className="mb-5 font-[family-name:var(--font-hero)] text-[clamp(28px,3.5vw,42px)] text-dark-green"
             initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -127,7 +131,7 @@ export default function WhySahlaContent() {
             Your app. Your brand. Your community.
           </motion.h2>
           <motion.p
-            className="mx-auto mb-10 max-w-[540px] text-[15px] leading-[1.7] text-sand/45"
+            className="mx-auto mb-10 max-w-[540px] text-[15px] leading-[1.7] text-dark-green/50"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}

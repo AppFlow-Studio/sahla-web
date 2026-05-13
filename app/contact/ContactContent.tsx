@@ -46,7 +46,7 @@ const reasons = [
 export default function ContactContent() {
   return (
     <>
-      <section className="bg-dark-green pt-36 pb-20">
+      <section className="bg-[#fffbf2] pt-36 pb-20">
         <div className="mx-auto max-w-[1200px] px-8">
           <div className="grid items-start gap-16 lg:grid-cols-2">
             {/* Left */}
@@ -55,26 +55,26 @@ export default function ContactContent() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             >
-              <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#d9c4a0]">Contact</p>
-              <h1 className="mb-6 font-[family-name:var(--font-display)] text-[clamp(36px,4.5vw,56px)] leading-[1.06] text-sand">
+              <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40">Contact</p>
+              <h1 className="mb-6 font-[family-name:var(--font-hero)] text-[clamp(36px,4.5vw,56px)] leading-[1.06] text-dark-green">
                 Let&apos;s talk.
               </h1>
-              <p className="mb-10 max-w-[480px] text-[16px] leading-[1.7] text-sand/50">
+              <p className="mb-10 max-w-[480px] text-[16px] leading-[1.7] text-dark-green/50">
                 Whether you&apos;re a mosque admin exploring options, a board member with questions, or an imam curious about Sahla — we&apos;d love to hear from you.
               </p>
 
               <div className="space-y-5">
                 {contactInfo.map((item) => (
                   <div key={item.label} className="flex items-center gap-4">
-                    <div className="flex h-[42px] w-[42px] items-center justify-center rounded-xl bg-[#1a6b42]/20">
-                      <item.Icon size={18} strokeWidth={1.7} className="text-[#4a8c65]" />
+                    <div className="flex h-[42px] w-[42px] items-center justify-center rounded-xl bg-[#1a6b42]/10">
+                      <item.Icon size={18} strokeWidth={1.7} className="text-[#1a6b42]" />
                     </div>
                     <div>
-                      <p className="text-[12px] font-medium text-sand/40">{item.label}</p>
+                      <p className="text-[12px] font-medium text-dark-green/40">{item.label}</p>
                       {item.href ? (
-                        <a href={item.href} className="text-[15px] text-sand/75 transition-colors hover:text-sand">{item.value}</a>
+                        <a href={item.href} className="text-[15px] text-dark-green/75 transition-colors hover:text-dark-green">{item.value}</a>
                       ) : (
-                        <p className="text-[15px] text-sand/75">{item.value}</p>
+                        <p className="text-[15px] text-dark-green/75">{item.value}</p>
                       )}
                     </div>
                   </div>
@@ -84,26 +84,25 @@ export default function ContactContent() {
 
             {/* Right — form */}
             <motion.div
-              className="overflow-hidden rounded-[24px] border border-sand/[0.08] p-8"
-              style={{ background: "linear-gradient(180deg, rgba(255,251,242,0.03), rgba(255,251,242,0.01))" }}
+              className="overflow-hidden rounded-[24px] border border-dark-green/[0.08] bg-white p-8"
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1 }}
             >
               <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
                 <div>
-                  <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-sand/50">Name</label>
-                  <input type="text" required className="w-full rounded-xl border border-sand/10 bg-sand/[0.04] px-4 py-3 text-[14px] text-sand placeholder:text-sand/25 focus:border-sand/20 focus:outline-none" placeholder="Your name" />
+                  <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-dark-green/50">Name</label>
+                  <input type="text" required className="w-full rounded-xl border border-dark-green/10 bg-dark-green/[0.03] px-4 py-3 text-[14px] text-dark-green placeholder:text-dark-green/25 focus:border-dark-green/20 focus:outline-none" placeholder="Your name" />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-sand/50">Email</label>
-                  <input type="email" required className="w-full rounded-xl border border-sand/10 bg-sand/[0.04] px-4 py-3 text-[14px] text-sand placeholder:text-sand/25 focus:border-sand/20 focus:outline-none" placeholder="you@email.com" />
+                  <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-dark-green/50">Email</label>
+                  <input type="email" required className="w-full rounded-xl border border-dark-green/10 bg-dark-green/[0.03] px-4 py-3 text-[14px] text-dark-green placeholder:text-dark-green/25 focus:border-dark-green/20 focus:outline-none" placeholder="you@email.com" />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-sand/50">Message</label>
-                  <textarea rows={5} required className="w-full resize-none rounded-xl border border-sand/10 bg-sand/[0.04] px-4 py-3 text-[14px] text-sand placeholder:text-sand/25 focus:border-sand/20 focus:outline-none" placeholder="Tell us about your mosque and how we can help..." />
+                  <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-dark-green/50">Message</label>
+                  <textarea rows={5} required className="w-full resize-none rounded-xl border border-dark-green/10 bg-dark-green/[0.03] px-4 py-3 text-[14px] text-dark-green placeholder:text-dark-green/25 focus:border-dark-green/20 focus:outline-none" placeholder="Tell us about your mosque and how we can help..." />
                 </div>
-                <button type="submit" className="w-full rounded-full bg-sand py-3.5 text-[13px] font-semibold text-dark-green transition-all duration-300 hover:bg-sand/90">
+                <button type="submit" className="w-full rounded-full bg-dark-green py-3.5 text-[13px] font-semibold text-sand transition-all duration-300 hover:bg-dark-green/90">
                   Send Message
                 </button>
               </form>
@@ -129,7 +128,7 @@ export default function ContactContent() {
                 transition={{ delay: i * 0.06 }}
               >
                 <stat.Icon size={20} className="mb-2 text-[#d9c4a0]/60" />
-                <span className="font-[family-name:var(--font-display)] text-[32px] leading-none text-[#d9c4a0]">
+                <span className="font-[family-name:var(--font-hero)] text-[32px] leading-none text-[#d9c4a0]">
                   {stat.value}
                 </span>
                 <p className="mt-2 max-w-[140px] text-[11px] font-medium uppercase tracking-[0.2em] text-sand/40">
@@ -157,7 +156,7 @@ export default function ContactContent() {
                 </svg>
               ))}
             </div>
-            <blockquote className="font-[family-name:var(--font-display)] text-[clamp(20px,2.4vw,26px)] leading-[1.45] text-dark-green">
+            <blockquote className="font-[family-name:var(--font-hero)] text-[clamp(20px,2.4vw,26px)] leading-[1.45] text-dark-green">
               &ldquo;Sahla gave our mosque its own identity in the App Store. Our community finally has one place for prayer times, events, and donations. It&apos;s changed how we connect with our families.&rdquo;
             </blockquote>
             <p className="mt-6 text-[13px] font-semibold uppercase tracking-[0.18em] text-dark-green/55">
@@ -186,7 +185,7 @@ export default function ContactContent() {
             <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#d9c4a0]">
               What people write us about
             </p>
-            <h2 className="font-[family-name:var(--font-display)] text-[clamp(28px,3.5vw,42px)] text-sand">
+            <h2 className="font-[family-name:var(--font-hero)] text-[clamp(28px,3.5vw,42px)] text-sand">
               You don&apos;t need to have it figured out.
             </h2>
             <p className="mx-auto mt-4 max-w-[560px] text-[15px] leading-[1.7] text-sand/50">

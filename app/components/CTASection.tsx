@@ -28,16 +28,10 @@ export default function CTASection() {
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="mb-5 flex items-center justify-center gap-3.5">
-          <div className="h-[1px] w-12" style={{ background: "linear-gradient(90deg, transparent, rgba(217,196,160,0.5))" }} />
-          <div className="h-1.5 w-1.5 rotate-45 bg-gold" />
-          <div className="h-[1px] w-12" style={{ background: "linear-gradient(90deg, rgba(217,196,160,0.5), transparent)" }} />
-        </div>
-
-        <h2 className="mt-6 font-[family-name:var(--font-display)] text-[clamp(28px,6vw,68px)] leading-[1.08] text-sand">
+        <h2 className="mt-6 font-[family-name:var(--font-hero)] text-[clamp(28px,6vw,68px)] leading-[1.08] text-sand">
           Your community is waiting for{" "}
           <em
-            className="font-[family-name:var(--font-display)] not-italic"
+            className="font-[family-name:var(--font-hero)] not-italic"
             style={{ color: "#d4af37" }}
           >their app.</em>
         </h2>
@@ -51,7 +45,7 @@ export default function CTASection() {
             href="/waitlist"
             className="group relative overflow-hidden rounded-full bg-sand px-[30px] py-[15px] text-[13px] font-semibold tracking-[0.02em] text-dark-green shadow-[0_20px_40px_-16px_rgba(255,251,242,0.18)] transition-all duration-300 hover:-translate-y-px hover:shadow-[0_24px_50px_-16px_rgba(255,251,242,0.28)]"
           >
-            <span className="relative z-10">Join the Waitlist</span>
+            <span className="relative z-10">Reserve Now</span>
             <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
           </Link>
           <Link

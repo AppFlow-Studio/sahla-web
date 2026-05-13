@@ -34,7 +34,7 @@ export default function Navbar() {
   // chrome washes out. While the navbar is still transparent (i.e. before
   // the dark-green scrolled state kicks in) we flip menu/logo/admin colors
   // to dark-green so they're visible against the page itself.
-  const isLightHero = (pathname === "/about" || pathname === "/global") && !scrolled;
+  const isLightHero = true;
 
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 50);
@@ -57,18 +57,16 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Thin gold accent line at very top */}
-      <div className="fixed top-0 right-0 left-0 z-[60] h-[2px]" style={{ background: "linear-gradient(90deg, transparent 0%, #B8922A 30%, #d4af37 50%, #B8922A 70%, transparent 100%)" }} />
 
       <motion.nav
-        className="fixed top-[2px] right-0 left-0 z-50 transition-all duration-700"
+        className="fixed top-0 right-0 left-0 z-50 transition-all duration-700"
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
         style={{
-          backgroundColor: scrolled ? "rgba(10, 38, 30, 0.92)" : "transparent",
+          backgroundColor: scrolled ? "rgba(255, 251, 242, 0.92)" : "transparent",
           backdropFilter: scrolled ? "blur(20px) saturate(1.4)" : "none",
-          borderBottom: scrolled ? "1px solid rgba(255,251,242,0.06)" : "1px solid transparent",
+          borderBottom: scrolled ? "1px solid rgba(10,38,30,0.06)" : "1px solid transparent",
         }}
       >
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-4">
@@ -110,8 +108,8 @@ export default function Navbar() {
                 <ArrowRight size={14} />
               </Link>
             )}
-            <Link href="/waitlist" className="group relative overflow-hidden rounded-full bg-white px-6 py-2.5 text-[13px] font-semibold text-dark-green transition-all duration-300 hover:shadow-lg hover:shadow-white/15">
-              <span className="relative z-10">Join the Waitlist</span>
+            <Link href="/waitlist" className="group relative overflow-hidden rounded-full bg-dark-green px-6 py-2.5 text-[13px] font-semibold text-sand transition-all duration-300 hover:shadow-lg hover:shadow-dark-green/15">
+              <span className="relative z-10">Reserve Now</span>
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-accent/10 to-transparent transition-transform duration-500 group-hover:translate-x-full" />
             </Link>
           </div>
@@ -183,7 +181,7 @@ export default function Navbar() {
                   onClick={() => setSidebarOpen(false)}
                   className="flex w-full items-center justify-center rounded-full bg-sand px-6 py-3 text-[13px] font-semibold text-dark-green transition-all duration-300 hover:bg-white"
                 >
-                  Join the Waitlist
+                  Reserve Now
                 </Link>
 
                 {isSahlaAdmin && (

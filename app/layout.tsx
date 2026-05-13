@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist, Fraunces, Newsreader, Mrs_Saint_Delafield } from "next/font/google";
+import { Inter, Geist, Fraunces, Newsreader, Mrs_Saint_Delafield, Bodoni_Moda } from "next/font/google";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import Providers from "./providers";
@@ -43,6 +43,13 @@ const signatureFont = Mrs_Saint_Delafield({
   display: "swap",
 });
 
+const bodoniModa = Bodoni_Moda({
+  subsets: ["latin"],
+  variable: "--font-hero",
+  display: "swap",
+});
+
+const SITE_URL = "https://sahla.app";
 const SITE_URL = "https://sahla.co";
 const SITE_TITLE = "Sahla — Your Mosque Deserves Its Own App";
 const SITE_DESCRIPTION =
@@ -171,6 +178,7 @@ export default function RootLayout({
           fraunces.variable,
           newsreader.variable,
           signatureFont.variable,
+          bodoniModa.variable,
           "font-sans",
           geist.variable
         )}
