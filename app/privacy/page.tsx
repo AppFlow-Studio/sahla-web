@@ -55,8 +55,8 @@ export default function PrivacyPage() {
             </div>
 
             <div>
-              <h2 className="mb-3 font-[family-name:var(--font-hero)] text-[22px] text-dark-green">7. GDPR & CCPA Compliance</h2>
-              <p>We comply with GDPR, CCPA, and other applicable privacy regulations. You have the right to access, correct, or delete your personal data. To exercise these rights, contact us at privacy@sahla.app.</p>
+              <h2 className="mb-3 font-[family-name:var(--font-display)] text-[22px] text-dark-green">7. GDPR & CCPA Compliance</h2>
+              <p>We comply with GDPR, CCPA, and other applicable privacy regulations. You have the right to access, correct, or delete your personal data. To exercise these rights, contact us at privacy@sahla.co.</p>
             </div>
 
             <div>
@@ -65,8 +65,8 @@ export default function PrivacyPage() {
             </div>
 
             <div>
-              <h2 className="mb-3 font-[family-name:var(--font-hero)] text-[22px] text-dark-green">9. Contact Us</h2>
-              <p>If you have questions about this privacy policy or our data practices, contact us at <a href="mailto:privacy@sahla.app" className="text-[#1a6b42] underline underline-offset-4">privacy@sahla.app</a>.</p>
+              <h2 className="mb-3 font-[family-name:var(--font-display)] text-[22px] text-dark-green">9. Contact Us</h2>
+              <p>If you have questions about this privacy policy or our data practices, contact us at <a href="mailto:privacy@sahla.co" className="text-[#1a6b42] underline underline-offset-4">privacy@sahla.co</a>.</p>
             </div>
           </div>
         </div>

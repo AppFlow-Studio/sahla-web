@@ -33,7 +33,7 @@ const cards = [
     icon: Globe,
     stat: "USA-based",
     title: "International clients",
-    desc: "American company with global reach. Enterprise-grade infrastructure trusted by masjids worldwide.",
+    desc: "New York company with global reach. Enterprise-grade infrastructure trusted by masjids worldwide.",
     accent: "#9a7b2e",
   },
   {
@@ -107,7 +107,7 @@ export default function ThreeProblems() {
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             >
-              Built in America, serving mosques worldwide. From New York to Dubai, London to Tokyo &mdash; we power communities across every continent.
+              Built in NYC, serving mosques worldwide. From New York to Dubai, London to Tokyo &mdash; we power communities across every continent.
             </motion.p>
 
             {/* Stats strip */}

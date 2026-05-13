@@ -40,4 +40,4 @@ CREATE INDEX IF NOT EXISTS idx_donations_stripe_pi
 UPDATE donations
 SET status = 'succeeded'
 WHERE status = 'pending'
-  AND stripe_payment_intent_id IS NULL;
+  AND stripe_payment_intent_id IS NULL;;

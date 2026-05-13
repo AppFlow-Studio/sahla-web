@@ -50,6 +50,7 @@ const bodoniModa = Bodoni_Moda({
 });
 
 const SITE_URL = "https://sahla.app";
+const SITE_URL = "https://sahla.co";
 const SITE_TITLE = "Sahla — Your Mosque Deserves Its Own App";
 const SITE_DESCRIPTION =
   "Sahla builds fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community. White-label mosque app builder with donations, prayer times, and sponsor revenue.";
@@ -101,9 +102,9 @@ export const metadata: Metadata = {
     locale: "en_US",
     images: [
       {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
+        url: "/sahlamedia.png",
+        width: 2961,
+        height: 2111,
         alt: "Sahla — Fully branded iOS and Android apps for mosques.",
         type: "image/png",
       },
@@ -115,7 +116,7 @@ export const metadata: Metadata = {
     description: SOCIAL_DESCRIPTION,
     images: [
       {
-        url: "/opengraph-image",
+        url: "/sahlamedia.png",
         alt: "Sahla — Fully branded iOS and Android apps for mosques.",
       },
     ],

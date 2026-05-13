@@ -7,4 +7,4 @@
 ALTER TABLE public.donations
   ADD COLUMN project_id UUID REFERENCES public.projects(project_id) ON DELETE SET NULL;
 
-CREATE INDEX idx_donations_project ON public.donations(project_id) WHERE project_id IS NOT NULL;
+CREATE INDEX idx_donations_project ON public.donations(project_id) WHERE project_id IS NOT NULL;;

@@ -36,7 +36,6 @@ CREATE TABLE mosques (
   updated_at timestamptz NOT NULL DEFAULT now(),
   clerk_org_id text
 );
-
 CREATE TABLE profiles (
   id text NOT NULL,
   first_name text,
@@ -47,14 +46,12 @@ CREATE TABLE profiles (
   stripe_id text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE islamic_goals (
   id bigint GENERATED ALWAYS AS IDENTITY,
   goal_key text NOT NULL,
   goal_name text NOT NULL,
   display_order integer
 );
-
 CREATE TABLE islamic_interest_categories (
   id bigint GENERATED ALWAYS AS IDENTITY,
   category_key text NOT NULL,
@@ -63,7 +60,6 @@ CREATE TABLE islamic_interest_categories (
   display_order integer,
   parent_category_id bigint
 );
-
 CREATE TABLE onboarding_checklist_items (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   category text NOT NULL,
@@ -80,17 +76,15 @@ CREATE TABLE onboarding_checklist_items (
   auto_complete_condition text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE sahla_config (
   id text NOT NULL DEFAULT 'singleton',
   org_id text NOT NULL,
   org_name text DEFAULT 'Sahla HQ',
-  support_email text DEFAULT 'support@sahla.app',
+  support_email text DEFAULT 'support@sahla.co',
   platform_fee_pct numeric DEFAULT 0,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE sahla_team (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id text NOT NULL,
@@ -104,7 +98,6 @@ CREATE TABLE sahla_team (
   org_id text,
   clerk_org_role text DEFAULT 'org:admin'
 );
-
 CREATE TABLE expenses (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -113,7 +106,6 @@ CREATE TABLE expenses (
   category text DEFAULT 'Platform',
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 -- ============================================================
 -- 2. Tables that reference mosques/profiles
 -- ============================================================
@@ -130,7 +122,6 @@ CREATE TABLE activity_log (
   metadata jsonb DEFAULT '{}',
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE ad_pricing_config (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -145,7 +136,6 @@ CREATE TABLE ad_pricing_config (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE speaker_data (
   speaker_id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -154,7 +144,6 @@ CREATE TABLE speaker_data (
   speaker_creds text[],
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE display_categories (
   id bigint GENERATED ALWAYS AS IDENTITY,
   mosque_id text NOT NULL,
@@ -165,7 +154,6 @@ CREATE TABLE display_categories (
   is_active boolean DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE content_items (
   id bigint GENERATED ALWAYS AS IDENTITY,
   content_id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -192,7 +180,6 @@ CREATE TABLE content_items (
   max_capacity integer,
   current_count integer DEFAULT 0
 );
-
 CREATE TABLE business_ads_submissions (
   id bigint GENERATED ALWAYS AS IDENTITY,
   submission_id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -209,7 +196,6 @@ CREATE TABLE business_ads_submissions (
   status text DEFAULT 'submitted',
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE pipeline_stages (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -220,14 +206,12 @@ CREATE TABLE pipeline_stages (
   notes jsonb DEFAULT '[]',
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE prayers (
   id bigint GENERATED ALWAYS AS IDENTITY,
   mosque_id text NOT NULL,
   "prayerData" jsonb,
   "iqamahData" jsonb
 );
-
 CREATE TABLE todays_prayers (
   id bigint GENERATED ALWAYS AS IDENTITY,
   mosque_id text NOT NULL,
@@ -235,7 +219,6 @@ CREATE TABLE todays_prayers (
   athan_time time DEFAULT '08:00:00',
   iqamah_time time
 );
-
 CREATE TABLE iqamah_config (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -247,7 +230,6 @@ CREATE TABLE iqamah_config (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE prayer_display_config (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -262,7 +244,6 @@ CREATE TABLE prayer_display_config (
   display_language text DEFAULT 'en',
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE jummah (
   id bigint GENERATED ALWAYS AS IDENTITY,
   mosque_id text NOT NULL,
@@ -272,7 +253,6 @@ CREATE TABLE jummah (
   capacity_status text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE jummah_notifications (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text,
@@ -281,7 +261,6 @@ CREATE TABLE jummah_notifications (
   notification_settings text[],
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE donations (
   id bigint GENERATED ALWAYS AS IDENTITY,
   mosque_id text NOT NULL,
@@ -289,7 +268,6 @@ CREATE TABLE donations (
   project_donated_to text[],
   date timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE projects (
   project_id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -299,7 +277,6 @@ CREATE TABLE projects (
   project_linked_to uuid,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE mosque_notification_config (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -309,7 +286,6 @@ CREATE TABLE mosque_notification_config (
   default_reminder_min integer DEFAULT 30,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE mosque_onboarding_steps (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -321,7 +297,6 @@ CREATE TABLE mosque_onboarding_steps (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE mosque_health_scores (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -334,7 +309,6 @@ CREATE TABLE mosque_health_scores (
   payment_health integer NOT NULL,
   computed_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE mosque_notes (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -343,7 +317,6 @@ CREATE TABLE mosque_notes (
   content text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE nudge_dismissals (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text,
@@ -352,7 +325,6 @@ CREATE TABLE nudge_dismissals (
   dismissed_by text NOT NULL,
   dismissed_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE push_tokens (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id text NOT NULL,
@@ -362,13 +334,11 @@ CREATE TABLE push_tokens (
   is_active boolean DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE capacity_alert_subscribers (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
   mosque_id text NOT NULL
 );
-
 CREATE TABLE lectures (
   id bigint GENERATED ALWAYS AS IDENTITY,
   lecture_id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -384,7 +354,6 @@ CREATE TABLE lectures (
   created_at timestamptz NOT NULL DEFAULT now(),
   status text DEFAULT 'draft'
 );
-
 CREATE TABLE content_tags (
   id bigint GENERATED ALWAYS AS IDENTITY,
   mosque_id text,
@@ -394,7 +363,6 @@ CREATE TABLE content_tags (
   display_category_id bigint,
   maps_to_interest_id integer
 );
-
 CREATE TABLE quran_playlist (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -404,7 +372,6 @@ CREATE TABLE quran_playlist (
   video_type text DEFAULT 'Quran',
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE ramadan_quran_tracker (
   id bigint GENERATED ALWAYS AS IDENTITY,
   mosque_id text NOT NULL,
@@ -414,7 +381,6 @@ CREATE TABLE ramadan_quran_tracker (
   num_of_ayahs numeric,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE taraweeh_lineup (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   mosque_id text NOT NULL,
@@ -423,7 +389,6 @@ CREATE TABLE taraweeh_lineup (
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
-
 -- ============================================================
 -- 3. Tables that reference content_items, lectures, etc.
 -- ============================================================
@@ -445,14 +410,12 @@ CREATE TABLE ad_subscriptions (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE approved_business_ads (
   id bigint GENERATED ALWAYS AS IDENTITY,
   submission_id uuid,
   mosque_id text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE content_forms (
   id bigint GENERATED ALWAYS AS IDENTITY,
   content_id uuid NOT NULL,
@@ -462,19 +425,16 @@ CREATE TABLE content_forms (
   radio_button_prompts text[],
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE content_islamic_goals (
   content_id uuid NOT NULL,
   goal_id bigint NOT NULL,
   created_at timestamptz DEFAULT now()
 );
-
 CREATE TABLE content_islamic_interests (
   content_id uuid NOT NULL,
   interest_id bigint NOT NULL,
   created_at timestamptz DEFAULT now()
 );
-
 CREATE TABLE content_notification_schedule (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -486,7 +446,6 @@ CREATE TABLE content_notification_schedule (
   push_notification_token text,
   is_sent boolean DEFAULT false
 );
-
 CREATE TABLE content_notification_settings (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -494,7 +453,6 @@ CREATE TABLE content_notification_settings (
   mosque_id text NOT NULL,
   notification_settings text[]
 );
-
 CREATE TABLE content_notifications (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -502,7 +460,6 @@ CREATE TABLE content_notifications (
   mosque_id text NOT NULL,
   created_at timestamptz DEFAULT now()
 );
-
 CREATE TABLE content_tag_assignments (
   id bigint GENERATED ALWAYS AS IDENTITY,
   content_id uuid NOT NULL,
@@ -510,7 +467,6 @@ CREATE TABLE content_tag_assignments (
   relevance_weight double precision,
   created_at timestamptz DEFAULT now()
 );
-
 CREATE TABLE liked_lectures (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id text NOT NULL,
@@ -518,14 +474,12 @@ CREATE TABLE liked_lectures (
   mosque_id text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE saved_content (
   user_id text NOT NULL,
   content_id uuid NOT NULL,
   mosque_id text NOT NULL,
   created_at timestamptz DEFAULT now()
 );
-
 CREATE TABLE user_cart (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -535,7 +489,6 @@ CREATE TABLE user_cart (
   product_quantity bigint DEFAULT 1,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE user_content_interactions (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -544,7 +497,6 @@ CREATE TABLE user_content_interactions (
   interaction_type text,
   created_at timestamptz DEFAULT now()
 );
-
 CREATE TABLE recommendation_log (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -557,7 +509,6 @@ CREATE TABLE recommendation_log (
   was_added boolean,
   created_at timestamptz DEFAULT now()
 );
-
 CREATE TABLE prayer_notification_schedule (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -567,7 +518,6 @@ CREATE TABLE prayer_notification_schedule (
   push_notification_token text,
   is_sent boolean DEFAULT false
 );
-
 CREATE TABLE prayer_notification_settings (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -575,7 +525,6 @@ CREATE TABLE prayer_notification_settings (
   prayer text,
   notification_settings text[]
 );
-
 CREATE TABLE user_bookmarked_ayahs (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -584,7 +533,6 @@ CREATE TABLE user_bookmarked_ayahs (
   ayah_number bigint NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE user_bookmarked_surahs (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -592,7 +540,6 @@ CREATE TABLE user_bookmarked_surahs (
   surah_number bigint NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE user_continue_read (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -602,7 +549,6 @@ CREATE TABLE user_continue_read (
   juz_number integer,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE user_islamic_goals (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -610,7 +556,6 @@ CREATE TABLE user_islamic_goals (
   mosque_id text NOT NULL,
   priority integer
 );
-
 CREATE TABLE user_islamic_interests (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -618,7 +563,6 @@ CREATE TABLE user_islamic_interests (
   mosque_id text NOT NULL,
   interest_level integer
 );
-
 CREATE TABLE user_liked_ayahs (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -627,7 +571,6 @@ CREATE TABLE user_liked_ayahs (
   ayah_number bigint NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE user_liked_surahs (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -635,7 +578,6 @@ CREATE TABLE user_liked_surahs (
   surah_number bigint NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE user_playlist (
   playlist_id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id text NOT NULL,
@@ -644,7 +586,6 @@ CREATE TABLE user_playlist (
   playlist_img text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE user_playlist_lectures (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -653,7 +594,6 @@ CREATE TABLE user_playlist_lectures (
   mosque_id text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-
 CREATE TABLE user_preferences (
   id bigint GENERATED ALWAYS AS IDENTITY,
   user_id text NOT NULL,
@@ -667,7 +607,6 @@ CREATE TABLE user_preferences (
   preferred_days text[],
   preferred_times text[]
 );
-
 -- ============================================================
 -- PRIMARY KEYS
 -- ============================================================
@@ -733,7 +672,6 @@ ALTER TABLE user_liked_surahs ADD PRIMARY KEY (id);
 ALTER TABLE user_playlist ADD PRIMARY KEY (playlist_id);
 ALTER TABLE user_playlist_lectures ADD PRIMARY KEY (id);
 ALTER TABLE user_preferences ADD PRIMARY KEY (id);
-
 -- ============================================================
 -- UNIQUE CONSTRAINTS
 -- ============================================================
@@ -771,7 +709,6 @@ ALTER TABLE user_liked_ayahs ADD CONSTRAINT user_liked_ayahs_user_id_mosque_id_s
 ALTER TABLE user_liked_surahs ADD CONSTRAINT user_liked_surahs_user_id_mosque_id_surah_number_key UNIQUE (user_id, mosque_id, surah_number);
 ALTER TABLE user_playlist_lectures ADD CONSTRAINT user_playlist_lectures_playlist_id_lecture_id_key UNIQUE (playlist_id, lecture_id);
 ALTER TABLE user_preferences ADD CONSTRAINT user_preferences_user_id_mosque_id_key UNIQUE (user_id, mosque_id);
-
 -- ============================================================
 -- FOREIGN KEYS
 -- ============================================================

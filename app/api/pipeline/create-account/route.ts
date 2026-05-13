@@ -366,7 +366,7 @@ export async function POST(req: Request) {
         contactName: lead.contactName,
         contactEmail: lead.contactEmail,
         orgId: org.id,
-        portalUrl: "crm.sahla.app",
+        portalUrl: "crm.sahla.co",
         inviteStatus: "Invite sent via Clerk",
         updatedAt,
       },

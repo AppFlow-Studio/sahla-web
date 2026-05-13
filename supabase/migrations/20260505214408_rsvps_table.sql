@@ -64,10 +64,6 @@ BEGIN
 END;
 $$;
 
--- Trigger functions are SECURITY DEFINER for cross-table writes; revoke REST
--- exposure so they're only callable via the trigger context.
-REVOKE EXECUTE ON FUNCTION public.maintain_content_count() FROM PUBLIC, anon, authenticated;
-
 CREATE TRIGGER trg_rsvps_maintain_count
   AFTER INSERT OR UPDATE OR DELETE ON public.rsvps
   FOR EACH ROW EXECUTE FUNCTION public.maintain_content_count();
@@ -94,8 +90,6 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.promote_from_waitlist() FROM PUBLIC, anon, authenticated;
-
 CREATE TRIGGER trg_rsvps_promote_waitlist
   AFTER UPDATE OF status ON public.rsvps
-  FOR EACH ROW EXECUTE FUNCTION public.promote_from_waitlist();
+  FOR EACH ROW EXECUTE FUNCTION public.promote_from_waitlist();;
