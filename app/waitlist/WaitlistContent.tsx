@@ -79,12 +79,9 @@ export default function WaitlistContent() {
     }
   }
 
-  const inputClass =
-    "w-full rounded-xl border border-sand/10 bg-sand/[0.04] px-4 py-3 text-[14px] text-sand placeholder:text-sand/25 focus:border-sand/20 focus:outline-none";
-
   return (
     <>
-      <section id="top" className="bg-dark-green pt-36 pb-20">
+      <section id="top" className="bg-[#fffbf2] pt-36 pb-20">
         <div className="mx-auto max-w-[1200px] px-8">
           <div className="grid items-start gap-16 lg:grid-cols-2">
             {/* Left — info */}
@@ -93,11 +90,11 @@ export default function WaitlistContent() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             >
-              <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#d9c4a0]">Join the Waitlist</p>
-              <h1 className="mb-6 font-[family-name:var(--font-display)] text-[clamp(36px,4.5vw,56px)] leading-[1.06] text-sand">
+              <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40">Reserve Now</p>
+              <h1 className="mb-6 font-[family-name:var(--font-hero)] text-[clamp(36px,4.5vw,56px)] leading-[1.06] text-dark-green">
                 Reserve your mosque&apos;s spot.
               </h1>
-              <p className="mb-10 max-w-[480px] text-[16px] leading-[1.7] text-sand/70">
+              <p className="mb-10 max-w-[480px] text-[16px] leading-[1.7] text-dark-green/70">
                 We&apos;re onboarding new mosques in waves so each community gets the attention it deserves. Add your masjid to the list — we&apos;ll reach out as your wave opens.
               </p>
 
@@ -108,10 +105,10 @@ export default function WaitlistContent() {
                   { Icon: Rocket, text: "When your wave opens, we move fast" },
                 ].map((item) => (
                   <div key={item.text} className="flex items-center gap-3.5">
-                    <div className="flex h-[38px] w-[38px] items-center justify-center rounded-xl bg-[#1a6b42]/20">
-                      <item.Icon size={18} strokeWidth={1.7} className="text-[#4a8c65]" />
+                    <div className="flex h-[38px] w-[38px] items-center justify-center rounded-xl bg-[#1a6b42]/10">
+                      <item.Icon size={18} strokeWidth={1.7} className="text-[#1a6b42]" />
                     </div>
-                    <span className="text-[14px] text-sand/70">{item.text}</span>
+                    <span className="text-[14px] text-dark-green/70">{item.text}</span>
                   </div>
                 ))}
               </div>
@@ -119,8 +116,7 @@ export default function WaitlistContent() {
 
             {/* Right — form / success */}
             <motion.div
-              className="overflow-hidden rounded-[24px] border border-sand/[0.08] p-8"
-              style={{ background: "linear-gradient(180deg, rgba(255,251,242,0.03), rgba(255,251,242,0.01))" }}
+              className="overflow-hidden rounded-[24px] border border-dark-green/[0.08] bg-white p-8"
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
@@ -128,10 +124,10 @@ export default function WaitlistContent() {
               {status === "already" ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <CheckCircle size={48} strokeWidth={1.5} className="mb-4 text-[#d4af37]" />
-                  <h2 className="mb-2 font-[family-name:var(--font-display)] text-[24px] text-sand">
+                  <h2 className="mb-2 font-[family-name:var(--font-hero)] text-[24px] text-dark-green">
                     You&apos;re already on the list.
                   </h2>
-                  <p className="max-w-[340px] text-[14px] leading-[1.7] text-sand/50">
+                  <p className="max-w-[340px] text-[14px] leading-[1.7] text-dark-green/50">
                     {alreadyMosque
                       ? `${alreadyMosque} is already reserved for an upcoming onboarding wave. We'll reach out as soon as your spot opens.`
                       : "Your mosque is already reserved for an upcoming onboarding wave. We'll reach out as soon as your spot opens."}
@@ -140,53 +136,53 @@ export default function WaitlistContent() {
               ) : status === "success" ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <CheckCircle size={48} strokeWidth={1.5} className="mb-4 text-[#4a8c65]" />
-                  <h2 className="mb-2 font-[family-name:var(--font-display)] text-[24px] text-sand">
+                  <h2 className="mb-2 font-[family-name:var(--font-hero)] text-[24px] text-dark-green">
                     You&apos;re on the list.
                   </h2>
-                  <p className="max-w-[340px] text-[14px] leading-[1.7] text-sand/50">
+                  <p className="max-w-[340px] text-[14px] leading-[1.7] text-dark-green/50">
                     Your mosque is reserved for the next onboarding wave. We&apos;ll reach out as soon as your spot opens — usually within a few days.
                   </p>
                 </div>
               ) : (
                 <form className="space-y-5" onSubmit={handleSubmit}>
                   <div>
-                    <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-sand/50">Your Name</label>
+                    <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-dark-green/50">Your Name</label>
                     <input
                       type="text"
                       required
-                      className={inputClass}
+                      className="w-full rounded-xl border border-dark-green/10 bg-dark-green/[0.03] px-4 py-3 text-[14px] text-dark-green placeholder:text-dark-green/25 focus:border-dark-green/20 focus:outline-none"
                       placeholder="Imam Ahmad"
                       value={form.name}
                       onChange={(e) => update("name", e.target.value)}
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-sand/50">Email</label>
+                    <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-dark-green/50">Email</label>
                     <input
                       type="email"
                       required
-                      className={inputClass}
+                      className="w-full rounded-xl border border-dark-green/10 bg-dark-green/[0.03] px-4 py-3 text-[14px] text-dark-green placeholder:text-dark-green/25 focus:border-dark-green/20 focus:outline-none"
                       placeholder="imam@masjid.org"
                       value={form.email}
                       onChange={(e) => update("email", e.target.value)}
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-sand/50">Phone <span className="text-sand/30">(optional)</span></label>
+                    <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-dark-green/50">Phone <span className="text-dark-green/30">(optional)</span></label>
                     <input
                       type="tel"
-                      className={inputClass}
+                      className="w-full rounded-xl border border-dark-green/10 bg-dark-green/[0.03] px-4 py-3 text-[14px] text-dark-green placeholder:text-dark-green/25 focus:border-dark-green/20 focus:outline-none"
                       placeholder="+1 555 123 4567"
                       value={form.phone}
                       onChange={(e) => update("phone", e.target.value)}
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-sand/50">Mosque Name</label>
+                    <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-dark-green/50">Mosque Name</label>
                     <input
                       type="text"
                       required
-                      className={inputClass}
+                      className="w-full rounded-xl border border-dark-green/10 bg-dark-green/[0.03] px-4 py-3 text-[14px] text-dark-green placeholder:text-dark-green/25 focus:border-dark-green/20 focus:outline-none"
                       placeholder="Islamic Center of Your City"
                       value={form.mosqueName}
                       onChange={(e) => update("mosqueName", e.target.value)}
@@ -194,20 +190,20 @@ export default function WaitlistContent() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-sand/50">City</label>
+                      <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-dark-green/50">City</label>
                       <input
                         type="text"
-                        className={inputClass}
+                        className="w-full rounded-xl border border-dark-green/10 bg-dark-green/[0.03] px-4 py-3 text-[14px] text-dark-green placeholder:text-dark-green/25 focus:border-dark-green/20 focus:outline-none"
                         placeholder="London"
                         value={form.city}
                         onChange={(e) => update("city", e.target.value)}
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-sand/50">Country</label>
+                      <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-dark-green/50">Country</label>
                       <input
                         type="text"
-                        className={inputClass}
+                        className="w-full rounded-xl border border-dark-green/10 bg-dark-green/[0.03] px-4 py-3 text-[14px] text-dark-green placeholder:text-dark-green/25 focus:border-dark-green/20 focus:outline-none"
                         placeholder="United Kingdom"
                         value={form.country}
                         onChange={(e) => update("country", e.target.value)}
@@ -215,10 +211,10 @@ export default function WaitlistContent() {
                     </div>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-sand/50">Anything you&apos;d like us to know?</label>
+                    <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-dark-green/50">Anything you&apos;d like us to know?</label>
                     <textarea
                       rows={3}
-                      className={`${inputClass} resize-none`}
+                      className="w-full resize-none rounded-xl border border-dark-green/10 bg-dark-green/[0.03] px-4 py-3 text-[14px] text-dark-green placeholder:text-dark-green/25 focus:border-dark-green/20 focus:outline-none"
                       placeholder="Congregation size, current tools, questions..."
                       value={form.notes}
                       onChange={(e) => update("notes", e.target.value)}
@@ -232,18 +228,24 @@ export default function WaitlistContent() {
                   <button
                     type="submit"
                     disabled={status === "submitting"}
-                    className="w-full rounded-full bg-sand py-3.5 text-[13px] font-semibold text-dark-green transition-all duration-300 hover:bg-sand/90 disabled:opacity-60"
+                    className="w-full rounded-full bg-dark-green py-3.5 text-[13px] font-semibold text-sand transition-all duration-300 hover:bg-dark-green/90 disabled:opacity-60"
                   >
-                    {status === "submitting" ? "Joining..." : "Join the Waitlist"}
+                    {status === "submitting" ? "Joining..." : "Reserve Now"}
                   </button>
-                  <p className="text-center text-[12px] text-sand/30">No card required. We&apos;ll reach out as your wave opens.</p>
+                  <p className="text-center text-[12px] text-dark-green/30">No card required. We&apos;ll reach out as your wave opens.</p>
                 </form>
               )}
             </motion.div>
           </div>
         </div>
       </section>
+    </>
+  );
+}
 
+export function WaitlistExtras() {
+  return (
+    <>
       {/* What happens after you join the waitlist */}
       <section className="bg-[#fffbf2] py-[80px]">
         <div className="mx-auto max-w-[1100px] px-8">
@@ -256,7 +258,7 @@ export default function WaitlistContent() {
             <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/55">
               How the waitlist works
             </p>
-            <h2 className="font-[family-name:var(--font-display)] text-[clamp(28px,3.5vw,42px)] text-dark-green">
+            <h2 className="font-[family-name:var(--font-hero)] text-[clamp(28px,3.5vw,42px)] text-dark-green">
               Three steps, no surprises.
             </h2>
             <p className="mx-auto mt-4 max-w-[560px] text-[15px] leading-[1.7] text-dark-green/55">
@@ -306,7 +308,7 @@ export default function WaitlistContent() {
                 transition={{ delay: i * 0.06 }}
               >
                 <stat.Icon size={20} className="mb-2 text-[#d9c4a0]/60" />
-                <span className="font-[family-name:var(--font-display)] text-[32px] leading-none text-[#d9c4a0]">
+                <span className="font-[family-name:var(--font-hero)] text-[32px] leading-none text-[#d9c4a0]">
                   {stat.value}
                 </span>
                 <p className="mt-2 max-w-[140px] text-[11px] font-medium uppercase tracking-[0.2em] text-sand/40">
@@ -332,7 +334,7 @@ export default function WaitlistContent() {
                 <p className="mb-3 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#d9c4a0]">
                   Case study
                 </p>
-                <h3 className="mb-4 font-[family-name:var(--font-display)] text-[clamp(24px,2.8vw,32px)] leading-[1.2] text-sand">
+                <h3 className="mb-4 font-[family-name:var(--font-hero)] text-[clamp(24px,2.8vw,32px)] leading-[1.2] text-sand">
                   How MAS Staten Island reached 95% of their community.
                 </h3>
                 <blockquote className="text-[15px] leading-[1.65] italic text-sand/55">
@@ -361,7 +363,7 @@ export default function WaitlistContent() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h3 className="mb-3 font-[family-name:var(--font-display)] text-[clamp(22px,2.4vw,28px)] text-sand pt-8">
+            <h3 className="mb-3 font-[family-name:var(--font-hero)] text-[clamp(22px,2.4vw,28px)] text-sand pt-8">
               Spots fill up wave by wave.
             </h3>
             <p className="mb-6 text-[15px] leading-[1.7] text-sand/55">

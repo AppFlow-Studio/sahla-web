@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Navbar from "../components/Navbar";
 import BottomBar from "../components/BottomBar";
-import WaitlistContent from "./WaitlistContent";
+import WaitlistContent, { WaitlistExtras } from "./WaitlistContent";
 
 export const metadata: Metadata = {
   title: "Join the Waitlist — Sahla",
@@ -14,6 +14,7 @@ export default function WaitlistPage() {
     <div className="relative">
       <Navbar />
       <WaitlistContent />
+      <WaitlistExtras />
       <BottomBar />
     </div>
   );

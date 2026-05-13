@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Heart, Shield, Moon } from "lucide-react";
+import { Heart, Shield, Moon } from "@phosphor-icons/react";
 
 const pillars = [
   {
@@ -32,15 +32,7 @@ export default function BuiltForMosques() {
   const HeroIcon = hero.Icon;
 
   return (
-    <section className="relative overflow-hidden bg-dark-green py-16 sm:py-[100px]">
-      {/* Pattern */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.025]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40 0L80 40L40 80L0 40Z' fill='none' stroke='%23fff' stroke-width='0.5'/%3E%3Cpath d='M40 10L70 40L40 70L10 40Z' fill='none' stroke='%23fff' stroke-width='0.3'/%3E%3Ccircle cx='40' cy='40' r='15' fill='none' stroke='%23fff' stroke-width='0.3'/%3E%3C/svg%3E")`,
-          backgroundSize: "80px 80px",
-        }}
-      />
+    <section className="relative overflow-hidden bg-[#fffbf2] py-16 sm:py-[100px]">
 
       <motion.div
         className="relative mx-auto max-w-[1200px] px-5 sm:px-8"
@@ -50,13 +42,8 @@ export default function BuiltForMosques() {
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
       >
         <div className="mb-16 text-center">
-          <div className="mb-5 flex items-center justify-center gap-3.5">
-            <div className="h-[1px] w-12" style={{ background: "linear-gradient(90deg, transparent, rgba(217,196,160,0.5))" }} />
-            <div className="h-1.5 w-1.5 rotate-45 bg-gold" />
-            <div className="h-[1px] w-12" style={{ background: "linear-gradient(90deg, rgba(217,196,160,0.5), transparent)" }} />
-          </div>
-          <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#d9c4a0]">Our DNA</p>
-          <h2 className="mt-4 font-[family-name:var(--font-display)] text-[clamp(32px,4vw,52px)] text-sand">
+          <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40">Our DNA</p>
+          <h2 className="mt-4 font-[family-name:var(--font-hero)] text-[clamp(32px,4vw,52px)] text-dark-green">
             An app made by the people who pray beside you.
           </h2>
         </div>
@@ -72,13 +59,12 @@ export default function BuiltForMosques() {
             }}
           >
             <div className="pointer-events-none absolute top-8 right-8 opacity-[0.06]">
-              <HeroIcon size={140} strokeWidth={0.7} className="text-sand" />
+              <HeroIcon size={140} weight="duotone" className="text-sand" />
             </div>
             <div
-              className="mb-5 flex h-[52px] w-[52px] items-center justify-center rounded-2xl transition-transform duration-500 group-hover:scale-110"
-              style={{ backgroundColor: `${hero.accent}22` }}
+              className="mb-5 flex h-[52px] w-[52px] items-center justify-center rounded-xl border border-sand/10 bg-sand/[0.06] transition-transform duration-500 group-hover:scale-110"
             >
-              <HeroIcon size={24} strokeWidth={1.7} style={{ color: hero.accent }} />
+              <HeroIcon size={22} weight="light" className="text-sand/70" />
             </div>
             <h3 className="mb-3 text-[22px] font-semibold text-sand">{hero.title}</h3>
             <p className="max-w-[420px] text-[15px] leading-[1.7] text-sand/70">{hero.description}</p>
@@ -100,10 +86,9 @@ export default function BuiltForMosques() {
               >
                 <div className="flex items-start gap-5">
                   <div
-                    className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl transition-transform duration-500 group-hover:scale-110"
-                    style={{ backgroundColor: `${p.accent}1A` }}
+                    className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl border border-sand/10 bg-sand/[0.06] transition-transform duration-500 group-hover:scale-110"
                   >
-                    <p.Icon size={22} strokeWidth={1.7} style={{ color: p.accent }} />
+                    <p.Icon size={20} weight="light" className="text-sand/70" />
                   </div>
                   <div>
                     <h3 className="mb-2 text-[17px] font-semibold text-sand">{p.title}</h3>

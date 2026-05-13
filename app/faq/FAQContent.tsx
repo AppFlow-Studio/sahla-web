@@ -1,9 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const categories = [
   {
@@ -84,6 +85,50 @@ const categories = [
   },
 ];
 
+function AccordionItem({ faq, itemKey, openItems, toggle }: {
+  faq: { q: string; a: string };
+  itemKey: string;
+  openItems: Record<string, boolean>;
+  toggle: (key: string) => void;
+}) {
+  const isOpen = openItems[itemKey];
+
+  return (
+    <div>
+      <button
+        onClick={() => toggle(itemKey)}
+        className="flex w-full cursor-pointer items-center justify-between gap-4 py-6 text-left sm:py-7"
+      >
+        <span className="text-[17px] font-medium text-dark-green sm:text-[19px]">{faq.q}</span>
+        <motion.div
+          animate={{ rotate: isOpen ? 45 : 0 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-300",
+            isOpen ? "bg-dark-green text-sand" : "bg-dark-green/[0.06] text-dark-green/40"
+          )}
+        >
+          <IconPlus size={16} stroke={2} />
+        </motion.div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <p className="pb-7 pr-12 text-[15px] leading-[1.8] text-dark-green/50">{faq.a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function FAQContent() {
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
 
@@ -93,17 +138,17 @@ export default function FAQContent() {
 
   return (
     <>
-      <section className="bg-dark-green pt-36 pb-20">
+      <section className="bg-[#fffbf2] pt-36 pb-20">
         <div className="mx-auto max-w-[800px] px-8 text-center">
           <motion.p
-            className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#d9c4a0]"
+            className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
             FAQ
           </motion.p>
           <motion.h1
-            className="mb-6 font-[family-name:var(--font-display)] text-[clamp(40px,5vw,64px)] leading-[1.06] text-sand"
+            className="mb-6 font-[family-name:var(--font-hero)] text-[clamp(40px,5vw,64px)] leading-[1.06] text-dark-green"
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -111,52 +156,39 @@ export default function FAQContent() {
             Frequently asked questions.
           </motion.h1>
           <motion.p
-            className="mx-auto max-w-[520px] text-[16px] leading-[1.7] text-sand/50"
+            className="mx-auto max-w-[520px] text-[16px] leading-[1.7] text-dark-green/50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.15 }}
           >
-            The questions mosque boards ask before saying yes. If yours isn&apos;t here, <Link href="/contact" className="underline underline-offset-4 text-sand/70 hover:text-sand transition-colors">reach out</Link>.
+            The questions mosque boards ask before saying yes. If yours isn&apos;t here, <Link href="/contact" className="underline underline-offset-4 text-dark-green/70 hover:text-dark-green transition-colors">reach out</Link>.
           </motion.p>
         </div>
       </section>
 
-      <section className="bg-[#fffbf2] py-[80px]">
-        <div className="mx-auto max-w-[760px] px-8">
+      <section className="bg-[#fffbf2] pb-[100px]">
+        <div className="mx-auto max-w-[800px] px-8">
           {categories.map((cat, ci) => (
             <motion.div
               key={cat.title}
-              className="mb-12 last:mb-0"
+              className="mb-14 last:mb-0"
               initial={{ opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: ci * 0.08 }}
             >
-              <h2 className="mb-5 font-[family-name:var(--font-display)] text-[24px] text-dark-green">{cat.title}</h2>
-              <div className="space-y-3">
+              <h2 className="mb-2 font-[family-name:var(--font-hero)] text-[26px] text-dark-green">{cat.title}</h2>
+              <div className="divide-y divide-dark-green/[0.06]">
                 {cat.faqs.map((faq, fi) => {
                   const key = `${ci}-${fi}`;
-                  const isOpen = openItems[key];
                   return (
-                    <div key={key} className="overflow-hidden rounded-[16px] border border-dark-green/[0.06] bg-white">
-                      <button
-                        onClick={() => toggle(key)}
-                        className="flex w-full items-center justify-between px-6 py-5 text-left"
-                      >
-                        <span className="pr-4 text-[15px] font-semibold text-dark-green">{faq.q}</span>
-                        <ChevronDown
-                          size={18}
-                          className="shrink-0 text-dark-green/30 transition-transform duration-300"
-                          style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0)" }}
-                        />
-                      </button>
-                      <div
-                        className="overflow-hidden transition-all duration-300"
-                        style={{ maxHeight: isOpen ? "300px" : "0px", opacity: isOpen ? 1 : 0 }}
-                      >
-                        <p className="px-6 pb-5 text-[14px] leading-[1.7] text-dark-green/55">{faq.a}</p>
-                      </div>
-                    </div>
+                    <AccordionItem
+                      key={key}
+                      faq={faq}
+                      itemKey={key}
+                      openItems={openItems}
+                      toggle={toggle}
+                    />
                   );
                 })}
               </div>
@@ -164,7 +196,6 @@ export default function FAQContent() {
           ))}
         </div>
       </section>
-
     </>
   );
 }
