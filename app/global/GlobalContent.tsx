@@ -23,7 +23,7 @@ import {
   Banknote,
   MessageSquare,
 } from "lucide-react";
-
+import Image from "next/image";
 const VisibilityGlobe = dynamic(() => import("../components/VisibilityGlobe"), {
   ssr: false,
   loading: () => (
@@ -67,7 +67,7 @@ const heroStats = [
   { value: 14, suffix: "+", label: "Prayer calc methods" },
   { value: 135, suffix: "+", label: "Currencies supported" },
   { value: 24, suffix: "/7", label: "Every timezone" },
-  { value: 47, suffix: "K+", label: "Notifications sent" },
+  // { value: 47, suffix: "K+", label: "Notifications sent" },
 ];
 
 const pillars = [
@@ -162,7 +162,7 @@ export default function GlobalContent() {
               <p className="mx-auto mt-6 max-w-[560px] text-[16px] leading-[1.7] text-dark-green/50">
                 We&apos;re a New York-based team. The first masjid we built for
                 is in Staten Island. The masjids we&apos;re building for next
-                are in Birmingham, Brisbane, Toronto, Cape Town, and Dubai.
+                are in Birmingham, Brisbane, Toronto, Cape Town, and More.
               </p>
             </motion.div>
           </div>
@@ -182,7 +182,7 @@ export default function GlobalContent() {
 
           {/* Stats — free floating */}
           <motion.div
-            className="relative z-10 mx-auto -mt-12 mb-16 grid max-w-[900px] grid-cols-2 gap-8 sm:mb-20 sm:grid-cols-4"
+            className="relative z-10 mx-auto -mt-12 mb-16 grid max-w-[900px] grid-cols-2 gap-8 sm:mb-20 sm:grid-cols-3"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.6 }}
@@ -420,8 +420,9 @@ export default function GlobalContent() {
               transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
               className="flex flex-col items-center text-center lg:items-start lg:text-left"
             >
-              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl border border-dark-green/10 bg-dark-green/[0.03]">
-                <Shield size={28} strokeWidth={1.5} className="text-dark-green" />
+              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-dark-green/[0.03] relative">
+                {/* <Shield size={28} strokeWidth={1.5} className="text-dark-green" /> */}
+                <Image src={'/sahla-logo-arabic.svg'} alt="Sahla Logo"  fill/>
               </div>
 
               <blockquote className="font-[family-name:var(--font-hero)] text-[clamp(20px,2.5vw,28px)] leading-[1.3] text-dark-green/70">
