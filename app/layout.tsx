@@ -95,7 +95,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     images: [
       {
-        url: "/sahlamedia.png",
+        url: "/sahlameta.png",
         width: 2961,
         height: 2111,
         alt: "Sahla — Fully branded iOS and Android apps for mosques.",
@@ -109,7 +109,7 @@ export const metadata: Metadata = {
     description: SOCIAL_DESCRIPTION,
     images: [
       {
-        url: "/sahlamedia.png",
+        url: "/sahlameta.png",
         alt: "Sahla — Fully branded iOS and Android apps for mosques.",
       },
     ],
