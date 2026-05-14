@@ -15,7 +15,7 @@ function NotificationsPreview() {
     { msg: "New event: Friday Halaqa", time: "2m ago" },
     { msg: "Donation goal reached!", time: "1h ago" },
     { msg: "Isha prayer time updated", time: "3h ago" },
-    { msg: "New member joined", time: "5h ago" },
+    { msg: "Business Submission Form", time: "5h ago" },
     { msg: "Jummah reminder", time: "6h ago" },
     { msg: "Taraweeh tonight at 9 PM", time: "7h ago" },
   ];

@@ -157,7 +157,7 @@ export default function PricingPage() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
           >
-            Most mosque platforms charge $99&ndash;149/month with a fee on every donation. Sahla charges $300/month flat and takes nothing from your donations or recurring ad revenue.
+            Sahla operates on a single $300/month subscription that guarantees you keep 100% of your community’s contributions.
           </motion.p>
         </div>
       </section>
@@ -181,7 +181,8 @@ export default function PricingPage() {
                 Local businesses sponsor ad space in your mosque&apos;s app at ${ratePerSponsor}/month each. You keep 100% of recurring ad revenue — Sahla takes $0. At just {Math.ceil(subscription / ratePerSponsor)} sponsors, your app is free.
               </p>
               <p className="max-w-[480px] text-[14px] leading-[1.7] text-dark-green/35">
-                Most mosque platforms charge $99&ndash;149/month with a fee on every donation. Sahla charges ${subscription}/month flat and takes nothing from your donations or recurring ad revenue.
+                {/* Most mosque platforms charge $99&ndash;149/month with a fee on every donation. Sahla charges ${subscription}/month flat and takes nothing from your donations or recurring ad revenue. */}
+                Sahla operates on a single $300/month subscription that guarantees you keep 100% of your community’s contributions.
               </p>
             </motion.div>
 

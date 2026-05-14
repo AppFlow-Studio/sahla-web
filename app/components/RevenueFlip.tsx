@@ -31,7 +31,7 @@ export default function RevenueFlip() {
               Local businesses sponsor ad space in your mosque&apos;s app at $100/month each. You keep 100% of recurring ad revenue — Sahla takes $0. At just 3 sponsors, your app is free. At 4+, it&apos;s generating surplus for your masjid.
             </p>
             <p className="mb-8 max-w-[480px] text-[14px] leading-[1.7] text-dark-green/40">
-              Most mosque platforms charge $99&ndash;149/month with a fee on every donation. Sahla charges $300/month flat and takes nothing from your donations or recurring ad revenue.
+              Sahla operates on a single $300/month subscription that guarantees you keep 100% of your community’s contributions.
             </p>
             <Link
               href="/pricing"

@@ -49,7 +49,6 @@ const bodoniModa = Bodoni_Moda({
   display: "swap",
 });
 
-const SITE_URL = "https://sahla.app";
 const SITE_URL = "https://sahla.co";
 const SITE_TITLE = "Sahla — Your Mosque Deserves Its Own App";
 const SITE_DESCRIPTION =
