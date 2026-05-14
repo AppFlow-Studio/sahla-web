@@ -10,7 +10,6 @@ import HowItWorks from "./components/HowItWorks";
 import AppShowcase from "./components/AppShowcase";
 import Features from "./components/Features";
 import RevenueFlip from "./components/RevenueFlip";
-import BuiltForMosques from "./components/BuiltForMosques";
 import FAQTeaser from "./components/FAQTeaser";
 import CTASection from "./components/CTASection";
 import BottomBar from "./components/BottomBar";
@@ -70,13 +69,19 @@ export default async function Home() {
       <SoftwareApplicationJsonLd />
       <Navbar />
       <Hero ctaLabel={cta.label} ctaHref={cta.href} />
+      <hr className="mx-auto max-w-[1200px] border-dark-green/[0.06]" />
       <AppShowcase />
+      <hr className="mx-auto max-w-[1200px] border-dark-green/[0.06]" />
       <ProofBar />
+      <hr className="mx-auto max-w-[1200px] border-dark-green/[0.06]" />
       <ThreeProblems />
+      <hr className="mx-auto max-w-[1200px] border-dark-green/[0.06]" />
       <HowItWorks />
+      <hr className="mx-auto max-w-[1200px] border-dark-green/[0.06]" />
       <Features />
+      <hr className="mx-auto max-w-[1200px] border-dark-green/[0.06]" />
       <RevenueFlip />
-      <BuiltForMosques />
+      <hr className="mx-auto max-w-[1200px] border-dark-green/[0.06]" />
       <FAQTeaser />
       <CTASection />
       <BottomBar />
