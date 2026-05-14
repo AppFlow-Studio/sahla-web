@@ -111,18 +111,18 @@ export default function ThreeProblems() {
             </motion.p>
 
             {/* Stats strip */}
-            <div className="mx-auto mt-12 grid max-w-[540px] grid-cols-4 gap-6 lg:mx-0">
+            <div className="mx-auto mt-12 grid max-w-[540px] grid-cols-2 sm:grid-cols-4 gap-6 lg:mx-0">
               {cards.map((card, i) => (
                 <motion.div
                   key={card.title}
-                  className="text-center lg:text-left"
+                  className={`text-center lg:text-left `}
                   custom={i}
                   variants={cardVariants}
                   initial="hidden"
                   whileInView="visible"
                   viewport={{ once: true }}
                 >
-                  <div className="mx-auto mb-3 flex h-[48px] w-[48px] items-center justify-center rounded-xl border border-dark-green/10 bg-dark-green/[0.04] lg:mx-0">
+                  <div className="mx-auto mb-3 flex h-[48px] w-[48px] items-center justify-center rounded-xl border border-dark-green/10 bg-dark-green/[0.04] lg:mx-0 lg:text-left">
                     <card.icon size={22} weight="light" className="text-dark-green/60" />
                   </div>
                   <span className="block whitespace-nowrap text-[20px] font-bold tracking-tight text-dark-green">
