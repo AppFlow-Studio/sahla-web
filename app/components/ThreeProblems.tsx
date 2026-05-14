@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import { Globe, Languages, Clock, Users } from "lucide-react";
+import { Globe, Translate, Clock, UsersThree } from "@phosphor-icons/react";
 
 const VisibilityGlobe = dynamic(() => import("./VisibilityGlobe"), {
   ssr: false,
@@ -16,7 +16,7 @@ const VisibilityGlobe = dynamic(() => import("./VisibilityGlobe"), {
 
 const cards = [
   {
-    icon: Languages,
+    icon: Translate,
     stat: "30+",
     title: "Languages supported",
     desc: "Arabic, Urdu, Turkish, Malay, French, Somali \u2014 your app speaks your community\u2019s language.",
@@ -37,7 +37,7 @@ const cards = [
     accent: "#9a7b2e",
   },
   {
-    icon: Users,
+    icon: UsersThree,
     stat: "One ummah",
     title: "Connected worldwide",
     desc: "Every masjid that joins strengthens the network. Be part of something bigger than your neighborhood.",
@@ -91,7 +91,7 @@ export default function ThreeProblems() {
             </motion.p>
 
             <motion.h2
-              className="font-[family-name:var(--font-display)] text-[clamp(32px,4vw,48px)] leading-[1.1] text-dark-green"
+              className="font-[family-name:var(--font-hero)] text-[clamp(32px,4vw,48px)] leading-[1.1] text-dark-green"
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -110,45 +110,26 @@ export default function ThreeProblems() {
               Built in NYC, serving mosques worldwide. From New York to Dubai, London to Tokyo &mdash; we power communities across every continent.
             </motion.p>
 
-            {/* Cards */}
-            <div className="mx-auto mt-10 grid max-w-[500px] gap-4 sm:grid-cols-2 lg:mx-0">
+            {/* Stats strip */}
+            <div className="mx-auto mt-12 grid max-w-[540px] grid-cols-4 gap-6 lg:mx-0">
               {cards.map((card, i) => (
                 <motion.div
                   key={card.title}
-                  className="group relative overflow-hidden rounded-2xl border border-dark-green/[0.06] bg-white/70 px-5 py-5 backdrop-blur-sm transition-shadow duration-300 hover:shadow-[0_4px_24px_rgba(10,38,30,0.06)]"
+                  className="text-center lg:text-left"
                   custom={i}
                   variants={cardVariants}
                   initial="hidden"
                   whileInView="visible"
                   viewport={{ once: true }}
                 >
-                  {/* Subtle accent bar */}
-                  <div
-                    className="absolute left-0 top-0 h-full w-[3px] rounded-l-2xl opacity-60"
-                    style={{ background: card.accent }}
-                  />
-
-                  <div className="mb-3 flex items-center gap-3">
-                    <div
-                      className="flex h-9 w-9 items-center justify-center rounded-lg"
-                      style={{ background: `${card.accent}12` }}
-                    >
-                      <card.icon
-                        size={18}
-                        strokeWidth={1.8}
-                        style={{ color: card.accent }}
-                      />
-                    </div>
-                    <span className="text-[20px] font-bold tracking-tight text-dark-green">
-                      {card.stat}
-                    </span>
+                  <div className="mx-auto mb-3 flex h-[48px] w-[48px] items-center justify-center rounded-xl border border-dark-green/10 bg-dark-green/[0.04] lg:mx-0">
+                    <card.icon size={22} weight="light" className="text-dark-green/60" />
                   </div>
-
-                  <div className="text-[13px] font-semibold text-dark-green/75">
+                  <span className="block whitespace-nowrap text-[20px] font-bold tracking-tight text-dark-green">
+                    {card.stat}
+                  </span>
+                  <p className="mt-1 text-[12px] leading-snug text-dark-green/50">
                     {card.title}
-                  </div>
-                  <p className="mt-1.5 text-[12px] leading-[1.55] text-dark-green/40">
-                    {card.desc}
                   </p>
                 </motion.div>
               ))}

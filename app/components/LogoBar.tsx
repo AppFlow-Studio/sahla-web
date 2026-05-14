@@ -28,7 +28,7 @@ function AnimatedNumber({ value, suffix, decimal }: { value: number; suffix: str
   }, [inView, value, decimal]);
 
   return (
-    <span ref={ref} className="font-[family-name:var(--font-display)] text-[46px] leading-none text-[#d9c4a0]">
+    <span ref={ref} className="font-[family-name:var(--font-hero)] text-[46px] leading-none text-[#d9c4a0]">
       {decimal ? display.toFixed(1) : display}{suffix}
     </span>
   );

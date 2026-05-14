@@ -24,14 +24,14 @@ export default function RevenueFlip() {
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
             <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#9a7b2e]">The Revenue Flip</p>
-            <h2 className="mb-5 font-[family-name:var(--font-display)] text-[clamp(32px,4vw,52px)] leading-[1.08] text-dark-green">
+            <h2 className="mb-5 font-[family-name:var(--font-hero)] text-[clamp(32px,4vw,52px)] leading-[1.08] text-dark-green">
               Your app pays for itself.
             </h2>
             <p className="mb-6 max-w-[480px] text-[16px] leading-[1.7] text-dark-green/55">
               Local businesses sponsor ad space in your mosque&apos;s app at $100/month each. You keep 100% of recurring ad revenue — Sahla takes $0. At just 3 sponsors, your app is free. At 4+, it&apos;s generating surplus for your masjid.
             </p>
             <p className="mb-8 max-w-[480px] text-[14px] leading-[1.7] text-dark-green/40">
-              Most mosque platforms charge $99&ndash;149/month with a fee on every donation. Sahla charges $300/month flat and takes nothing from your donations or recurring ad revenue.
+              Sahla operates on a single $300/month subscription that guarantees you keep 100% of your community’s contributions.
             </p>
             <Link
               href="/pricing"
@@ -43,7 +43,7 @@ export default function RevenueFlip() {
 
           {/* Right — calculator */}
           <motion.div
-            className="overflow-hidden rounded-[24px] border border-dark-green/[0.08] bg-white p-5 shadow-[0_20px_60px_-20px_rgba(10,38,30,0.08)] sm:p-8"
+            className="sm:p-4"
             initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -54,7 +54,7 @@ export default function RevenueFlip() {
             <div className="mb-8">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-[14px] text-dark-green/60">Local sponsors</span>
-                <span className="font-[family-name:var(--font-display)] text-[28px] text-dark-green">
+                <span className="font-[family-name:var(--font-hero)] text-[28px] text-dark-green">
                   <NumberFlow value={sponsors} trend={1} />
                 </span>
               </div>
@@ -76,7 +76,7 @@ export default function RevenueFlip() {
               </div>
             </div>
 
-            <div className="space-y-4 border-t border-dark-green/[0.06] pt-6">
+            <div className="space-y-4 border-t border-dark-green/[0.04] pt-6">
               <div className="flex items-center justify-between">
                 <span className="text-[14px] text-dark-green/60">Sahla subscription</span>
                 <span className="text-[16px] font-semibold text-dark-green">${subscription}/mo</span>
@@ -87,11 +87,11 @@ export default function RevenueFlip() {
                   -$<NumberFlow value={revenue} />/mo
                 </span>
               </div>
-              <div className="border-t border-dark-green/[0.06] pt-4">
+              <div className="border-t border-dark-green/[0.04] pt-4">
                 <div className="flex items-center justify-between">
                   <span className="text-[15px] font-semibold text-dark-green">Net cost to mosque</span>
                   <span
-                    className="font-[family-name:var(--font-display)] text-[32px] leading-none transition-colors duration-300"
+                    className="font-[family-name:var(--font-hero)] text-[32px] leading-none transition-colors duration-300"
                     style={{ color: net <= 0 ? "#1a6b42" : "#0A261E" }}
                   >
                     {net <= 0 ? "+$" : "$"}<NumberFlow value={Math.abs(net)} />

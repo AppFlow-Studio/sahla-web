@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist, Fraunces, Newsreader, Mrs_Saint_Delafield } from "next/font/google";
+import { Inter, Geist, Fraunces, Newsreader, Mrs_Saint_Delafield, Bodoni_Moda } from "next/font/google";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import Providers from "./providers";
@@ -40,6 +40,12 @@ const signatureFont = Mrs_Saint_Delafield({
   subsets: ["latin"],
   weight: "400",
   variable: "--font-signature",
+  display: "swap",
+});
+
+const bodoniModa = Bodoni_Moda({
+  subsets: ["latin"],
+  variable: "--font-hero",
   display: "swap",
 });
 
@@ -95,7 +101,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     images: [
       {
-        url: "/sahlamedia.png",
+        url: "/sahlameta.png",
         width: 2961,
         height: 2111,
         alt: "Sahla — Fully branded iOS and Android apps for mosques.",
@@ -109,7 +115,7 @@ export const metadata: Metadata = {
     description: SOCIAL_DESCRIPTION,
     images: [
       {
-        url: "/sahlamedia.png",
+        url: "/sahlameta.png",
         alt: "Sahla — Fully branded iOS and Android apps for mosques.",
       },
     ],
@@ -171,6 +177,7 @@ export default function RootLayout({
           fraunces.variable,
           newsreader.variable,
           signatureFont.variable,
+          bodoniModa.variable,
           "font-sans",
           geist.variable
         )}
