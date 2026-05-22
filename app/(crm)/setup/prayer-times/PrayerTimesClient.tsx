@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sunrise,
@@ -13,6 +13,7 @@ import {
   Save,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -23,6 +24,15 @@ import {
 } from "@/components/ui/select";
 import PageHeader from "../../_components/PageHeader";
 import HelpButton from "../../_components/HelpButton";
+import { useMosque } from "../../_lib/mock-mosque";
+import { useIqamahConfig } from "../../_hooks/useIqamahConfig";
+import {
+  calcMethodToNumber,
+  calcMethodFromNumber,
+  schoolToNumber,
+  schoolFromNumber,
+} from "./_lib/calcMethodMap";
+import type { IqamahConfig as DbIqamahConfig, PrayerName } from "@/lib/prayer/types";
 import { cn } from "@/lib/utils";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -93,19 +103,101 @@ function computeIqamah(athan: string, config: IqamahConfig): string {
   return addMinutes(athan, 25);
 }
 
+/** Translate a DB iqamah row → local UI state shape. */
+function fromDbConfig(rows: DbIqamahConfig[]): Record<PrayerId, IqamahConfig> {
+  const map: Record<PrayerId, IqamahConfig> = { ...DEFAULT_CONFIG };
+  for (const row of rows) {
+    const id = row.prayer_name as PrayerId;
+    if (row.mode === "fixed") {
+      map[id] = { mode: "fixed", fixedTime: row.fixed_time ?? "13:15" };
+    } else if (row.mode === "offset") {
+      map[id] = { mode: "offset", offsetMin: row.offset_minutes ?? 15 };
+    } else {
+      map[id] = { mode: "seasonal" };
+    }
+  }
+  return map;
+}
+
+/** Translate UI state → DB rows ready to POST. */
+function toDbConfigs(state: Record<PrayerId, IqamahConfig>): DbIqamahConfig[] {
+  return (Object.keys(state) as PrayerId[]).map<DbIqamahConfig>((id) => {
+    const c = state[id];
+    return {
+      mosque_id: "", // filled in by the server using requireCrmAccess
+      prayer_name: id as PrayerName,
+      mode: c.mode,
+      fixed_time: c.mode === "fixed" ? c.fixedTime ?? null : null,
+      offset_minutes: c.mode === "offset" ? c.offsetMin ?? 0 : null,
+      seasonal_rules: null,
+    };
+  });
+}
+
 export default function PrayerTimesClient() {
+  const mosque = useMosque();
+  const queryClient = useQueryClient();
+  const { data: serverConfig, isLoading } = useIqamahConfig();
+
   const [calcMethod, setCalcMethod] = useState("ISNA");
   const [school, setSchool] = useState("shafi");
   const [config, setConfig] = useState<Record<PrayerId, IqamahConfig>>(DEFAULT_CONFIG);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
-
-  function bumpSaved(message: string) {
-    setSavedAt(new Date());
-    toast.success(message);
-  }
-
-  // Auto-save indicator timeout
   const [savedFlash, setSavedFlash] = useState(false);
+
+  // Hydrate UI state once the server config arrives.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    if (isLoading) return;
+    setCalcMethod(calcMethodFromNumber(serverConfig.calculation_method));
+    setSchool(schoolFromNumber(serverConfig.school));
+    if (serverConfig.iqamah.length > 0) {
+      setConfig(fromDbConfig(serverConfig.iqamah));
+    }
+    hydratedRef.current = true;
+  }, [serverConfig, isLoading]);
+
+  // Debounced persist — fires 600ms after the last edit. Saves the full
+  // (calc method, school, iqamah) bundle to match the endpoint contract.
+  const pendingRef = useRef<number | null>(null);
+  const persist = useCallback(
+    (nextMethod: string, nextSchool: string, nextConfig: Record<PrayerId, IqamahConfig>) => {
+      if (pendingRef.current) window.clearTimeout(pendingRef.current);
+      pendingRef.current = window.setTimeout(async () => {
+        if (mosque.isHQ) {
+          // HQ preview — local state changes, no persistence.
+          setSavedAt(new Date());
+          return;
+        }
+        try {
+          const res = await fetch("/api/crm/prayer-times", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              calculation_method: calcMethodToNumber(nextMethod),
+              school: schoolToNumber(nextSchool),
+              iqamah: toDbConfigs(nextConfig),
+            }),
+          });
+          if (!res.ok) {
+            const body = (await res.json().catch(() => ({}))) as {
+              error?: string;
+            };
+            throw new Error(body.error ?? `Save failed (${res.status})`);
+          }
+          setSavedAt(new Date());
+          queryClient.invalidateQueries({ queryKey: ["crm", "prayer-times"] });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Couldn't save.";
+          toast.error(message);
+        }
+      }, 600);
+    },
+    [mosque.isHQ, queryClient]
+  );
+
+  // Auto-save flash indicator
   useEffect(() => {
     if (!savedAt) return;
     setSavedFlash(true);
@@ -113,26 +205,40 @@ export default function PrayerTimesClient() {
     return () => clearTimeout(t);
   }, [savedAt]);
 
+  function bumpSaved(message: string) {
+    toast.success(message);
+  }
+
   function updateMode(id: PrayerId, mode: IqamahMode) {
     setConfig((prev) => {
       const current = prev[id];
       const next: IqamahConfig = { mode };
       if (mode === "fixed") next.fixedTime = current.fixedTime ?? "13:15";
       if (mode === "offset") next.offsetMin = current.offsetMin ?? 15;
-      return { ...prev, [id]: next };
+      const out = { ...prev, [id]: next };
+      persist(calcMethod, school, out);
+      return out;
     });
     bumpSaved("Iqamah mode updated");
   }
 
   function updateFixed(id: PrayerId, fixedTime: string) {
-    setConfig((prev) => ({ ...prev, [id]: { ...prev[id], fixedTime } }));
+    setConfig((prev) => {
+      const out = { ...prev, [id]: { ...prev[id], fixedTime } };
+      persist(calcMethod, school, out);
+      return out;
+    });
   }
 
   function updateOffset(id: PrayerId, offsetMin: number) {
-    setConfig((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], offsetMin: Number.isNaN(offsetMin) ? 0 : offsetMin },
-    }));
+    setConfig((prev) => {
+      const out = {
+        ...prev,
+        [id]: { ...prev[id], offsetMin: Number.isNaN(offsetMin) ? 0 : offsetMin },
+      };
+      persist(calcMethod, school, out);
+      return out;
+    });
   }
 
   const previewRows = useMemo(
@@ -184,7 +290,9 @@ export default function PrayerTimesClient() {
                 <Select
                   value={calcMethod}
                   onValueChange={(v) => {
-                    setCalcMethod(v ?? "ISNA");
+                    const next = v ?? "ISNA";
+                    setCalcMethod(next);
+                    persist(next, school, config);
                     bumpSaved("Calculation method updated");
                   }}
                 >
@@ -205,7 +313,9 @@ export default function PrayerTimesClient() {
                 <Select
                   value={school}
                   onValueChange={(v) => {
-                    setSchool(v ?? "shafi");
+                    const next = v ?? "shafi";
+                    setSchool(next);
+                    persist(calcMethod, next, config);
                     bumpSaved("Asr school updated");
                   }}
                 >
