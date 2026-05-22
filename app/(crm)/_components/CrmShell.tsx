@@ -8,11 +8,20 @@ import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import MobileNavDrawer from "./MobileNavDrawer";
 import FirstLoginTour from "./FirstLoginTour";
+import { MosqueProvider } from "./MosqueProvider";
+import type { MosqueProfile } from "../_lib/getCurrentMosque";
 
-export default function CrmShell({ children }: { children: React.ReactNode }) {
+export default function CrmShell({
+  mosque,
+  children,
+}: {
+  mosque: MosqueProfile;
+  children: React.ReactNode;
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
+    <MosqueProvider mosque={mosque}>
     <TooltipProvider delay={120}>
       <CommandPaletteProvider>
         <div className="relative flex min-h-screen bg-[#fffbf2] text-[#0A261E]">
@@ -53,5 +62,6 @@ export default function CrmShell({ children }: { children: React.ReactNode }) {
         </div>
       </CommandPaletteProvider>
     </TooltipProvider>
+    </MosqueProvider>
   );
 }
