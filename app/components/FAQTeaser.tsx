@@ -46,7 +46,7 @@ export default function FAQTeaser() {
           viewport={{ once: true }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         >
-          <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40">Common Questions</p>
+          <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#9a7b2e]">Common Questions</p>
           <h2 className="font-[family-name:var(--font-hero)] text-[clamp(32px,4vw,48px)] text-dark-green">
             Questions mosque boards ask.
           </h2>
@@ -72,8 +72,8 @@ export default function FAQTeaser() {
                     animate={{ rotate: isOpen ? 45 : 0 }}
                     transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                     className={cn(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-300",
-                      isOpen ? "bg-dark-green text-sand" : "bg-dark-green/[0.06] text-dark-green/40"
+                      "flex shrink-0 items-center justify-center transition-colors duration-300",
+                      isOpen ? "text-dark-green" : "text-dark-green/40"
                     )}
                   >
                     <IconPlus size={16} stroke={2} />
