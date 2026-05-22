@@ -9,6 +9,7 @@ import TopBar from "./TopBar";
 import MobileNavDrawer from "./MobileNavDrawer";
 import FirstLoginTour from "./FirstLoginTour";
 import { MosqueProvider } from "./MosqueProvider";
+import BinaryBuildBanner from "./BinaryBuildBanner";
 import type { MosqueProfile } from "../_lib/getCurrentMosque";
 
 export default function CrmShell({
@@ -40,6 +41,7 @@ export default function CrmShell({
           <MobileNavDrawer open={mobileOpen} onOpenChange={setMobileOpen} />
 
           <div className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col">
+            <BinaryBuildBanner />
             <TopBar onOpenMobileNav={() => setMobileOpen(true)} />
             <main className="flex-1 px-4 py-6 md:px-8 md:py-10">
               <div className="mx-auto w-full max-w-[1400px]">{children}</div>
