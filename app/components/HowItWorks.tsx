@@ -42,7 +42,7 @@ export default function HowItWorks() {
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
       >
         <div className="mb-16 text-center">
-          <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40">How It Works</p>
+          <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#9a7b2e]">How It Works</p>
           <h2 className="mt-4 font-[family-name:var(--font-hero)] text-[clamp(32px,4vw,52px)] text-dark-green">
             Three steps to your mosque&apos;s app.
           </h2>
@@ -53,11 +53,6 @@ export default function HowItWorks() {
 
         {/* Vertical timeline */}
         <div className="relative">
-          {/* Timeline line */}
-          <div
-            className="absolute top-0 bottom-0 left-[25px] hidden w-[1px] sm:block"
-            style={{ background: "linear-gradient(180deg, rgba(10,38,30,0.12), rgba(10,38,30,0.03))" }}
-          />
 
           <div className="flex flex-col gap-8 sm:gap-12">
             {steps.map((step) => (
@@ -67,15 +62,10 @@ export default function HowItWorks() {
               >
                 <div className="relative z-10 flex shrink-0 flex-col items-center">
                   <div
-                    className="flex h-[50px] w-[50px] items-center justify-center rounded-full border-2 transition-transform duration-500 group-hover:scale-110"
-                    style={{
-                      borderColor: step.accent,
-                      backgroundColor: `${step.accent}1A`,
-                    }}
+                    className="flex h-[50px] w-[50px] items-center justify-center rounded-full border-2 border-dark-green/10 bg-transparent transition-transform duration-500 group-hover:scale-110"
                   >
                     <span
-                      className="font-[family-name:var(--font-hero)] text-[16px] font-bold"
-                      style={{ color: step.accent }}
+                      className="font-[family-name:var(--font-hero)] text-[16px] font-bold text-dark-green/40"
                     >
                       {step.number}
                     </span>
