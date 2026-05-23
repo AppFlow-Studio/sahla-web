@@ -22,6 +22,8 @@ export type MosqueProfile = {
   logoInitials: string;
   onboardingStatus: string;
   hasCrmAccess: boolean;
+  /** Whether this mosque admin has already dismissed the welcome tour. */
+  tourDismissed: boolean;
   /** True when the signed-in user is browsing as Sahla HQ (QA mode). */
   isHQ: boolean;
 };
@@ -46,6 +48,7 @@ const HQ_PLACEHOLDER: MosqueProfile = {
   logoInitials: "SH",
   onboardingStatus: "live",
   hasCrmAccess: true,
+  tourDismissed: false,
   isHQ: true,
 };
 
@@ -78,7 +81,7 @@ export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => 
   const { data: mosque, error: mosqueErr } = await supabase
     .from("mosques")
     .select(
-      "id, name, city, state, brand_color, accent_color, logo_url, subscription_tier, onboarding_status"
+      "id, name, city, state, brand_color, accent_color, logo_url, subscription_tier, onboarding_status, onboarding_progress"
     )
     .eq("clerk_org_id", session.orgId)
     .maybeSingle();
@@ -95,6 +98,8 @@ export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => 
     .eq("mosque_id", mosque.id)
     .maybeSingle();
 
+  const progress = (mosque.onboarding_progress as Record<string, unknown> | null) ?? {};
+
   const profile: MosqueProfile = {
     id: mosque.id,
     name: mosque.name ?? "Your mosque",
@@ -107,6 +112,7 @@ export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => 
     logoInitials: initialsFrom(mosque.name ?? "Mosque"),
     onboardingStatus: mosque.onboarding_status ?? "in_progress",
     hasCrmAccess: !!flags?.has_crm_access,
+    tourDismissed: progress.crm_tour_dismissed === true,
     isHQ: false,
   };
 
