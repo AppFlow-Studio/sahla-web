@@ -25,7 +25,19 @@ export default function CrmShell({
     <MosqueProvider mosque={mosque}>
     <TooltipProvider delay={120}>
       <CommandPaletteProvider>
-        <div className="relative flex min-h-screen bg-[#fffbf2] text-[#0A261E]">
+        <div
+          className="relative flex min-h-screen bg-[#fffbf2] text-[#0A261E]"
+          // Expose the mosque's brand colors as CSS vars so any descendant
+          // (sidebar accents, badges, etc.) can recolor without prop-drilling.
+          // Falls back to the Sahla default palette if the mosque hasn't
+          // overridden them.
+          style={
+            {
+              "--mosque-primary": mosque.primaryColor,
+              "--mosque-accent": mosque.accentColor,
+            } as React.CSSProperties
+          }
+        >
           {/* Subtle background grain — sits on the cream main canvas */}
           <div
             aria-hidden
