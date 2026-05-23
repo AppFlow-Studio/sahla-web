@@ -23,15 +23,20 @@ type SpeakerRow = {
   speaker_email: string | null;
 };
 
-function rowToCrm(row: SpeakerRow): CrmSpeaker {
+type SpeakerStats = { programsCount: number; lastSpokeAt: string | null };
+
+function rowToCrm(
+  row: SpeakerRow,
+  stats: SpeakerStats = { programsCount: 0, lastSpokeAt: null }
+): CrmSpeaker {
   return {
     id: row.speaker_id,
     name: row.speaker_name ?? "Untitled speaker",
     credentials: (row.speaker_creds ?? []).join(" · "),
     bio: row.speaker_bio ?? "",
     photoUrl: row.speaker_img ?? "",
-    programsCount: 0, // TODO: derive from content_items.speakers FK
-    lastSpokeAt: null,
+    programsCount: stats.programsCount,
+    lastSpokeAt: stats.lastSpokeAt,
     email: row.speaker_email ?? undefined,
   };
 }
@@ -52,16 +57,61 @@ export async function GET() {
   }
 
   const supabase = createAdminSupabaseClient();
-  const { data, error } = await supabase
-    .from("speaker_data")
-    .select("speaker_id, speaker_name, speaker_img, speaker_creds, speaker_bio, speaker_email")
-    .eq("mosque_id", access.mosqueId)
-    .order("created_at", { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({
-    speakers: ((data as SpeakerRow[] | null) ?? []).map(rowToCrm),
-  });
+  // Bulk-fetch speakers + every content item's speakers/start_date for
+  // this mosque in parallel. Derive programsCount + lastSpokeAt in
+  // memory instead of N correlated subqueries.
+  const [speakersRes, contentRes] = await Promise.all([
+    supabase
+      .from("speaker_data")
+      .select(
+        "speaker_id, speaker_name, speaker_img, speaker_creds, speaker_bio, speaker_email"
+      )
+      .eq("mosque_id", access.mosqueId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("content_items")
+      .select("speakers, start_date")
+      .eq("mosque_id", access.mosqueId),
+  ]);
+
+  if (speakersRes.error) {
+    return NextResponse.json({ error: speakersRes.error.message }, { status: 500 });
+  }
+
+  // Build a name → { count, lastSpokeAt } map from the content rows.
+  const statsByName = new Map<string, SpeakerStats>();
+  for (const row of (contentRes.data as Array<{ speakers: string[] | null; start_date: string | null }> | null) ?? []) {
+    const names = row.speakers ?? [];
+    const startDate = row.start_date;
+    for (const name of names) {
+      const existing = statsByName.get(name) ?? {
+        programsCount: 0,
+        lastSpokeAt: null,
+      };
+      existing.programsCount += 1;
+      if (
+        startDate &&
+        (!existing.lastSpokeAt ||
+          new Date(startDate).getTime() > new Date(existing.lastSpokeAt).getTime())
+      ) {
+        existing.lastSpokeAt = startDate;
+      }
+      statsByName.set(name, existing);
+    }
+  }
+
+  const speakers = ((speakersRes.data as SpeakerRow[] | null) ?? []).map((row) =>
+    rowToCrm(
+      row,
+      statsByName.get(row.speaker_name ?? "") ?? {
+        programsCount: 0,
+        lastSpokeAt: null,
+      }
+    )
+  );
+
+  return NextResponse.json({ speakers });
 }
 
 export async function POST(request: Request) {

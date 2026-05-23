@@ -22,6 +22,12 @@ export type MosqueProfile = {
   name: string;
   city: string;
   state: string;
+  /** App name set during app_branding onboarding (different from `name`). */
+  appName: string;
+  address: string;
+  phone: string;
+  email: string;
+  timezone: string;
   tier: "core" | "core_crm" | "complete";
   primaryColor: string;
   accentColor: string;
@@ -50,6 +56,11 @@ const HQ_PLACEHOLDER: MosqueProfile = {
   name: "Sahla HQ Preview",
   city: "Brooklyn",
   state: "NY",
+  appName: "Sahla HQ",
+  address: "",
+  phone: "",
+  email: "",
+  timezone: "America/New_York",
   tier: "core_crm",
   primaryColor: "#0A261E",
   accentColor: "#B8922A",
@@ -91,7 +102,7 @@ export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => 
   const { data: mosque, error: mosqueErr } = await supabase
     .from("mosques")
     .select(
-      "id, name, city, state, brand_color, accent_color, logo_url, subscription_tier, onboarding_status, onboarding_progress"
+      "id, name, city, state, app_name, address, phone, email, timezone, brand_color, accent_color, logo_url, subscription_tier, onboarding_status, onboarding_progress"
     )
     .eq("clerk_org_id", session.orgId)
     .maybeSingle();
@@ -135,6 +146,11 @@ export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => 
     name: mosque.name ?? "Your mosque",
     city: mosque.city ?? "",
     state: mosque.state ?? "",
+    appName: mosque.app_name ?? "",
+    address: mosque.address ?? "",
+    phone: mosque.phone ?? "",
+    email: mosque.email ?? "",
+    timezone: mosque.timezone ?? "America/New_York",
     tier: (mosque.subscription_tier as MosqueProfile["tier"]) ?? "core",
     primaryColor: mosque.brand_color ?? "#0A261E",
     accentColor: mosque.accent_color ?? "#B8922A",
