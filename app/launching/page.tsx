@@ -1,14 +1,14 @@
 import { Suspense } from "react";
-import GoLiveClient from "./GoLiveClient";
+import LaunchingClient from "./LaunchingClient";
 
 export const metadata = {
   title: "Setting up your CRM · Sahla",
 };
 
-export default function GoLivePage() {
+export default function LaunchingPage() {
   return (
     <Suspense fallback={null}>
-      <GoLiveClient />
+      <LaunchingClient />
     </Suspense>
   );
 }

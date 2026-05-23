@@ -11,7 +11,7 @@ type Phase = "polling" | "ready" | "stuck" | "cancelled";
 const POLL_MS = 2000;
 const MAX_POLLS = 30; // ~60 seconds
 
-export default function GoLiveClient() {
+export default function LaunchingClient() {
   const router = useRouter();
   const params = useSearchParams();
   const paymentParam = params.get("payment");
@@ -188,10 +188,10 @@ function CancelledCard() {
         No worries — your progress is saved. Pick up where you left off whenever you&apos;re ready.
       </p>
       <Link
-        href="/go_live"
+        href="/dashboard"
         className="mt-6 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#0A261E] px-4 py-2.5 text-[13px] font-semibold text-[#fffbf2] transition-opacity hover:opacity-90"
       >
-        Back to launch
+        Back to onboarding
         <ArrowRight size={13} />
       </Link>
     </motion.div>
