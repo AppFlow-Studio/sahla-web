@@ -296,7 +296,7 @@ export default function Features() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         >
-          <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40">What&apos;s In The App</p>
+          <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#9a7b2e]">What&apos;s In The App</p>
           <h2 className="mt-4 font-[family-name:var(--font-hero)] text-[clamp(36px,4.5vw,60px)] text-dark-green">
             Everything your mosque needs.
           </h2>

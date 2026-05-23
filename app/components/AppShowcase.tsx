@@ -172,7 +172,7 @@ export default function AppShowcase() {
           viewport={{ once: true }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         >
-          <p className="mb-4 inline-flex items-center gap-2.5 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40">
+          <p className="mb-4 inline-flex items-center gap-2.5 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#9a7b2e]">
             App Showcase
           </p>
           <h2 className="mt-4 font-[family-name:var(--font-hero)] text-[clamp(36px,4.5vw,60px)] text-dark-green">
@@ -248,7 +248,6 @@ export default function AppShowcase() {
               >
                 {/* Eyebrow */}
                 <div className="mb-3.5 inline-flex items-center gap-2.5 text-[11px] font-semibold tracking-[0.28em] uppercase text-[#9a7b2e]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#1a6b42]" />
                   {screen.label}
                 </div>
 
