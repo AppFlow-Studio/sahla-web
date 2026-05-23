@@ -286,7 +286,8 @@ function ActivityRow({ event, index }: { event: ActivityEvent; index: number }) 
           meta.tone === "rsvp" && "bg-[#0A261E]/[0.06] text-[#0A261E]/70",
           meta.tone === "member" && "bg-[#fffbf2] text-[#B8922A]",
           meta.tone === "notification" && "bg-amber-50 text-amber-700",
-          meta.tone === "content" && "bg-violet-50 text-violet-700"
+          meta.tone === "content" && "bg-violet-50 text-violet-700",
+          meta.tone === "settings" && "bg-sky-50 text-sky-700"
         )}
       >
         <meta.Icon size={13} />
@@ -305,7 +306,7 @@ function ActivityRow({ event, index }: { event: ActivityEvent; index: number }) 
 
 function activityMeta(event: ActivityEvent): {
   Icon: typeof Heart;
-  tone: "donation" | "rsvp" | "member" | "notification" | "content";
+  tone: "donation" | "rsvp" | "member" | "notification" | "content" | "settings";
   label: React.ReactNode;
 } {
   switch (event.kind) {
@@ -379,6 +380,19 @@ function activityMeta(event: ActivityEvent): {
             )}{" "}
             created {event.contentKind === "event" ? "event" : "program"}{" "}
             <span className="font-semibold text-[#0A261E]">{event.contentName}</span>
+          </>
+        ),
+      };
+    case "settings":
+      return {
+        Icon: Sparkles,
+        tone: "settings",
+        label: (
+          <>
+            <span className="font-semibold text-[#0A261E]">
+              {event.actorName ?? "You"}
+            </span>{" "}
+            updated <span className="font-semibold text-[#0A261E]">{event.label}</span>
           </>
         ),
       };

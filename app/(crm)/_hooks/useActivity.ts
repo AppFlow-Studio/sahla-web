@@ -45,6 +45,13 @@ export type ActivityEvent =
       occurredAt: string;
       title: string;
       recipientCount: number;
+    }
+  | {
+      kind: "settings";
+      id: string;
+      occurredAt: string;
+      label: string;
+      actorName: string | null;
     };
 
 function synthesizeFromMocks(limit: number): ActivityEvent[] {

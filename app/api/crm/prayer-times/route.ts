@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { requireCrmAccess } from "@/lib/supabase/requireCrmAccess";
@@ -125,6 +126,26 @@ export async function POST(request: Request) {
   if (insErr) {
     return NextResponse.json({ error: insErr.message }, { status: 500 });
   }
+
+  // D3 from the CRM gap plan: surface prayer-time edits on the activity feed.
+  const session = await auth();
+  const actorName =
+    (session?.sessionClaims?.fullName as string | undefined) ??
+    (session?.sessionClaims?.email as string | undefined) ??
+    "An admin";
+  void supabase.from("activity_log").insert({
+    mosque_id: access.mosqueId,
+    actor_id: access.userId,
+    actor_name: actorName,
+    action: "prayer_times_updated",
+    entity_type: "mosque",
+    entity_id: access.mosqueId,
+    entity_name: null,
+    metadata: {
+      calculation_method: body.calculation_method,
+      school: body.school,
+    },
+  });
 
   return NextResponse.json({ success: true });
 }
