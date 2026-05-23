@@ -33,46 +33,57 @@ export async function POST(req: Request) {
 
   const supabase = createAdminSupabaseClient();
 
-  const { data: mosqueRow, error: mosqueReadError } = await supabase
-    .from("mosques")
-    .select("id, app_name, onboarding_status, subscription_status")
-    .eq("id", mosqueId)
-    .single();
+  // Find the pipeline row — could be linked by mosque_id or be the row's own id
+  const { data: pipelineRow, error: pipelineReadError } = await supabase
+    .from("pipeline_stages")
+    .select("id, mosque_id")
+    .or(`mosque_id.eq.${mosqueId},id.eq.${mosqueId}`)
+    .limit(1)
+    .maybeSingle();
 
-  if (mosqueReadError || !mosqueRow) {
-    return NextResponse.json({ error: "Mosque not found." }, { status: 404 });
+  if (pipelineReadError || !pipelineRow) {
+    return NextResponse.json({ error: "Pipeline entry not found." }, { status: 404 });
   }
 
-  // Validation gates requested in P2.
-  if (newStage === "onboarding") {
-    const hasAccount = Boolean(mosqueRow.app_name) || mosqueRow.onboarding_status !== null;
-    if (!hasAccount) {
-      return NextResponse.json(
-        { error: "Cannot move to Onboarding: account has not been created yet." },
-        { status: 422 }
-      );
-    }
-  }
+  // Validation gates only apply when there's a linked mosque record
+  if (pipelineRow.mosque_id && (newStage === "onboarding" || newStage === "live")) {
+    const { data: mosqueRow, error: mosqueReadError } = await supabase
+      .from("mosques")
+      .select("id, app_name, onboarding_status, subscription_status")
+      .eq("id", pipelineRow.mosque_id)
+      .single();
 
-  if (newStage === "live") {
-    const subscriptionStatus = (mosqueRow.subscription_status ?? "").toLowerCase();
-    const isActiveSubscription =
-      subscriptionStatus === "active" || subscriptionStatus === "trialing";
-    if (!isActiveSubscription) {
-      return NextResponse.json(
-        { error: "Cannot move to Live: subscription is not active." },
-        { status: 422 }
-      );
+    if (!mosqueReadError && mosqueRow) {
+      if (newStage === "onboarding") {
+        const hasAccount = Boolean(mosqueRow.app_name) || mosqueRow.onboarding_status !== null;
+        if (!hasAccount) {
+          return NextResponse.json(
+            { error: "Cannot move to Onboarding: account has not been created yet." },
+            { status: 422 }
+          );
+        }
+      }
+
+      if (newStage === "live") {
+        const subscriptionStatus = (mosqueRow.subscription_status ?? "").toLowerCase();
+        const isActiveSubscription =
+          subscriptionStatus === "active" || subscriptionStatus === "trialing";
+        if (!isActiveSubscription) {
+          return NextResponse.json(
+            { error: "Cannot move to Live: subscription is not active." },
+            { status: 422 }
+          );
+        }
+      }
     }
   }
 
   const updatedAt = new Date().toISOString();
 
-  const { data: updatedRows, error: stageUpdateError } = await supabase
+  const { error: stageUpdateError } = await supabase
     .from("pipeline_stages")
     .update({ stage: newStage, updated_at: updatedAt })
-    .eq("mosque_id", mosqueId)
-    .select("mosque_id");
+    .eq("id", pipelineRow.id);
 
   if (stageUpdateError) {
     return NextResponse.json(
@@ -81,25 +92,13 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!updatedRows || updatedRows.length === 0) {
-    const { error: stageInsertError } = await supabase
-      .from("pipeline_stages")
-      .insert({ mosque_id: mosqueId, stage: newStage, updated_at: updatedAt });
-
-    if (stageInsertError) {
-      return NextResponse.json(
-        { error: `Failed to create stage: ${stageInsertError.message}` },
-        { status: 500 }
-      );
-    }
-  }
-
-  if (newStage === "onboarding" || newStage === "live") {
+  // Update mosque onboarding status when linked
+  if (pipelineRow.mosque_id && (newStage === "onboarding" || newStage === "live")) {
     const onboardingStatus = newStage === "live" ? "live" : "in_progress";
     const { error: mosqueUpdateError } = await supabase
       .from("mosques")
       .update({ onboarding_status: onboardingStatus })
-      .eq("id", mosqueId);
+      .eq("id", pipelineRow.mosque_id);
 
     if (mosqueUpdateError) {
       return NextResponse.json(
@@ -113,4 +112,3 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ ok: true, updatedAt });
 }
-

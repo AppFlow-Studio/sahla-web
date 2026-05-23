@@ -26,24 +26,56 @@ export async function POST(req: Request) {
 
   const supabase = await createClerkSupabaseClient();
 
-  const attempts = [
-    { mosque_id: mosqueId, note },
-    { mosque_id: mosqueId, content: note },
-    { mosque_id: mosqueId, body: note },
-    { mosque_id: mosqueId, text: note },
-  ];
+  // Check if this ID belongs to a mosque or is a pipeline-only lead
+  const { data: mosqueRow } = await supabase
+    .from("mosques")
+    .select("id")
+    .eq("id", mosqueId)
+    .maybeSingle();
 
-  let lastError: string | null = null;
-  for (const payload of attempts) {
-    const { error } = await supabase.from("mosque_notes").insert(payload);
-    if (!error) {
-      return NextResponse.json({ ok: true }, { status: 200 });
+  if (mosqueRow) {
+    // Mosque exists — store note in mosque_notes
+    const { error } = await supabase.from("mosque_notes").insert({
+      mosque_id: mosqueId,
+      content: note,
+    });
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Failed to insert note: ${error.message}` },
+        { status: 500 },
+      );
     }
-    lastError = error.message;
+
+    return NextResponse.json({ ok: true }, { status: 200 });
   }
 
-  return NextResponse.json(
-    { error: lastError ?? "Failed to insert note." },
-    { status: 500 },
-  );
+  // Pipeline-only lead — append to pipeline_stages.notes jsonb
+  const { data: pipelineRow, error: readError } = await supabase
+    .from("pipeline_stages")
+    .select("id, notes")
+    .or(`id.eq.${mosqueId},mosque_id.eq.${mosqueId}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (readError || !pipelineRow) {
+    return NextResponse.json({ error: "Lead not found." }, { status: 404 });
+  }
+
+  const existing = Array.isArray(pipelineRow.notes) ? pipelineRow.notes : [];
+  const updated = [...existing, { text: note, at: new Date().toISOString() }];
+
+  const { error: updateError } = await supabase
+    .from("pipeline_stages")
+    .update({ notes: updated })
+    .eq("id", pipelineRow.id);
+
+  if (updateError) {
+    return NextResponse.json(
+      { error: `Failed to save note: ${updateError.message}` },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ ok: true }, { status: 200 });
 }
