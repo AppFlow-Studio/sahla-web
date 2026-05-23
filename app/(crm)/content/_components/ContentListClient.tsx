@@ -13,22 +13,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import PageHeader from "../../_components/PageHeader";
 import EmptyState from "../../_components/EmptyState";
 import StatCard from "../../_components/StatCard";
 import { useContent, type ContentItem } from "../../_hooks/useContent";
 import { formatUsd } from "../../_lib/format";
-import {
-  EVENT_CATEGORIES,
-  PROGRAM_CATEGORIES,
-} from "../../_mock/programs";
 import CreateContentWizard from "../_wizard/CreateContentWizard";
 import { cn } from "@/lib/utils";
 
@@ -42,9 +31,6 @@ export default function ContentListClient({ kind }: Props) {
   const { data: items } = useContent(kind);
   const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-
-  const cats = kind === "program" ? PROGRAM_CATEGORIES : EVENT_CATEGORIES;
 
   const filtered = useMemo(() => {
     let rows = items;
@@ -56,13 +42,10 @@ export default function ContentListClient({ kind }: Props) {
           i.speakerName.toLowerCase().includes(q)
       );
     }
-    if (categoryFilter !== "all") {
-      rows = rows.filter((i) => i.category === categoryFilter);
-    }
     return rows.sort(
       (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
     );
-  }, [items, query, categoryFilter]);
+  }, [items, query]);
 
   const stats = useMemo(() => {
     const upcoming = items.filter((i) => new Date(i.startsAt).getTime() > Date.now()).length;
@@ -138,19 +121,6 @@ export default function ContentListClient({ kind }: Props) {
                   className="pl-9"
                 />
               </div>
-              <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v ?? "all")}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  {cats.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <p className="text-[12.5px] text-[#0A261E]/55">
               {filtered.length} of {items.length}
@@ -224,9 +194,11 @@ function ContentCard({ item }: { item: ContentItem }) {
       >
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0" />
         <div className="absolute left-3 top-3 flex items-center gap-2">
-          <span className="rounded-full bg-white/95 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-[#0A261E] backdrop-blur">
-            {item.category}
-          </span>
+          {item.category ? (
+            <span className="rounded-full bg-white/95 px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-[#0A261E] backdrop-blur">
+              {item.category}
+            </span>
+          ) : null}
           {item.isPaid && item.priceUsd ? (
             <span className="rounded-full bg-[#B8922A]/95 px-2 py-0.5 text-[10.5px] font-semibold text-white">
               {formatUsd(item.priceUsd)}

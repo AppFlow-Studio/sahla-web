@@ -98,9 +98,11 @@ export default function ContentDetailClient({ id }: { id: string }) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-white/95 px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-[#0A261E]">
-                {item.category}
-              </span>
+              {item.category ? (
+                <span className="rounded-full bg-white/95 px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-[#0A261E]">
+                  {item.category}
+                </span>
+              ) : null}
               {item.isPaid && item.priceUsd ? (
                 <span className="rounded-full bg-[#B8922A] px-2.5 py-0.5 text-[10.5px] font-semibold text-white">
                   {formatUsd(item.priceUsd)}

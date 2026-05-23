@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { HexColorPicker } from "react-colorful";
 import { Check, Lock, RotateCcw, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,8 +29,14 @@ const PRESETS = [
 
 export default function ThemeClient() {
   const mosque = useMosque();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [primary, setPrimary] = useState(mosque.primaryColor);
   const [accent, setAccent] = useState(mosque.accentColor);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const dirty =
+    primary !== mosque.primaryColor || accent !== mosque.accentColor;
 
   function reset() {
     setPrimary(mosque.primaryColor);
@@ -36,10 +44,45 @@ export default function ThemeClient() {
     toast.success("Reverted to current colors");
   }
 
-  function save() {
-    toast.success("Theme saved", {
-      description: `Primary ${primary} · Accent ${accent}`,
-    });
+  async function save() {
+    if (mosque.isHQ) {
+      toast(
+        "HQ preview — colors won't persist. Sign in as a mosque admin to save.",
+      );
+      return;
+    }
+    if (!dirty) {
+      toast("Nothing to save", { description: "Colors are already up to date." });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/mosques/${mosque.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brand_color: primary, accent_color: accent }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(body.error ?? `Save failed (${res.status})`);
+      }
+      toast.success("Theme saved", {
+        description: `Primary ${primary} · Accent ${accent}`,
+      });
+      // Refresh the layout's server-fetched mosque profile so the
+      // sidebar + every other useMosque() consumer reflects the change.
+      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["crm"] });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Couldn't save theme.";
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -50,13 +93,17 @@ export default function ThemeClient() {
         description="Pick the two colors that define your mosque app. Saves auto when you click Apply."
         action={
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={reset}>
+            <Button
+              variant="ghost"
+              onClick={reset}
+              disabled={isSaving || !dirty}
+            >
               <RotateCcw size={13} />
               Reset
             </Button>
-            <Button onClick={save}>
+            <Button onClick={save} disabled={isSaving || !dirty}>
               <Save size={13} />
-              Apply theme
+              {isSaving ? "Saving…" : "Apply theme"}
             </Button>
           </div>
         }

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Paperclip, Phone, Mail, Clock, CheckCheck } from "lucide-react";
+import { Send, Paperclip, Phone, Mail, Clock, CheckCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,44 +25,20 @@ type Message = {
 const NOW = new Date("2026-05-08T12:00:00Z").getTime();
 const HOUR = 3_600_000;
 
-const SEED_MESSAGES: Message[] = [
-  {
-    id: "msg_01",
-    author: "sahla",
-    authorName: "Sara from Sahla",
-    body:
-      "Asalamu alaykum! 👋 Welcome to Sahla. I'm your point of contact — text me here for anything: bug reports, feature requests, or just getting unstuck. We aim to respond within a few hours, always within 24h.",
-    sentAt: new Date(NOW - 72 * HOUR).toISOString(),
-  },
-  {
-    id: "msg_02",
-    author: "you",
-    authorName: "You",
-    body:
-      "Walaikum asalam! Quick question — can we change the iqamah for Maghrib mid-week, or do we have to wait until next month?",
-    sentAt: new Date(NOW - 48 * HOUR).toISOString(),
-  },
-  {
-    id: "msg_03",
-    author: "sahla",
-    authorName: "Sara from Sahla",
-    body:
-      "Anytime — go to Mosque Setup → Prayer Times. Switch Maghrib to Fixed mode and set the new time. Members see the update on next app open. Auto-saved, no publish step.",
-    sentAt: new Date(NOW - 47 * HOUR).toISOString(),
-  },
-  {
-    id: "msg_04",
-    author: "you",
-    authorName: "You",
-    body: "Perfect. JazakAllah!",
-    sentAt: new Date(NOW - 47 * HOUR + 5 * 60_000).toISOString(),
-  },
-];
+const WELCOME_MESSAGE: Message = {
+  id: "welcome",
+  author: "sahla",
+  authorName: "Sahla Support",
+  body:
+    "As-salāmu ʿalaykum 👋 Send anything here — bug reports, feature requests, billing questions, or just getting unstuck. Your message reaches our support channel in Slack, and we reply by email at the address on your mosque profile. Usually within an hour, always within 24h.",
+  sentAt: new Date(NOW - 72 * HOUR).toISOString(),
+};
 
 export default function SupportClient() {
   const mosque = useMosque();
-  const [messages, setMessages] = useState<Message[]>(SEED_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -71,34 +47,53 @@ export default function SupportClient() {
     }
   }, [messages.length]);
 
-  function send() {
+  async function send() {
     const text = draft.trim();
     if (!text) return;
-    const msg: Message = {
+    if (mosque.isHQ) {
+      toast("HQ preview — sign in as a mosque admin to send messages.");
+      return;
+    }
+
+    const optimistic: Message = {
       id: `msg_${Date.now().toString(36)}`,
       author: "you",
       authorName: "You",
       body: text,
       sentAt: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, msg]);
+    setMessages((prev) => [...prev, optimistic]);
     setDraft("");
-    toast.success("Message sent");
+    setSending(true);
 
-    // Simulate Sahla typing back after a moment
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `msg_${Date.now().toString(36)}`,
-          author: "sahla",
-          authorName: "Sara from Sahla",
-          body:
-            "Thanks for the message! I'll look into this and get back to you shortly, in shaa Allah.",
-          sentAt: new Date().toISOString(),
-        },
-      ]);
-    }, 1800);
+    try {
+      const res = await fetch("/api/crm/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        deliveredToSlack?: boolean;
+        webhookError?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(body.error ?? `Send failed (${res.status})`);
+      }
+      if (body.deliveredToSlack) {
+        toast.success("Message sent — we'll reply by email.");
+      } else {
+        toast.success("Message recorded — reach us at support@sahla.co if urgent.");
+      }
+    } catch (err) {
+      // Roll back the optimistic message.
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      setDraft(text);
+      toast.error(err instanceof Error ? err.message : "Couldn't send.");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -170,8 +165,17 @@ export default function SupportClient() {
                 >
                   <Paperclip size={14} />
                 </Button>
-                <Button onClick={send} disabled={!draft.trim()} size="icon">
-                  <Send size={14} />
+                <Button
+                  onClick={send}
+                  disabled={!draft.trim() || sending}
+                  size="icon"
+                  aria-label="Send message"
+                >
+                  {sending ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Send size={14} />
+                  )}
                 </Button>
               </div>
             </div>

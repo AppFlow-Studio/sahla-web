@@ -112,8 +112,8 @@ export async function POST(
           type: "saas_subscription",
         },
       },
-      success_url: `${appUrl}/go_live?payment=success`,
-      cancel_url: `${appUrl}/go_live?payment=cancelled`,
+      success_url: `${appUrl}/launching?payment=success`,
+      cancel_url: `${appUrl}/launching?payment=cancelled`,
     });
 
     return NextResponse.json({ checkoutUrl: checkoutSession.url });

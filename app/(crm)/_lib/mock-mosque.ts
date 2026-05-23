@@ -1,30 +1,19 @@
 /**
- * Mock mosque profile so the CRM shell renders something believable
- * without depending on the auth/data layer. Replace with `useMosque()`
- * pulling from Clerk + Supabase in the backend pass.
+ * Mosque profile hook backed by the server-resolved `MosqueProvider`.
+ *
+ * Historically this file held a hard-coded `mockMosque` fixture so the
+ * CRM UI could render before the backend was wired. The fixture is now
+ * gone — the layout fetches the real mosque via `getCurrentMosque()`
+ * and threads it through `<MosqueProvider>`. Every consumer that used
+ * to call `useMosque()` keeps the same import path and shape.
+ *
+ * Re-export `MosqueProfile` so existing call sites don't need to change.
  */
-export type MosqueProfile = {
-  id: string;
-  name: string;
-  city: string;
-  state: string;
-  tier: "core" | "core_crm" | "complete";
-  primaryColor: string;
-  accentColor: string;
-  logoInitials: string;
-};
+export type { MosqueProfile } from "./getCurrentMosque";
 
-export const mockMosque: MosqueProfile = {
-  id: "mosque_demo_hamoudeh",
-  name: "Masjid Hamoudeh",
-  city: "Brooklyn",
-  state: "NY",
-  tier: "core_crm",
-  primaryColor: "#0A261E",
-  accentColor: "#B8922A",
-  logoInitials: "MH",
-};
+import { useMosqueContext } from "../_components/MosqueProvider";
+import type { MosqueProfile } from "./getCurrentMosque";
 
 export function useMosque(): MosqueProfile {
-  return mockMosque;
+  return useMosqueContext();
 }

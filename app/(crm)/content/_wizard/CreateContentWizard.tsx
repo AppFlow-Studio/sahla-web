@@ -59,33 +59,31 @@ export default function CreateContentWizard({ open, onOpenChange, kind }: Props)
       return;
     }
     const v = form.getValues();
-    const startsAt = new Date(`${v.startsAtDate}T${v.startsAtTime}:00`).toISOString();
     add({
       kind,
       name: v.name,
-      category: v.category,
       description: v.description ?? "",
       speakerId: v.speakerId,
       speakerName: v.speakerName,
       imageUrl: v.imageUrl,
-      startsAt,
-      durationMin: v.durationMin,
-      recurrence: v.recurrence,
+      startDate: v.startDate,
+      endDate: v.endDate ?? null,
+      startTime: v.startTime,
+      days: v.days ?? [],
       maxCapacity: v.maxCapacity,
       isPaid: v.isPaid,
       priceUsd: v.priceUsd,
     });
-    toast.success(
-      `${kind === "program" ? "Program" : "Event"} published: ${v.name}`
-    );
+    // The useContent hook fires its own success toast on mutation success;
+    // close + reset eagerly so the dialog feels responsive.
     onOpenChange(false);
     reset();
   }
 
-  // Wizards step gates
-  const stepValidators: Array<keyof ContentFormValues | (keyof ContentFormValues)[]> = [
-    ["name", "category", "speakerName"],
-    ["startsAtDate", "startsAtTime", "durationMin"],
+  // Per-step field gates
+  const stepValidators: Array<(keyof ContentFormValues)[]> = [
+    ["name", "speakerName"],
+    ["startDate", "startTime", "endDate"],
     ["maxCapacity", "isPaid", "priceUsd"],
     ["imageUrl"],
     [],

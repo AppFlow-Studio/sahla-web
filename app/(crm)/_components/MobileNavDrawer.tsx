@@ -30,9 +30,21 @@ export default function MobileNavDrawer({ open, onOpenChange }: Props) {
 
           <div className="flex items-center justify-between px-5 pt-6 pb-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#B8922A] font-display text-base text-[#0A261E]">
-                {mosque.logoInitials}
-              </div>
+              {mosque.logoUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={mosque.logoUrl}
+                  alt=""
+                  className="h-9 w-9 rounded-xl object-cover ring-1 ring-white/15"
+                />
+              ) : (
+                <div
+                  className="flex h-9 w-9 items-center justify-center rounded-xl font-display text-base text-[#0A261E]"
+                  style={{ background: "var(--mosque-accent, #B8922A)" }}
+                >
+                  {mosque.logoInitials}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-display text-[15px] leading-tight text-[#E8D5B0]">
                   {mosque.name}
@@ -99,7 +111,12 @@ export default function MobileNavDrawer({ open, onOpenChange }: Props) {
                         <ChildIcon
                           size={14}
                           strokeWidth={1.75}
-                          className={isActive ? "text-[#B8922A]" : "text-[#fffbf2]/45"}
+                          className={isActive ? "" : "text-[#fffbf2]/45"}
+                          style={
+                            isActive
+                              ? { color: "var(--mosque-accent, #B8922A)" }
+                              : undefined
+                          }
                         />
                         <span className="flex-1">{child.label}</span>
                         {child.comingSoon ? <ComingSoonBadge variant="ghost" /> : null}

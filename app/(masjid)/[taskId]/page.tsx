@@ -8,6 +8,7 @@ import { ALL_TASKS, ONBOARDING_CATEGORIES } from "../components/onboarding-tasks
 import { getMosqueOnboardingData } from "../data";
 import TaskPageTransition from "./TaskPageTransition";
 import { createStripeClient } from "@/lib/stripe";
+import { markOnboardingStep } from "@/lib/supabase/onboarding";
 
 // Lazy-load panels — only the active panel is compiled/loaded per request.
 // This prevents Turbopack from parsing all 13 panels + their deps on every page load.
@@ -189,6 +190,23 @@ export default async function TaskPage({
           },
           business_profile: { name: account.business_profile?.name ?? null },
         };
+        // Self-heal: if charges are enabled but the task isn't marked
+        // complete, mark it now. The API-route path (panel useEffect on
+        // ?stripe_return) only fires once and can miss this when Stripe
+        // activates asynchronously after the redirect.
+        if (account.charges_enabled) {
+          const progress = (mosque as Record<string, unknown>).onboarding_progress as
+            | Record<string, boolean>
+            | null;
+          if (!progress?.stripe_connect) {
+            const supabase = createAdminSupabaseClient();
+            await markOnboardingStep(
+              supabase,
+              (mosque as Record<string, unknown>).id as string,
+              "stripe_connect"
+            );
+          }
+        }
       } catch {
         stripeStatus = { status: "not_connected" as const };
       }
