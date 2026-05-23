@@ -25,7 +25,9 @@ export async function GET() {
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase
     .from("mosques")
-    .select("onboarding_status, subscription_tier, name")
+    .select(
+      "onboarding_status, subscription_tier, subscription_status, saas_stripe_customer_id, name"
+    )
     .eq("id", mosqueId)
     .maybeSingle();
 
@@ -33,8 +35,20 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Defensive: Stripe webhook delivery can lag (sometimes minutes) or fail
+  // entirely. If we have hard evidence of a successful checkout — both a
+  // subscription_tier AND a saas_stripe_customer_id are set — surface the
+  // mosque as "ready" so the launching page can redirect the admin into
+  // their CRM without waiting on the async webhook.
+  const derived =
+    data?.onboarding_status === "ready" || data?.onboarding_status === "live"
+      ? data.onboarding_status
+      : data?.subscription_tier && data?.saas_stripe_customer_id
+      ? "ready"
+      : data?.onboarding_status ?? "in_progress";
+
   return NextResponse.json({
-    status: data?.onboarding_status ?? "in_progress",
+    status: derived,
     tier: data?.subscription_tier ?? null,
     name: data?.name ?? null,
   });
