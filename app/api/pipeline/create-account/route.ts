@@ -170,27 +170,41 @@ export async function POST(req: Request) {
     const client = await clerkClient();
 
     // ── Pre-flight: detect conflict BEFORE creating Clerk side effects ──
-    // If we're graduating an existing lead, make sure the mosque exists and
-    // doesn't already have a Clerk org. Doing this after Clerk org creation
-    // (the previous order) leaked orphan orgs + invitations on every retry.
+    // The mosqueId may refer to a mosques row OR a pipeline-only lead (no mosque yet).
+    let existingMosque: { id: string; clerk_org_id: string | null } | null = null;
+    let pipelineOnlyLeadId: string | null = null;
+
     if (lead.mosqueId) {
-      const { data: existing, error: lookupError } = await supabase
+      const { data: mosqueHit } = await supabase
         .from("mosques")
         .select("id, clerk_org_id")
         .eq("id", lead.mosqueId)
-        .single();
+        .maybeSingle();
 
-      if (lookupError || !existing) {
-        return NextResponse.json(
-          { error: "Mosque not found." },
-          { status: 404 }
-        );
-      }
-      if (existing.clerk_org_id) {
-        return NextResponse.json(
-          { error: "Mosque already has a Clerk organization." },
-          { status: 409 }
-        );
+      if (mosqueHit) {
+        if (mosqueHit.clerk_org_id) {
+          return NextResponse.json(
+            { error: "Mosque already has a Clerk organization." },
+            { status: 409 }
+          );
+        }
+        existingMosque = mosqueHit;
+      } else {
+        // Check if it's a pipeline-only lead (no mosque row yet)
+        const { data: pipelineHit } = await supabase
+          .from("pipeline_stages")
+          .select("id")
+          .or(`id.eq.${lead.mosqueId},mosque_id.eq.${lead.mosqueId}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (!pipelineHit) {
+          return NextResponse.json(
+            { error: "Lead not found." },
+            { status: 404 }
+          );
+        }
+        pipelineOnlyLeadId = pipelineHit.id;
       }
     }
 
@@ -232,17 +246,15 @@ export async function POST(req: Request) {
     const updatedAt = new Date().toISOString();
     let mosqueRow: { id: string; name: string | null } | null = null;
 
-    if (lead.mosqueId) {
-      // ── Graduating an existing lead ──
-      // Conflict already checked above. Update the existing mosque row with
-      // the Clerk org link instead of creating a duplicate row.
+    if (existingMosque) {
+      // ── Graduating an existing lead that already has a mosque row ──
       const { data: updated, error: updateError } = await supabase
         .from("mosques")
         .update({
           clerk_org_id: org.id,
           onboarding_status: "in_progress",
         })
-        .eq("id", lead.mosqueId)
+        .eq("id", existingMosque.id)
         .select("id, name")
         .single();
 
@@ -259,11 +271,12 @@ export async function POST(req: Request) {
         .from("pipeline_stages")
         .update({
           stage: "onboarding",
+          mosque_id: existingMosque.id,
           contact_name: lead.contactName,
           contact_email: lead.contactEmail,
           updated_at: updatedAt,
         })
-        .eq("mosque_id", lead.mosqueId);
+        .eq("mosque_id", existingMosque.id);
 
       if (stageError) {
         return NextResponse.json(
@@ -272,6 +285,67 @@ export async function POST(req: Request) {
           },
           { status: 500 }
         );
+      }
+    } else if (pipelineOnlyLeadId) {
+      // ── Graduating a pipeline-only lead (no mosque row yet) ──
+      // Create the mosque row now and link the pipeline stage to it.
+      const mosqueId = org.id;
+
+      const { data: inserted, error: mosqueError } = await supabase
+        .from("mosques")
+        .insert({
+          id: mosqueId,
+          slug: mosqueSlug,
+          name: lead.mosqueName,
+          city: lead.city,
+          state: lead.state,
+          onboarding_status: "in_progress",
+          clerk_org_id: org.id,
+        })
+        .select("id, name")
+        .single();
+
+      if (mosqueError || !inserted) {
+        return NextResponse.json(
+          { error: mosqueError?.message ?? "Failed to create mosque." },
+          { status: 500 }
+        );
+      }
+      mosqueRow = inserted;
+
+      // Link the pipeline stage to the new mosque
+      const { error: stageError } = await supabase
+        .from("pipeline_stages")
+        .update({
+          mosque_id: mosqueId,
+          stage: "onboarding",
+          contact_name: lead.contactName,
+          contact_email: lead.contactEmail,
+          updated_at: updatedAt,
+        })
+        .eq("id", pipelineOnlyLeadId);
+
+      if (stageError) {
+        return NextResponse.json(
+          {
+            error: `Mosque created, but failed to update pipeline stage: ${stageError.message}`,
+          },
+          { status: 500 }
+        );
+      }
+
+      const { error: notifError } = await supabase
+        .from("mosque_notification_config")
+        .insert({
+          mosque_id: mosqueId,
+          prayer_notif_enabled: false,
+          program_notif_enabled: false,
+          event_notif_enabled: false,
+          default_reminder_min: 30,
+        });
+
+      if (notifError) {
+        console.error("Failed to create notification config:", notifError.message);
       }
     } else {
       // ── Fresh create ──

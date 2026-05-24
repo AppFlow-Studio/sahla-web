@@ -27,6 +27,7 @@ export default async function MosquesPage() {
       )
     `
     )
+    .in("onboarding_status", ["in_progress", "ready", "live"])
     .order("created_at", { ascending: false });
 
   return (

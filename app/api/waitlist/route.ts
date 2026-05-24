@@ -15,17 +15,6 @@ type DemoBody = {
   notes?: string;
 };
 
-function createSlug(name: string) {
-  const base =
-    name
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "mosque";
-  const suffix = Date.now().toString(36);
-  return `${base}-${suffix}`;
-}
-
 export async function POST(req: Request) {
   let body: DemoBody;
   try {
@@ -51,15 +40,13 @@ export async function POST(req: Request) {
 
   const supabase = createAdminSupabaseClient();
   const normalizedEmail = email.toLowerCase();
-  const mosqueId = crypto.randomUUID();
-  const slug = createSlug(mosqueName);
 
-  // 0. Reject duplicates — if a mosque already exists with this email, tell
+  // 0. Reject duplicates — if a lead already exists with this email, tell
   //    the user they're on the list rather than silently creating a second row.
   const { data: existing, error: lookupError } = await supabase
-    .from("mosques")
-    .select("id, name")
-    .ilike("email", normalizedEmail)
+    .from("pipeline_stages")
+    .select("id, mosque_name")
+    .ilike("contact_email", normalizedEmail)
     .maybeSingle();
 
   if (lookupError) {
@@ -75,58 +62,33 @@ export async function POST(req: Request) {
       {
         error: "You're already on the list.",
         alreadyJoined: true,
-        mosqueName: existing.name,
+        mosqueName: existing.mosque_name,
       },
       { status: 409 }
     );
   }
 
-  // 1. Create mosque record in pipeline as a lead
-  const { data: mosqueRow, error: mosqueError } = await supabase
-    .from("mosques")
-    .insert({
-      id: mosqueId,
-      slug,
-      name: mosqueName,
-      city: city || null,
-      country: country || null,
-      email: normalizedEmail,
-      onboarding_status: "pipeline",
-    })
-    .select("id, name")
-    .single();
-
-  if (mosqueError || !mosqueRow) {
-    console.error("Mosque insert failed:", mosqueError);
-    return NextResponse.json(
-      { error: "Something went wrong. Please try again." },
-      { status: 500 }
-    );
-  }
-
-  // 2. Create pipeline stage as "lead"
+  // 1. Create pipeline stage as "lead" — no mosque record yet.
+  //    The mosque row is created later when the lead reaches onboarding.
   const { error: stageError } = await supabase.from("pipeline_stages").insert({
-    mosque_id: mosqueRow.id,
     stage: "lead",
+    mosque_name: mosqueName,
+    city: city || null,
+    country: country || null,
     contact_name: name,
     contact_email: normalizedEmail,
     contact_phone: phone || null,
+    notes: notes ? JSON.stringify([{ text: `Source: Waitlist form\n${notes}`, at: new Date().toISOString() }]) : JSON.stringify([{ text: "Source: Waitlist form", at: new Date().toISOString() }]),
     updated_at: new Date().toISOString(),
   });
 
   if (stageError) {
     console.error("Pipeline stage insert failed:", stageError.message);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
-
-  // 3. Add a note tagging the source plus any free-text notes
-  const noteParts: string[] = [];
-  noteParts.push(`Source: Waitlist form`);
-  if (notes) noteParts.push(notes);
-
-  await supabase.from("mosque_notes").insert({
-    mosque_id: String(mosqueRow.id),
-    content: noteParts.join("\n"),
-  });
 
   // 4. Notify the team
   try {

@@ -165,10 +165,33 @@ export async function DELETE(
     .from("mosques")
     .select("id, name, onboarding_status, clerk_org_id")
     .eq("id", mosqueId)
-    .single();
+    .maybeSingle();
 
+  // If no mosque row exists, this might be a pipeline-only lead — delete just the pipeline row
   if (readError || !mosque) {
-    return NextResponse.json({ error: "Mosque not found." }, { status: 404 });
+    const { data: pipelineRow, error: pipelineReadError } = await supabase
+      .from("pipeline_stages")
+      .select("id, mosque_name")
+      .eq("id", mosqueId)
+      .maybeSingle();
+
+    if (pipelineReadError || !pipelineRow) {
+      return NextResponse.json({ error: "Mosque not found." }, { status: 404 });
+    }
+
+    const { error: pipelineDeleteError } = await supabase
+      .from("pipeline_stages")
+      .delete()
+      .eq("id", pipelineRow.id);
+
+    if (pipelineDeleteError) {
+      return NextResponse.json(
+        { error: `Failed to delete lead: ${pipelineDeleteError.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, name: pipelineRow.mosque_name });
   }
 
   // Refuse to delete paying customers via this admin action — they should

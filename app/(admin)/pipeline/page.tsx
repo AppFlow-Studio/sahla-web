@@ -2,6 +2,8 @@ import KanbanBoard from "@/app/components/kanban/KanbanBoard";
 import type { KanbanCard, Stage } from "@/app/components/kanban/types";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+
 export default async function PipelinePage() {
   const supabase = createAdminSupabaseClient();
   const VALID_STAGES = new Set<Stage>([
@@ -26,6 +28,9 @@ export default async function PipelinePage() {
   type PipelineRow = {
     id: string;
     mosque_id: string | null;
+    mosque_name: string | null;
+    city: string | null;
+    country: string | null;
     stage: string | null;
     contact_name: string | null;
     contact_email: string | null;
@@ -44,6 +49,9 @@ export default async function PipelinePage() {
       `
     id,
     mosque_id,
+    mosque_name,
+    city,
+    country,
     stage,
     contact_name,
     contact_email,
@@ -70,36 +78,30 @@ export default async function PipelinePage() {
     );
   }
 
-  const latestByMosque = new Map<string, PipelineRow>();
-  const fallbackRows: PipelineRow[] = [];
+  const latestByKey = new Map<string, PipelineRow>();
 
   for (const row of (data ?? []) as PipelineRow[]) {
     const mosque = unwrapMosque(row.mosques);
-    const mosqueId = (row.mosque_id ?? mosque?.id ?? "").trim();
+    // Use mosque_id when linked, otherwise use the pipeline row's own id
+    const dedupKey = (row.mosque_id ?? mosque?.id ?? row.id ?? "").trim();
 
-    // Keep only the latest stage row per mosque so board reflects current pipeline state.
-    if (mosqueId) {
-      if (!latestByMosque.has(mosqueId)) {
-        latestByMosque.set(mosqueId, row);
-      }
-      continue;
+    // Keep only the latest stage row per key so board reflects current pipeline state.
+    if (dedupKey && !latestByKey.has(dedupKey)) {
+      latestByKey.set(dedupKey, row);
     }
-
-    // Rows without mosque id cannot be de-duplicated safely; keep them as-is.
-    fallbackRows.push(row);
   }
 
-  const dedupedRows = [...latestByMosque.values(), ...fallbackRows];
+  const dedupedRows = [...latestByKey.values()];
 
   const cards: KanbanCard[] = dedupedRows.map((row) => {
     const mosque = unwrapMosque(row.mosques);
     const mosqueId = row.mosque_id ?? mosque?.id ?? "";
 
     return {
-      id: mosqueId || row.id,
-      mosqueId,
-      mosqueName: (mosque?.name ?? "").trim(),
-      city: (mosque?.city ?? "").trim(),
+      id: row.id,
+      mosqueId: mosqueId || row.id,
+      mosqueName: (row.mosque_name ?? mosque?.name ?? "").trim(),
+      city: (row.city ?? mosque?.city ?? "").trim(),
       state: mosque?.state?.trim() ?? null,
       contactName: (row.contact_name ?? "").trim(),
       contactEmail: (row.contact_email ?? "").trim() || null,

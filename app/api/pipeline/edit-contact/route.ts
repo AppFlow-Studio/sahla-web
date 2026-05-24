@@ -26,19 +26,28 @@ export async function POST(req: Request) {
   const supabase = await createClerkSupabaseClient();
   const updatedAt = new Date().toISOString();
 
-  const { error } = await supabase
+  // Try matching by mosque_id first, then fall back to the row's own id
+  const { data: updatedRows, error } = await supabase
     .from("pipeline_stages")
     .update({
       contact_name: contactName ?? "",
       contact_email: contactEmail ?? "",
       updated_at: updatedAt,
     })
-    .eq("mosque_id", mosqueId);
+    .or(`mosque_id.eq.${mosqueId},id.eq.${mosqueId}`)
+    .select("id");
 
   if (error) {
     return NextResponse.json(
       { error: `Failed to update contact: ${error.message}` },
       { status: 500 },
+    );
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    return NextResponse.json(
+      { error: "Lead not found." },
+      { status: 404 },
     );
   }
 
