@@ -55,6 +55,32 @@ export async function PATCH(
       .eq("id", mosqueId);
   }
 
+  // D2 from the CRM gap plan: log theme changes to the activity feed.
+  // Fire-and-forget when brand_color / accent_color / logo_url move so the
+  // mosque admin's Home dashboard shows "<You> updated theme".
+  const themeFields = ["brand_color", "accent_color", "logo_url"] as const;
+  const themeChanged = themeFields.some((f) => f in updateData);
+  if (themeChanged) {
+    const actorName =
+      (session?.sessionClaims?.fullName as string | undefined) ??
+      (session?.sessionClaims?.email as string | undefined) ??
+      "An admin";
+    void supabase.from("activity_log").insert({
+      mosque_id: mosqueId,
+      actor_id: session.userId,
+      actor_name: actorName,
+      action: "theme_updated",
+      entity_type: "mosque",
+      entity_id: mosqueId,
+      entity_name: null,
+      metadata: {
+        changed: themeFields.filter((f) => f in updateData),
+        brand_color: updateData.brand_color ?? null,
+        accent_color: updateData.accent_color ?? null,
+      },
+    });
+  }
+
   return NextResponse.json({ success: true });
 }
 

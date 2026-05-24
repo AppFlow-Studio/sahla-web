@@ -22,6 +22,7 @@ import PageHeader from "../../_components/PageHeader";
 import StatCard from "../../_components/StatCard";
 import EmptyState from "../../_components/EmptyState";
 import { useDonations, type Donation } from "../../_hooks/useDonations";
+import { useMosque } from "../../_lib/mock-mosque";
 import { formatUsd, relativeShort } from "../../_lib/format";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,7 @@ const RANGE_LABELS: Record<Range, string> = {
 
 export default function DonationsClient() {
   const { data: donations } = useDonations();
+  const mosque = useMosque();
   const [range, setRange] = useState<Range>("90");
 
   const succeeded = useMemo(
@@ -164,6 +166,15 @@ export default function DonationsClient() {
           </a>
         }
       />
+
+      {/* Fundraising goal — pulled from onboarding's _donations_config */}
+      {mosque.donationsConfig && mosque.donationsConfig.goalAmount > 0 ? (
+        <FundraisingGoalCard
+          projectName={mosque.donationsConfig.projectName}
+          goalAmount={mosque.donationsConfig.goalAmount}
+          ytdRaised={Math.round(stats.ytd)}
+        />
+      ) : null}
 
       {/* KPI strip */}
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -386,5 +397,59 @@ function RecentDonationRow({ donation }: { donation: Donation }) {
         {formatUsd(donation.amountUsd)}
       </p>
     </li>
+  );
+}
+
+function FundraisingGoalCard({
+  projectName,
+  goalAmount,
+  ytdRaised,
+}: {
+  projectName: string;
+  goalAmount: number;
+  ytdRaised: number;
+}) {
+  const pct = Math.min(100, Math.round((ytdRaised / goalAmount) * 100));
+  const remaining = Math.max(0, goalAmount - ytdRaised);
+  return (
+    <section
+      aria-label="Fundraising goal"
+      className="mb-6 overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-[#0A261E] p-5 text-[#fffbf2] md:p-6"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div>
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#fffbf2]/55">
+            Fundraising goal
+          </p>
+          <h2 className="mt-1 font-display text-[22px] leading-tight text-[#E8D5B0]">
+            {projectName}
+          </h2>
+        </div>
+        <div className="text-right">
+          <p className="font-display text-[24px] leading-none text-[#fffbf2]">
+            {formatUsd(ytdRaised)}
+            <span className="ml-1 text-[14px] font-sans font-normal text-[#fffbf2]/55">
+              / {formatUsd(goalAmount)}
+            </span>
+          </p>
+          <p className="mt-1 text-[11px] text-[#fffbf2]/55 tabular-nums">
+            {remaining > 0 ? `${formatUsd(remaining)} to go` : "Goal reached"}
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: `${pct}%`,
+            background: "var(--mosque-accent, #B8922A)",
+          }}
+        />
+      </div>
+      <div className="mt-2 flex items-center justify-between text-[11px] text-[#fffbf2]/55">
+        <span>{pct}% of goal · YTD</span>
+        <span>Set during onboarding · edit anytime in Setup</span>
+      </div>
+    </section>
   );
 }

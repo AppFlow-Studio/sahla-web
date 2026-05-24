@@ -26,11 +26,15 @@ async function isEventProcessed(eventId: string): Promise<boolean> {
 }
 
 async function markEventProcessed(eventId: string, eventType: string) {
+  // upsert with onConflict — `.insert().onConflict().ignore()` was invalid
+  // chaining and was throwing on every webhook, so this row never got
+  // written and `markEventProcessed` was effectively a no-op.
   await supabase
     .from("stripe_webhook_events")
-    .insert({ event_id: eventId, event_type: eventType })
-    .onConflict("event_id")
-    .ignore();
+    .upsert(
+      { event_id: eventId, event_type: eventType },
+      { onConflict: "event_id", ignoreDuplicates: true }
+    );
 }
 
 function isSaasSubscription(obj: { metadata?: Record<string, string> }): boolean {
@@ -39,6 +43,21 @@ function isSaasSubscription(obj: { metadata?: Record<string, string> }): boolean
 
 function getMosqueId(obj: { metadata?: Record<string, string> }): string | undefined {
   return obj.metadata?.mosque_id;
+}
+
+/**
+ * Stripe API 2026-03-25.dahlia moved current_period_end from the
+ * subscription itself onto the subscription item. Read from either
+ * location so a server-side API version bump doesn't blow this up.
+ */
+function stripePeriodEndIso(
+  subscription: Stripe.Subscription
+): string | null {
+  const item = subscription.items.data[0];
+  const unix =
+    (item as { current_period_end?: number } | undefined)?.current_period_end ??
+    (subscription as { current_period_end?: number }).current_period_end;
+  return unix ? new Date(unix * 1000).toISOString() : null;
 }
 
 // ─── Notifications ───
@@ -276,17 +295,19 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     const mosqueId = getMosqueId(subscription);
     if (!mosqueId) return;
 
+    const periodEndIso = stripePeriodEndIso(subscription);
+
     await supabase
       .from("mosques")
       .update({
         subscription_status: "active",
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        current_period_end: periodEndIso,
       })
       .eq("id", mosqueId);
 
     await logActivity(mosqueId, "saas_invoice_paid", "subscription", subscriptionId, {
       amount: invoice.amount_paid / 100,
-      period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+      period_end: periodEndIso,
     });
     console.log(`SaaS invoice paid for mosque ${mosqueId}`);
     return;
@@ -395,7 +416,7 @@ async function handleSaasCheckoutCompleted(session: Stripe.Checkout.Session) {
       subscription_status: "active",
       saas_stripe_subscription_id: subscriptionId,
       subscription_tier: tier || null,
-      current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+      current_period_end: stripePeriodEndIso(subscription),
       onboarding_status: "ready",
     })
     .eq("id", mosqueId);
@@ -453,7 +474,7 @@ async function handleSaasSubscriptionUpdated(subscription: Stripe.Subscription) 
     .from("mosques")
     .update({
       subscription_tier: tier || null,
-      current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+      current_period_end: stripePeriodEndIso(subscription),
     })
     .eq("id", mosqueId);
 

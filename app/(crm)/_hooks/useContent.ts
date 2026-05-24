@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback } from "react";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   seedContent,
   generateRsvps,
@@ -8,104 +14,181 @@ import {
   type ContentKind,
   type ContentRsvp,
 } from "../_mock/programs";
+import { useMosque } from "../_lib/mock-mosque";
 
-type Listener = () => void;
-
-let store: ContentItem[] = [...seedContent];
-const listeners = new Set<Listener>();
-let rsvpCache: Map<string, ContentRsvp[]> = new Map();
-
-function snapshot() {
-  return store;
-}
-
-function subscribe(cb: Listener) {
-  listeners.add(cb);
-  return () => listeners.delete(cb);
-}
-
-function emit() {
-  store = [...store];
-  rsvpCache = new Map();
-  for (const l of listeners) l();
-}
-
-function id(prefix: "prg" | "evt") {
-  return `${prefix}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-export type ContentInput = {
+/** Wizard payload — the shape the new schedule step emits. */
+export type ContentWizardInput = {
   kind: ContentKind;
   name: string;
-  category: string;
   description: string;
   speakerId?: string;
   speakerName: string;
   imageUrl?: string;
-  startsAt: string;
-  durationMin: number;
-  recurrence: ContentItem["recurrence"];
+  startDate: string; // YYYY-MM-DD
+  endDate?: string | null;
+  startTime: string; // HH:MM
+  days: string[]; // ["monday","wednesday",...] — [] for one-off events
   maxCapacity: number;
   isPaid: boolean;
   priceUsd?: number;
 };
 
+async function fetchContent(kind?: ContentKind): Promise<ContentItem[]> {
+  const url = kind ? `/api/crm/content?kind=${kind}` : "/api/crm/content";
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to load content (${res.status})`);
+  const body = (await res.json()) as { items: ContentItem[] };
+  return body.items ?? [];
+}
+
+async function createContent(input: ContentWizardInput): Promise<ContentItem> {
+  const res = await fetch("/api/crm/content", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `Failed to create (${res.status})`);
+  }
+  const body = (await res.json()) as { item: ContentItem };
+  return body.item;
+}
+
+async function deleteContent(id: string): Promise<void> {
+  const res = await fetch(`/api/crm/content/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `Failed to delete (${res.status})`);
+  }
+}
+
+async function fetchContentItem(id: string): Promise<ContentItem | null> {
+  const res = await fetch(`/api/crm/content/${encodeURIComponent(id)}`, {
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Failed to load item (${res.status})`);
+  const body = (await res.json()) as { item: ContentItem | null };
+  return body.item;
+}
+
+async function fetchContentRsvps(id: string): Promise<ContentRsvp[]> {
+  const res = await fetch(
+    `/api/crm/content/${encodeURIComponent(id)}/rsvps`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) throw new Error(`Failed to load RSVPs (${res.status})`);
+  const body = (await res.json()) as { rsvps: ContentRsvp[] };
+  return body.rsvps ?? [];
+}
+
+/**
+ * Content list + create + delete. Same public API the mock had — consumers
+ * (ContentListClient, ContentDetailClient, CreateContentWizard) work
+ * unchanged.
+ */
 export function useContent(kind?: ContentKind) {
-  const data = useSyncExternalStore(subscribe, snapshot, snapshot);
-  const filtered = useMemo(
-    () => (kind ? data.filter((d) => d.kind === kind) : data),
-    [data, kind]
+  const mosque = useMosque();
+  const queryClient = useQueryClient();
+  const queryKey = ["crm", "content", mosque.id, kind ?? "all"] as const;
+
+  const query = useQuery({
+    queryKey,
+    queryFn: () => fetchContent(kind),
+    enabled: !mosque.isHQ,
+    placeholderData: [],
+    staleTime: 30_000,
+  });
+
+  const addMutation = useMutation({
+    mutationFn: createContent,
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["crm", "content", mosque.id] });
+      toast.success(
+        `${created.kind === "event" ? "Event" : "Program"} published: ${created.name}`
+      );
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Couldn't publish.");
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: deleteContent,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm", "content", mosque.id] });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Couldn't delete.");
+    },
+  });
+
+  const add = useCallback(
+    (input: ContentWizardInput) => {
+      if (mosque.isHQ) {
+        toast("HQ preview — won't persist.");
+        return;
+      }
+      addMutation.mutate(input);
+    },
+    [addMutation, mosque.isHQ]
   );
 
-  const add = useCallback((input: ContentInput) => {
-    const item: ContentItem = {
-      id: id(input.kind === "program" ? "prg" : "evt"),
-      kind: input.kind,
-      name: input.name,
-      category: input.category,
-      description: input.description,
-      speakerId: input.speakerId,
-      speakerName: input.speakerName,
-      imageUrl:
-        input.imageUrl ||
-        "https://images.unsplash.com/photo-1542816417-0983c9c9ad53",
-      startsAt: input.startsAt,
-      durationMin: input.durationMin,
-      recurrence: input.recurrence,
-      maxCapacity: input.maxCapacity,
-      currentCount: 0,
-      isPaid: input.isPaid,
-      priceUsd: input.priceUsd,
-      isPublished: true,
-    };
-    store = [item, ...store];
-    emit();
-    return item;
-  }, []);
+  const remove = useCallback(
+    (id: string) => {
+      if (mosque.isHQ) {
+        toast("HQ preview — won't persist.");
+        return;
+      }
+      removeMutation.mutate(id);
+    },
+    [removeMutation, mosque.isHQ]
+  );
 
-  const remove = useCallback((removeId: string) => {
-    store = store.filter((s) => s.id !== removeId);
-    emit();
-  }, []);
+  const data = mosque.isHQ
+    ? kind
+      ? seedContent.filter((c) => c.kind === kind)
+      : seedContent
+    : query.data ?? [];
 
-  return { data: filtered, add, remove };
+  return { data, add, remove };
 }
 
 export function useContentItem(itemId: string): ContentItem | null {
-  const all = useSyncExternalStore(subscribe, snapshot, snapshot);
-  return useMemo(() => all.find((i) => i.id === itemId) ?? null, [all, itemId]);
+  const mosque = useMosque();
+
+  const query = useQuery({
+    queryKey: ["crm", "content", mosque.id, "item", itemId],
+    queryFn: () => fetchContentItem(itemId),
+    enabled: !mosque.isHQ && !!itemId,
+    staleTime: 30_000,
+  });
+
+  if (mosque.isHQ) {
+    return seedContent.find((c) => c.id === itemId) ?? null;
+  }
+  return query.data ?? null;
 }
 
 export function useContentRsvps(itemId: string): ContentRsvp[] {
-  const all = useSyncExternalStore(subscribe, snapshot, snapshot);
-  return useMemo(() => {
-    const item = all.find((i) => i.id === itemId);
-    if (!item) return [];
-    if (rsvpCache.has(itemId)) return rsvpCache.get(itemId)!;
-    const rows = generateRsvps(item);
-    rsvpCache.set(itemId, rows);
-    return rows;
-  }, [all, itemId]);
+  const mosque = useMosque();
+
+  const query = useQuery({
+    queryKey: ["crm", "content", mosque.id, "rsvps", itemId],
+    queryFn: () => fetchContentRsvps(itemId),
+    enabled: !mosque.isHQ && !!itemId,
+    placeholderData: [],
+    staleTime: 15_000,
+  });
+
+  if (mosque.isHQ) {
+    const item = seedContent.find((c) => c.id === itemId);
+    return item ? generateRsvps(item) : [];
+  }
+  return query.data ?? [];
 }
 
 export type { ContentItem, ContentKind, ContentRsvp };

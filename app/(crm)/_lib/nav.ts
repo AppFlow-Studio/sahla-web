@@ -20,6 +20,7 @@ import {
   UserCog,
   CreditCard,
   LifeBuoy,
+  Building2,
 } from "lucide-react";
 
 export type CrmRoute = {
@@ -96,8 +97,7 @@ export const CRM_NAV: CrmSection[] = [
         href: "/content/jummah",
         label: "Jummah",
         icon: BookOpenText,
-        comingSoon: true,
-        description: "Friday prayer scheduling",
+        description: "Friday prayer slots — time, khateeb, topic",
       },
     ],
   },
@@ -161,6 +161,12 @@ export const CRM_NAV: CrmSection[] = [
     href: "/settings",
     icon: Cog,
     children: [
+      {
+        href: "/settings/profile",
+        label: "Profile",
+        icon: Building2,
+        description: "Mosque name, app branding name, contact info, timezone",
+      },
       {
         href: "/settings/team",
         label: "Team",

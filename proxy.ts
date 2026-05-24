@@ -126,8 +126,16 @@ export const proxy = clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // Allow HQ + mosque admins to preview the CRM while it's being built.
+  // CRM routes — the (crm) server layout enforces tier + onboarding state
+  // for non-HQ mosque admins. Proxy just passes through; defense-in-depth
+  // is the layout + per-route requireCrmAccess() helper.
   if (isCrmPath(url.pathname)) {
+    return NextResponse.next();
+  }
+
+  // The "no CRM access" upsell page must be reachable by mosque admins
+  // whose tier doesn't grant CRM — i.e. the (crm) layout's redirect target.
+  if (url.pathname === "/no-crm-access") {
     return NextResponse.next();
   }
 

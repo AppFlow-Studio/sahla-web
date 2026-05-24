@@ -21,12 +21,22 @@ export default function Sidebar() {
       {/* Mosque header */}
       <div className="px-5 pt-6 pb-5">
         <div className="flex items-center gap-3">
-          <div
-            aria-hidden
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#B8922A] font-display text-base text-[#0A261E] shadow-[inset_0_-2px_4px_rgba(0,0,0,0.15)]"
-          >
-            {mosque.logoInitials}
-          </div>
+          {mosque.logoUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={mosque.logoUrl}
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-xl object-cover ring-1 ring-white/15"
+            />
+          ) : (
+            <div
+              aria-hidden
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-display text-base text-[#0A261E] shadow-[inset_0_-2px_4px_rgba(0,0,0,0.15)]"
+              style={{ background: "var(--mosque-accent, #B8922A)" }}
+            >
+              {mosque.logoInitials}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate font-display text-[15px] leading-tight text-[#E8D5B0]">
               {mosque.name}
@@ -154,8 +164,13 @@ function SectionGroup({
                       strokeWidth={1.75}
                       className={cn(
                         "shrink-0",
-                        isActive ? "text-[#B8922A]" : "text-[#fffbf2]/40"
+                        isActive ? "" : "text-[#fffbf2]/40"
                       )}
+                      style={
+                        isActive
+                          ? { color: "var(--mosque-accent, #B8922A)" }
+                          : undefined
+                      }
                     />
                     <span className="flex-1 truncate">{child.label}</span>
                     {child.comingSoon ? <ComingSoonBadge variant="ghost" /> : null}

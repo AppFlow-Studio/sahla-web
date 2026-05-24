@@ -95,7 +95,7 @@ export default function Navbar() {
 
           {/* Right — CTA buttons */}
           <div className="flex items-center gap-3">
-            {isSahlaAdmin && (
+            {isSahlaAdmin ? (
               <Link
                 href="/overview"
                 className={`hidden items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 sm:inline-flex ${
@@ -107,7 +107,22 @@ export default function Navbar() {
                 Go to App
                 <ArrowRight size={14} />
               </Link>
-            )}
+            ) : isSignedIn && orgId ? (
+              // Signed-in mosque admin — link to /launch, which the proxy
+              // routes to /dashboard. From there the "Open your CRM" CTA
+              // takes them into /home if they have CRM access.
+              <Link
+                href="/launch"
+                className={`hidden items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 sm:inline-flex ${
+                  isLightHero
+                    ? "border border-dark-green/20 text-dark-green hover:bg-dark-green/[0.06]"
+                    : "border border-white/15 text-white hover:bg-white/[0.06]"
+                }`}
+              >
+                Dashboard
+                <ArrowRight size={14} />
+              </Link>
+            ) : null}
             <Link href="/waitlist" className="group relative overflow-hidden rounded-full bg-dark-green px-6 py-2.5 text-[13px] font-semibold text-sand transition-all duration-300 hover:shadow-lg hover:shadow-dark-green/15">
               <span className="relative z-10">Reserve Now</span>
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-accent/10 to-transparent transition-transform duration-500 group-hover:translate-x-full" />
