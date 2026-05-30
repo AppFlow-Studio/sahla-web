@@ -58,6 +58,7 @@ export async function POST(
   const rows = slots.map((slot: { time: string; khateeb_name?: string; topic?: string; capacity_status?: string }) => ({
     mosque_id: mosqueId,
     prayer_time: slot.time,
+    khateeb_name: slot.khateeb_name?.trim() || null,
     topic: slot.topic || null,
     capacity_status: slot.capacity_status || null,
   }));

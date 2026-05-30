@@ -17,6 +17,7 @@ type JummahRow = {
   prayer_time: string | null;
   topic: string | null;
   speaker: string | null;
+  khateeb_name: string | null;
   capacity_status: string | null;
 };
 
@@ -29,14 +30,17 @@ function rowToSlot(
   row: JummahRow,
   speakersById: Map<string, SpeakerRow>
 ): CrmJummahSlot {
+  // Prefer the linked speaker's name; fall back to the free-text khateeb_name
+  // captured during onboarding (before the admin had a speaker registry).
+  const linkedName = row.speaker
+    ? speakersById.get(row.speaker)?.speaker_name ?? null
+    : null;
   return {
     id: String(row.id),
     prayerTime: row.prayer_time ?? "13:00",
     topic: row.topic ?? null,
     speakerId: row.speaker ?? null,
-    speakerName: row.speaker
-      ? speakersById.get(row.speaker)?.speaker_name ?? null
-      : null,
+    speakerName: linkedName ?? row.khateeb_name ?? null,
     capacityStatus: row.capacity_status ?? null,
   };
 }
@@ -51,7 +55,7 @@ export async function GET() {
   const [jummahRes, speakersRes] = await Promise.all([
     supabase
       .from("jummah")
-      .select("id, prayer_time, topic, speaker, capacity_status")
+      .select("id, prayer_time, topic, speaker, khateeb_name, capacity_status")
       .eq("mosque_id", access.mosqueId)
       .order("prayer_time", { ascending: true }),
     supabase
@@ -103,7 +107,7 @@ export async function POST(request: Request) {
       topic: body.topic?.trim() || null,
       speaker: body.speakerId || null,
     })
-    .select("id, prayer_time, topic, speaker, capacity_status")
+    .select("id, prayer_time, topic, speaker, khateeb_name, capacity_status")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
