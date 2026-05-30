@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, MapPin, Check, CheckCircle2, Loader2, ChevronDown } from "lucide-react";
+import { Settings, MapPin, Check, CheckCircle2, Loader2, ChevronDown, RefreshCcw, AlertTriangle } from "lucide-react";
 import {
   CALCULATION_METHODS,
   SCHOOLS,
@@ -125,6 +125,8 @@ export default function PrayerTimesOnboardingPanel({
   const isConfigured = existingConfig.length === 5;
   const [step, setStep] = useState<WizardStep>(isConfigured ? "view" : 1);
   const [todaysPrayers, setTodaysPrayers] = useState<TodaysPrayer[] | null>(null);
+  const [todaysPrayersError, setTodaysPrayersError] = useState<string | null>(null);
+  const [syncingTodaysPrayers, setSyncingTodaysPrayers] = useState(false);
   const [address, setAddress] = useState(mosque.address || "");
   const [method, setMethod] = useState(mosque.calculation_method ?? 2);
   const [school, setSchool] = useState(mosque.school ?? 0);
@@ -157,18 +159,50 @@ export default function PrayerTimesOnboardingPanel({
     }));
   });
 
+  async function loadTodaysPrayers() {
+    setTodaysPrayersError(null);
+    try {
+      const res = await fetch(`/api/mosques/${mosque.id}/todays-prayers`);
+      const data = res.ok ? await res.json() : null;
+      if (Array.isArray(data) && data.length > 0) {
+        const ordered = PRAYER_NAMES.map((p) =>
+          data.find((d: TodaysPrayer) => d.prayer_name === p)
+        ).filter(Boolean) as TodaysPrayer[];
+        setTodaysPrayers(ordered);
+        return;
+      }
+      // Nothing in todays_prayers yet — derive it from iqamah_config + AlAdhan now.
+      setSyncingTodaysPrayers(true);
+      const syncRes = await fetch(`/api/mosques/${mosque.id}/prayer-sync`, {
+        method: "POST",
+      });
+      if (!syncRes.ok) {
+        const err = await syncRes.json().catch(() => null);
+        throw new Error(err?.error ?? "Couldn't fetch today's prayer times");
+      }
+      const syncData = await syncRes.json();
+      if (syncData?.prayers?.length) {
+        const ordered = PRAYER_NAMES.map((p) =>
+          syncData.prayers.find((d: TodaysPrayer) => d.prayer_name === p)
+        ).filter(Boolean) as TodaysPrayer[];
+        setTodaysPrayers(ordered);
+      } else {
+        throw new Error("Prayer sync returned no times");
+      }
+    } catch (err) {
+      setTodaysPrayersError(
+        err instanceof Error ? err.message : "Couldn't load today's prayer times"
+      );
+    } finally {
+      setSyncingTodaysPrayers(false);
+    }
+  }
+
   useEffect(() => {
     if (isConfigured) {
-      fetch(`/api/mosques/${mosque.id}/todays-prayers`)
-        .then((res) => res.ok ? res.json() : null)
-        .then((data) => {
-          if (data?.length) {
-            const ordered = PRAYER_NAMES.map((p) => data.find((d: TodaysPrayer) => d.prayer_name === p)).filter(Boolean);
-            setTodaysPrayers(ordered);
-          }
-        })
-        .catch(() => {});
+      void loadTodaysPrayers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchDefaults() {
@@ -346,11 +380,40 @@ export default function PrayerTimesOnboardingPanel({
                   </div>
                 ))}
               </div>
+            ) : todaysPrayersError ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-6 text-center">
+                <AlertTriangle size={20} className="text-amber-500" />
+                <p className="mt-2 text-[13px] font-medium text-stone-800">
+                  Couldn&apos;t load today&apos;s prayer times
+                </p>
+                <p className="mt-1 max-w-sm text-[12px] text-stone-500">
+                  {todaysPrayersError}
+                </p>
+                <button
+                  onClick={() => void loadTodaysPrayers()}
+                  disabled={syncingTodaysPrayers}
+                  className="mt-3 flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-[12px] font-medium text-stone-600 shadow-sm transition-colors hover:bg-stone-50 disabled:opacity-60"
+                >
+                  {syncingTodaysPrayers ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <RefreshCcw size={13} />
+                  )}
+                  {syncingTodaysPrayers ? "Retrying..." : "Try again"}
+                </button>
+              </div>
             ) : (
-              <div className="space-y-1.5">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <div key={n} className="h-10 animate-pulse rounded-lg bg-stone-100" />
-                ))}
+              <div>
+                <div className="space-y-1.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <div key={n} className="h-10 animate-pulse rounded-lg bg-stone-100" />
+                  ))}
+                </div>
+                {syncingTodaysPrayers && (
+                  <p className="mt-3 text-center text-[11px] text-stone-400">
+                    Fetching today&apos;s times from AlAdhan...
+                  </p>
+                )}
               </div>
             )}
           </div>
