@@ -51,19 +51,6 @@ const TIERS = [
       "Real-time activity feed",
     ],
   },
-  {
-    id: "complete" as const,
-    name: "Sahla Complete",
-    price: 500,
-    description: "Everything plus business ads, reels, and white-glove launch.",
-    features: [
-      "Everything in Core + CRM",
-      "Business Ads marketplace",
-      "Reels (vertical video)",
-      "TV Mode for the lobby",
-      "White-glove launch + monthly review",
-    ],
-  },
 ];
 
 async function fetchSubscription(): Promise<CrmSubscriptionResponse> {
@@ -203,7 +190,7 @@ export default function SubscriptionClient() {
         <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#0A261E]/55">
           Plans
         </h3>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           {TIERS.map((tier) => {
             const active = tier.id === currentTier.id;
             return (

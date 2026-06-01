@@ -8,6 +8,7 @@ const ALLOWED_FIELDS = [
   "name", "address", "city", "state", "phone", "email", "timezone",
   "app_name", "logo_url", "brand_color", "accent_color", "secondary_color",
   "calculation_method", "school",
+  "reels_scope",
 ];
 
 export async function PATCH(

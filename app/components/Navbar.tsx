@@ -2,7 +2,43 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth, useClerk } from "@clerk/nextjs";
+import { OrganizationSwitcher, useAuth, useClerk } from "@clerk/nextjs";
+import { useIsSahlaHQ } from "@/lib/auth/useIsSahlaHQ";
+
+const DRAWER_SWITCHER_APPEARANCE = {
+  variables: {
+    colorBackground: "#0A261E",
+    colorText: "#fffbf2",
+    colorTextSecondary: "rgba(255,251,242,0.55)",
+    colorPrimary: "#fffbf2",
+    colorTextOnPrimaryBackground: "#0A261E",
+    colorInputBackground: "rgba(255,251,242,0.06)",
+    colorInputText: "#fffbf2",
+  },
+  elements: {
+    rootBox: { width: "100%" },
+    organizationSwitcherTrigger: {
+      width: "100%",
+      padding: "10px 14px",
+      borderRadius: "9999px",
+      border: "1px solid rgba(255,251,242,0.1)",
+      color: "#fffbf2",
+      backgroundColor: "transparent",
+      justifyContent: "center",
+      "&:hover": { backgroundColor: "rgba(255,255,255,0.04)" },
+      "&:focus": { boxShadow: "none" },
+    },
+    organizationPreviewMainIdentifier: {
+      fontSize: "13px",
+      fontWeight: 500,
+      color: "#fffbf2",
+    },
+    organizationPreviewSecondaryIdentifier: {
+      fontSize: "11px",
+      color: "rgba(255,251,242,0.5)",
+    },
+  },
+};
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ArrowRight, LogIn, LogOut } from "lucide-react";
@@ -20,6 +56,7 @@ const navLinks = [
 export default function Navbar() {
   const pathname = usePathname();
   const { isSignedIn, isLoaded, orgId } = useAuth();
+  const { isHQ } = useIsSahlaHQ();
   const { signOut } = useClerk();
   const [scrolled, setScrolled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -211,13 +248,25 @@ export default function Navbar() {
                 )}
 
                 {isLoaded && isSignedIn ? (
-                  <button
-                    onClick={() => { signOut({ redirectUrl: "/" }); setSidebarOpen(false); }}
-                    className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-sand/10 px-6 py-3 text-[13px] font-medium text-sand/50 transition-all duration-300 hover:border-sand/20 hover:text-sand"
-                  >
-                    <LogOut size={14} />
-                    Sign Out
-                  </button>
+                  <>
+                    {isHQ && (
+                      <div className="mt-3">
+                        <OrganizationSwitcher
+                          hidePersonal
+                          afterSelectOrganizationUrl="/launch"
+                          afterSelectPersonalUrl="/select-org"
+                          appearance={DRAWER_SWITCHER_APPEARANCE}
+                        />
+                      </div>
+                    )}
+                    <button
+                      onClick={() => { signOut({ redirectUrl: "/" }); setSidebarOpen(false); }}
+                      className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-sand/10 px-6 py-3 text-[13px] font-medium text-sand/50 transition-all duration-300 hover:border-sand/20 hover:text-sand"
+                    >
+                      <LogOut size={14} />
+                      Sign Out
+                    </button>
+                  </>
                 ) : isLoaded ? (
                   <Link
                     href="/login"

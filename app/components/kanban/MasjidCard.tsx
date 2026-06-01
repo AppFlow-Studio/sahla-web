@@ -3,6 +3,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { KanbanCard as KanbanCardModel, Stage } from "./types";
 import EditContactModal from "./EditContactModal";
+import MosqueDetailsModal from "./MosqueDetailsModal";
 
 type Props = {
   card: KanbanCardModel;
@@ -182,6 +183,7 @@ export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdi
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [isEditingContact, setIsEditingContact] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -253,8 +255,16 @@ export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdi
 
   return (
     <article
-      className={`group relative flex h-44 w-full flex-col rounded-2xl border border-l-[3px] ${stageBorderClass[card.stage]} border-green/[0.09] bg-white p-4 text-left shadow-[0_1px_2px_rgba(10,38,30,0.05)] transition-shadow hover:shadow-md`}
+      className={`group relative flex h-44 w-full cursor-pointer flex-col rounded-2xl border border-l-[3px] ${stageBorderClass[card.stage]} border-green/[0.09] bg-white p-4 text-left shadow-[0_1px_2px_rgba(10,38,30,0.05)] transition-shadow hover:shadow-md`}
       aria-label={title ? `${title}, pipeline card` : "Pipeline card"}
+      onClick={() => {
+        // Skip if the user is mid-interaction with the card's inline forms
+        // (note draft / menu). Those handlers already stopPropagation, but
+        // belt-and-suspenders so an accidental click never opens the modal
+        // over an in-progress note.
+        if (isAddingNote || isMenuOpen) return;
+        setIsDetailsOpen(true);
+      }}
     >
       {isAddingNote ? (
         <div className="flex flex-1 flex-col gap-2" onPointerDown={(e) => e.stopPropagation()}>
@@ -419,6 +429,29 @@ export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdi
         initialEmail={contactEmail}
         mosqueName={title}
         mosqueId={String(card.mosqueId ?? card.id)}
+      />
+      <MosqueDetailsModal
+        open={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        mosqueId={String(card.mosqueId ?? card.id)}
+        initial={{
+          mosqueName: title,
+          city: card.city,
+          state: card.state ?? null,
+          contactName,
+          contactEmail: contactEmail || null,
+        }}
+        onSaved={(changes) => {
+          // Reuse the existing onContactEdited path so the card refreshes its
+          // contact line optimistically. Mosque name/city/state changes will
+          // come through on the next router.refresh().
+          if (
+            changes.contactName !== contactName ||
+            (changes.contactEmail ?? "") !== contactEmail
+          ) {
+            onContactEdited?.(changes.contactName, changes.contactEmail ?? "");
+          }
+        }}
       />
     </article>
   );
