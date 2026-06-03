@@ -60,6 +60,34 @@ async function patchAd(
   return body.ad;
 }
 
+async function approveAd(id: string): Promise<BusinessAd> {
+  const res = await fetch("/api/crm/business-ads", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, approve: true }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `Failed to approve ad (${res.status})`);
+  }
+  const body = (await res.json()) as OneResponse;
+  return body.ad;
+}
+
+async function decideAd(id: string, action: "decline" | "cancel"): Promise<BusinessAd> {
+  const res = await fetch("/api/crm/business-ads", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, action }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `Failed to ${action} ad (${res.status})`);
+  }
+  const body = (await res.json()) as OneResponse;
+  return body.ad;
+}
+
 async function deleteAd(id: string): Promise<void> {
   const res = await fetch(`/api/crm/business-ads?id=${encodeURIComponent(id)}`, {
     method: "DELETE",
@@ -165,6 +193,40 @@ export function useBusinessAds() {
     },
   });
 
+  const approveMutation = useMutation({
+    mutationFn: approveAd,
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<BusinessAd[]>(queryKey) ?? [];
+      queryClient.setQueryData<BusinessAd[]>(queryKey, (prev) =>
+        (prev ?? []).map((a) => (a.id === id ? { ...a, status: "approved" } : a))
+      );
+      return { previous };
+    },
+    onError: (err, _id, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(queryKey, ctx.previous);
+      toast.error(err instanceof Error ? err.message : "Couldn't approve ad.");
+    },
+  });
+
+  const decideMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: "decline" | "cancel" }) =>
+      decideAd(id, action),
+    onMutate: async ({ id, action }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<BusinessAd[]>(queryKey) ?? [];
+      const nextStatus = action === "decline" ? "declined" : "canceled";
+      queryClient.setQueryData<BusinessAd[]>(queryKey, (prev) =>
+        (prev ?? []).map((a) => (a.id === id ? { ...a, status: nextStatus } : a))
+      );
+      return { previous };
+    },
+    onError: (err, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(queryKey, ctx.previous);
+      toast.error(err instanceof Error ? err.message : "Couldn't update ad.");
+    },
+  });
+
   const removeMutation = useMutation({
     mutationFn: deleteAd,
     onMutate: async (id) => {
@@ -215,11 +277,35 @@ export function useBusinessAds() {
     [removeMutation, mosque.isHQ]
   );
 
+  const approve = useCallback(
+    (id: string) => {
+      if (mosque.isHQ) {
+        toast("HQ preview — won't persist.");
+        return;
+      }
+      approveMutation.mutate(id);
+    },
+    [approveMutation, mosque.isHQ]
+  );
+
+  const decide = useCallback(
+    (id: string, action: "decline" | "cancel") => {
+      if (mosque.isHQ) {
+        toast("HQ preview — won't persist.");
+        return;
+      }
+      decideMutation.mutate({ id, action });
+    },
+    [decideMutation, mosque.isHQ]
+  );
+
   return {
     data: mosque.isHQ ? [] : query.data ?? [],
     isLoading: query.isLoading,
     add,
     update,
     remove,
+    approve,
+    decide,
   };
 }

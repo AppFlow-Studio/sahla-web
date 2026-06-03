@@ -613,6 +613,44 @@ function mapAdStatus(status: Stripe.Subscription.Status): string {
   }
 }
 
+const money = (n: number) => `$${n.toFixed(2)}`;
+
+async function sendAdReceiptEmail(
+  to: string,
+  r: {
+    name?: string | null;
+    businessName?: string | null;
+    totalPaid: number;
+    onboarding?: number | null;
+    monthly?: number | null;
+  },
+) {
+  const greeting = r.name ? `Assalamu alaikum ${r.name},` : "Assalamu alaikum,";
+  const row = (label: string, value: string, bold = false) =>
+    `<tr>
+      <td style="padding:8px 0;color:rgba(10,38,30,${bold ? "1" : "0.6"});font-size:${bold ? "15px" : "14px"};font-weight:${bold ? "700" : "400"};">${label}</td>
+      <td align="right" style="padding:8px 0;color:#0A261E;font-size:${bold ? "15px" : "14px"};font-weight:${bold ? "700" : "600"};">${value}</td>
+    </tr>`;
+  await sendEmail(
+    to,
+    "Your Business Ad receipt",
+    sahlaEmailHtml(
+      `
+      <p style="margin:0 0 6px;font-size:10px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#B8922A;">Payment received</p>
+      <h1 style="font-size:22px;font-weight:600;color:#0A261E;margin:0 0 6px;line-height:1.3;">Thank you${r.businessName ? ` — ${r.businessName}` : ""}</h1>
+      <p style="margin:0 0 20px;color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">${greeting} your business ad subscription is active. Here's your receipt:</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid rgba(10,38,30,0.08);border-bottom:1px solid rgba(10,38,30,0.08);margin-bottom:20px;">
+        ${r.onboarding != null ? row("One-time onboarding fee", money(r.onboarding)) : ""}
+        ${r.monthly != null ? row("First month", money(r.monthly)) : ""}
+        ${row("Total paid", money(r.totalPaid), true)}
+      </table>
+      ${r.monthly != null ? `<p style="margin:0;color:rgba(10,38,30,0.5);font-size:13px;">You'll then be billed ${money(r.monthly)}/month. We'll review your ad and get back to you within 1–3 business days.</p>` : ""}
+      `,
+      `Receipt — ${money(r.totalPaid)} paid`,
+    ),
+  );
+}
+
 async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: string) {
   const paymentIntentId = typeof invoice.payment_intent === "string"
     ? invoice.payment_intent
@@ -634,7 +672,7 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
         updated_at: new Date().toISOString(),
       })
       .eq("stripe_subscription_id", subscriptionId)
-      .select("submission_id, mosque_id");
+      .select("submission_id, mosque_id, onboarding_amount, recurring_amount");
 
     const row = updated?.[0];
     if (row?.submission_id) {
@@ -642,6 +680,22 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
         .from("business_ads_submissions")
         .update({ status: "submitted" })
         .eq("submission_id", row.submission_id);
+
+      // Email a receipt to the applicant.
+      const { data: sub } = await supabase
+        .from("business_ads_submissions")
+        .select("personal_email, personal_full_name, business_name")
+        .eq("submission_id", row.submission_id)
+        .single();
+      if (sub?.personal_email) {
+        await sendAdReceiptEmail(sub.personal_email, {
+          name: sub.personal_full_name,
+          businessName: sub.business_name,
+          totalPaid: invoice.amount_paid / 100,
+          onboarding: row.onboarding_amount,
+          monthly: row.recurring_amount,
+        });
+      }
     }
     if (row?.mosque_id) {
       await logActivity(row.mosque_id, "ad_subscription_activated", "subscription", subscriptionId, {
@@ -663,9 +717,14 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
 }
 
 async function handleAdSubscriptionUpdated(subscription: Stripe.Subscription) {
+  // A pending cancellation (cancel_at_period_end) keeps Stripe status 'active',
+  // so surface it as 'canceling' for the in-app Manage screen.
+  const status = subscription.cancel_at_period_end
+    ? "canceling"
+    : mapAdStatus(subscription.status);
   await supabase
     .from("ad_subscriptions")
-    .update({ status: mapAdStatus(subscription.status), updated_at: new Date().toISOString() })
+    .update({ status, updated_at: new Date().toISOString() })
     .eq("stripe_subscription_id", subscription.id);
   console.log(`Ad subscription updated: ${subscription.id} → ${subscription.status}`);
 }

@@ -59,6 +59,8 @@ export async function GET() {
     .from("business_ads_submissions")
     .select(SELECT_COLS)
     .eq("mosque_id", access.mosqueId)
+    // Hide abandoned checkouts that never completed payment.
+    .neq("status", "pending_payment")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -137,7 +139,11 @@ export async function POST(request: Request) {
   return NextResponse.json({ ad: rowToAd(data as AdRow) });
 }
 
-type PatchBody = CreateBody & { id?: string };
+type PatchBody = CreateBody & {
+  id?: string;
+  approve?: boolean;
+  action?: "decline" | "cancel";
+};
 
 export async function PATCH(request: Request) {
   const access = await requireCrmAccess();
@@ -155,6 +161,63 @@ export async function PATCH(request: Request) {
   }
 
   const updates: Record<string, unknown> = {};
+
+  // Decline (reject submitted) / cancel (take down approved) → proxy to the
+  // admin-ad-decision edge function, which also stops Stripe billing.
+  if (body.action === "decline" || body.action === "cancel") {
+    const fnUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/admin-ad-decision`;
+    const res = await fetch(fnUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.SUPABASE_SECRET_KEY}`,
+      },
+      body: JSON.stringify({
+        mosque_id: access.mosqueId,
+        submission_id: body.id,
+        action: body.action,
+      }),
+    });
+    const out = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !out.ok) {
+      return NextResponse.json({ error: out.error ?? "Action failed" }, { status: 500 });
+    }
+    const supabase = createAdminSupabaseClient();
+    const { data } = await supabase
+      .from("business_ads_submissions")
+      .select(SELECT_COLS)
+      .eq("submission_id", body.id)
+      .single();
+    return NextResponse.json({ ad: data ? rowToAd(data as AdRow) : null });
+  }
+
+  // Approve a (paid) submission → mark approved + mirror into
+  // approved_business_ads so the mobile app starts showing it.
+  if (body.approve === true) {
+    const supabase = createAdminSupabaseClient();
+    updates.status = "approved";
+    const { data, error } = await supabase
+      .from("business_ads_submissions")
+      .update(updates)
+      .eq("submission_id", body.id)
+      .eq("mosque_id", access.mosqueId)
+      .select(SELECT_COLS)
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const { data: existing } = await supabase
+      .from("approved_business_ads")
+      .select("id")
+      .eq("submission_id", body.id)
+      .maybeSingle();
+    if (!existing) {
+      await supabase
+        .from("approved_business_ads")
+        .insert({ submission_id: body.id, mosque_id: access.mosqueId });
+    }
+    return NextResponse.json({ ad: rowToAd(data as AdRow) });
+  }
   if (typeof body.businessName === "string")
     updates.business_name = body.businessName.trim();
   if (typeof body.businessAddress === "string")

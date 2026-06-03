@@ -11,6 +11,9 @@ import {
   MapPin,
   Mail,
   Phone,
+  Check,
+  X,
+  Ban,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -47,10 +50,34 @@ type DialogState =
   | { mode: "add" }
   | { mode: "edit"; ad: BusinessAd };
 
+const STATUS_META: Record<string, { label: string; className: string }> = {
+  pending_payment: { label: "Awaiting payment", className: "bg-[#0A261E]/[0.06] text-[#0A261E]/55" },
+  submitted: { label: "Needs review", className: "bg-amber-100 text-amber-700" },
+  approved: { label: "Live", className: "bg-emerald-100 text-emerald-700" },
+  past_due: { label: "Past due", className: "bg-red-100 text-red-700" },
+  canceled: { label: "Canceled", className: "bg-[#0A261E]/[0.06] text-[#0A261E]/55" },
+  declined: { label: "Declined", className: "bg-red-100 text-red-700" },
+};
+
 export default function BusinessAdsClient() {
-  const { data: ads, isLoading, add, update, remove } = useBusinessAds();
+  const { data: ads, isLoading, add, update, remove, approve, decide } = useBusinessAds();
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
   const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  function handleApprove(ad: BusinessAd) {
+    approve(ad.id);
+    toast.success(`${ad.businessName} approved — now live`);
+  }
+
+  function handleDecline(ad: BusinessAd) {
+    decide(ad.id, "decline");
+    toast.success(`${ad.businessName} declined — subscription canceled`);
+  }
+
+  function handleCancel(ad: BusinessAd) {
+    decide(ad.id, "cancel");
+    toast.success(`${ad.businessName} taken down — subscription canceled`);
+  }
 
   function handleSubmit(values: BusinessAdFormValues) {
     if (dialog.mode === "add") {
@@ -136,9 +163,21 @@ export default function BusinessAdsClient() {
 
                     <div className="flex items-start gap-3 px-5 py-4">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-display text-[16px] text-[#0A261E]">
-                          {ad.businessName}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-display text-[16px] text-[#0A261E]">
+                            {ad.businessName}
+                          </p>
+                          {(() => {
+                            const meta = STATUS_META[ad.status];
+                            return meta ? (
+                              <span
+                                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${meta.className}`}
+                              >
+                                {meta.label}
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
                         <div className="mt-2 space-y-1 text-[12px] text-[#0A261E]/60">
                           {ad.businessAddress ? (
                             <p className="flex items-start gap-1.5">
@@ -181,6 +220,34 @@ export default function BusinessAdsClient() {
                           <MoreHorizontal size={16} />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44">
+                          {ad.status === "submitted" ? (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleApprove(ad)}
+                                className="text-emerald-700 data-[highlighted]:text-emerald-700"
+                              >
+                                <Check size={13} /> Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDecline(ad)}
+                                className="text-red-600 data-[highlighted]:text-red-600"
+                              >
+                                <X size={13} /> Decline
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          ) : null}
+                          {ad.status === "approved" ? (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleCancel(ad)}
+                                className="text-red-600 data-[highlighted]:text-red-600"
+                              >
+                                <Ban size={13} /> Take down
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          ) : null}
                           <DropdownMenuItem
                             onClick={() => setDialog({ mode: "edit", ad })}
                           >
