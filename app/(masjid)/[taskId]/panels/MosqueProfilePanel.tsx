@@ -23,6 +23,8 @@ type MosqueData = {
   address: string | null;
   city: string | null;
   state: string | null;
+  phone: string | null;
+  email: string | null;
   timezone: string | null;
 };
 
@@ -39,8 +41,8 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
     address: mosque.address || "",
     city: mosque.city || "",
     state: mosque.state || "",
-    phone: "",
-    email: "",
+    phone: mosque.phone || "",
+    email: mosque.email || "",
     timezone: mosque.timezone || "America/New_York",
   });
 

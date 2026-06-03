@@ -90,7 +90,6 @@ export const CRM_NAV: CrmSection[] = [
         href: "/content/reels",
         label: "Reels",
         icon: Film,
-        comingSoon: true,
         description: "Short-form vertical videos for the Discover tab",
       },
       {
@@ -117,8 +116,7 @@ export const CRM_NAV: CrmSection[] = [
         href: "/money/business-ads",
         label: "Business Ads",
         icon: Megaphone,
-        comingSoon: true,
-        description: "Pricing config + submissions queue",
+        description: "Local business ads — creatives, contacts, placement",
       },
     ],
   },
@@ -144,8 +142,7 @@ export const CRM_NAV: CrmSection[] = [
         href: "/setup/categories",
         label: "Categories",
         icon: Tags,
-        comingSoon: true,
-        description: "Rename program and event categories",
+        description: "Discover-tab filter pills (Kids, Youth, Adults, …)",
       },
       {
         href: "/setup/notifications",

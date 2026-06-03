@@ -379,3 +379,37 @@ body {
     @apply font-sans;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Clerk UserProfile / UserButton text-color fallback
+ *
+ * Clerk paints headers + navbar tabs from its base theme rather than from
+ * appearance.variables.colorText, so element classes that look identical
+ * across components can render dark-on-dark depending on the visitor's OS
+ * color scheme. We set baseTheme=dark and named elements overrides in
+ * ClerkProvider, but those keys only cover a subset of the rendered DOM,
+ * and Clerk's UserProfile MODAL uses a different DOM tree than the embedded
+ * UserProfile. The blanket rule below defaults every descendant of a Clerk
+ * surface to cream, with surgical overrides re-applying dark text on the
+ * cream primary buttons + form inputs that sit on lighter backgrounds.
+ * ───────────────────────────────────────────────────────────────────────── */
+.cl-rootBox,
+.cl-rootBox *,
+.cl-modalContent,
+.cl-modalContent *,
+.cl-card,
+.cl-cardBox,
+.cl-pageScrollBox {
+  color: #fffbf2;
+}
+
+/* Re-darken the cream primary button (Update profile, Save, Continue, etc.) */
+.cl-formButtonPrimary,
+.cl-formButtonPrimary *,
+.cl-button[data-variant="solid"],
+.cl-button[data-variant="solid"] * {
+  color: #0a261e !important;
+}
+
+/* Inputs sit on translucent cream so their text needs to stay cream too —
+   inherits from the rootBox rule above and doesn't need a separate selector. */

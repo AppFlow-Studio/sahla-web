@@ -8,6 +8,7 @@ const ALLOWED_FIELDS = [
   "name", "address", "city", "state", "phone", "email", "timezone",
   "app_name", "logo_url", "brand_color", "accent_color", "secondary_color",
   "calculation_method", "school",
+  "reels_scope",
 ];
 
 export async function PATCH(
@@ -33,26 +34,49 @@ export async function PATCH(
 
   const supabase = createAdminSupabaseClient();
 
-  // Update mosque fields + get current onboarding_progress
-  const { data: mosque, error } = await supabase
-    .from("mosques")
-    .update(updateData)
-    .eq("id", mosqueId)
-    .select("onboarding_progress")
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  // Update mosque fields when there's something to update. Skipping this on
+  // empty payloads (e.g. mark-complete-only requests) avoids PostgREST
+  // erroring on `UPDATE ... SET` with no columns.
+  let currentProgress: Record<string, boolean> = {};
+  if (Object.keys(updateData).length > 0) {
+    const { data: mosque, error } = await supabase
+      .from("mosques")
+      .update(updateData)
+      .eq("id", mosqueId)
+      .select("onboarding_progress")
+      .single();
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    currentProgress =
+      (mosque?.onboarding_progress as Record<string, boolean>) || {};
+  } else if (markComplete) {
+    // No field update; read current progress so we can merge the flag in.
+    const { data: mosque, error } = await supabase
+      .from("mosques")
+      .select("onboarding_progress")
+      .eq("id", mosqueId)
+      .single();
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    currentProgress =
+      (mosque?.onboarding_progress as Record<string, boolean>) || {};
   }
 
   // Mark task complete if requested
   if (markComplete && typeof markComplete === "string") {
-    const progress = (mosque?.onboarding_progress as Record<string, boolean>) || {};
-    progress[markComplete] = true;
-    await supabase
+    currentProgress[markComplete] = true;
+    const { error: progressError } = await supabase
       .from("mosques")
-      .update({ onboarding_progress: progress })
+      .update({ onboarding_progress: currentProgress })
       .eq("id", mosqueId);
+    if (progressError) {
+      return NextResponse.json(
+        { error: progressError.message },
+        { status: 500 }
+      );
+    }
   }
 
   // D2 from the CRM gap plan: log theme changes to the activity feed.
