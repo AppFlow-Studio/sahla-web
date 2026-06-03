@@ -141,7 +141,7 @@ async function sendEmail(to: string, subject: string, html: string) {
     return;
   }
   try {
-    await fetch("https://api.resend.com/emails", {
+    const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${resendApiKey}`,
@@ -154,6 +154,12 @@ async function sendEmail(to: string, subject: string, html: string) {
         html,
       }),
     });
+    const body = await res.text();
+    if (!res.ok) {
+      console.error(`[email] Resend ${res.status} sending "${subject}" to ${to}: ${body}`);
+    } else {
+      console.log(`[email] sent "${subject}" to ${to}: ${body}`);
+    }
   } catch (err) {
     console.error("Failed to send email:", err);
   }
@@ -282,12 +288,25 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   });
 }
 
-async function handleInvoicePaid(invoice: Stripe.Invoice, connectedAccountId?: string) {
-  if (!invoice.subscription) return;
+// Stripe Dahlia (2025+) removed invoice.subscription; the subscription id now
+// lives under invoice.parent.subscription_details.subscription. Read both so
+// the handler works regardless of the account's API version.
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const direct =
+    typeof invoice.subscription === "string"
+      ? invoice.subscription
+      : invoice.subscription?.id;
+  if (direct) return direct;
+  const parent = (invoice as unknown as {
+    parent?: { subscription_details?: { subscription?: string | { id: string } } };
+  }).parent;
+  const fromParent = parent?.subscription_details?.subscription;
+  return (typeof fromParent === "string" ? fromParent : fromParent?.id) ?? null;
+}
 
-  const subscriptionId = typeof invoice.subscription === "string"
-    ? invoice.subscription
-    : invoice.subscription.id;
+async function handleInvoicePaid(invoice: Stripe.Invoice, connectedAccountId?: string) {
+  const subscriptionId = invoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
 
   // Connected-account invoice → business-ad subscription. Ad subs live on the
   // mosque's connected account, so they can't be retrieved from the platform
@@ -332,11 +351,8 @@ async function handleInvoicePaid(invoice: Stripe.Invoice, connectedAccountId?: s
 }
 
 async function handleInvoiceFailed(invoice: Stripe.Invoice, connectedAccountId?: string) {
-  if (!invoice.subscription) return;
-
-  const subscriptionId = typeof invoice.subscription === "string"
-    ? invoice.subscription
-    : invoice.subscription.id;
+  const subscriptionId = invoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
 
   // Connected-account invoice → business-ad subscription (see handleInvoicePaid).
   if (connectedAccountId) {
