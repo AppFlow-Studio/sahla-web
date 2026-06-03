@@ -9,25 +9,22 @@ export const metadata = {
   title: "Business Ads · Mosque CRM",
 };
 
-async function loadOnboardingAdsConfig(
+async function loadAdsConfig(
   mosqueId: string
 ): Promise<OnboardingAdsConfig | null> {
   if (mosqueId === "hq_preview") return null;
   const supabase = createAdminSupabaseClient();
   const { data } = await supabase
     .from("mosques")
-    .select("onboarding_progress")
+    .select("ad_monthly_price_cents, ad_onboarding_fee_cents, ads_enabled")
     .eq("id", mosqueId)
     .maybeSingle();
-  const progress = (data?.onboarding_progress as Record<string, unknown> | null) ?? {};
-  const raw = progress._ads_config as
-    | { enabled?: boolean; onboardingFee?: string; monthlyRate?: string }
-    | undefined;
-  if (!raw) return null;
+  if (!data) return null;
+  // All three now come from authoritative columns the app reads/charges from.
   return {
-    enabled: !!raw.enabled,
-    onboardingFee: Number(raw.onboardingFee ?? 0) || 0,
-    monthlyRate: Number(raw.monthlyRate ?? 0) || 0,
+    enabled: !!data.ads_enabled,
+    onboardingFee: (data.ad_onboarding_fee_cents ?? 0) / 100,
+    monthlyRate: (data.ad_monthly_price_cents ?? 0) / 100,
   };
 }
 
@@ -35,7 +32,7 @@ export default async function BusinessAdsPage() {
   const result = await getCurrentMosque();
   const adsConfig =
     result.kind === "ok"
-      ? await loadOnboardingAdsConfig(result.mosque.id)
+      ? await loadAdsConfig(result.mosque.id)
       : null;
 
   return (

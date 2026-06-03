@@ -282,12 +282,21 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   });
 }
 
-async function handleInvoicePaid(invoice: Stripe.Invoice) {
+async function handleInvoicePaid(invoice: Stripe.Invoice, connectedAccountId?: string) {
   if (!invoice.subscription) return;
 
   const subscriptionId = typeof invoice.subscription === "string"
     ? invoice.subscription
     : invoice.subscription.id;
+
+  // Connected-account invoice → business-ad subscription. Ad subs live on the
+  // mosque's connected account, so they can't be retrieved from the platform
+  // (the SaaS path below would throw). The ad_subscriptions row already holds
+  // everything we need, keyed by stripe_subscription_id.
+  if (connectedAccountId) {
+    await handleAdInvoicePaid(invoice, subscriptionId);
+    return;
+  }
 
   // Check if this is a SaaS subscription by fetching from Stripe
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -322,12 +331,21 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   console.log(`Invoice paid for subscription ${subscriptionId}`);
 }
 
-async function handleInvoiceFailed(invoice: Stripe.Invoice) {
+async function handleInvoiceFailed(invoice: Stripe.Invoice, connectedAccountId?: string) {
   if (!invoice.subscription) return;
 
   const subscriptionId = typeof invoice.subscription === "string"
     ? invoice.subscription
     : invoice.subscription.id;
+
+  // Connected-account invoice → business-ad subscription (see handleInvoicePaid).
+  if (connectedAccountId) {
+    await supabase
+      .from("ad_subscriptions")
+      .update({ status: "past_due", updated_at: new Date().toISOString() })
+      .eq("stripe_subscription_id", subscriptionId);
+    return;
+  }
 
   // Check if this is a SaaS subscription
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -576,6 +594,94 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
   });
 }
 
+// ─── Business-ad Subscription Handlers ───
+
+/** Map a Stripe subscription status onto our ad_subscriptions.status vocabulary. */
+function mapAdStatus(status: Stripe.Subscription.Status): string {
+  switch (status) {
+    case "active":
+    case "trialing":
+      return "active";
+    case "past_due":
+    case "unpaid":
+      return "past_due";
+    case "canceled":
+    case "incomplete_expired":
+      return "canceled";
+    default:
+      return "pending";
+  }
+}
+
+async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: string) {
+  const paymentIntentId = typeof invoice.payment_intent === "string"
+    ? invoice.payment_intent
+    : invoice.payment_intent?.id ?? null;
+
+  // First invoice (onboarding fee + first month) activates the subscription and
+  // queues the submission for review. Renewals just keep it alive — they must
+  // not re-stamp start_date or clobber a later review decision.
+  const isFirstInvoice = invoice.billing_reason === "subscription_create";
+
+  if (isFirstInvoice) {
+    const { data: updated } = await supabase
+      .from("ad_subscriptions")
+      .update({
+        status: "active",
+        onboarding_paid: true,
+        stripe_payment_intent_id: paymentIntentId,
+        start_date: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("stripe_subscription_id", subscriptionId)
+      .select("submission_id, mosque_id");
+
+    const row = updated?.[0];
+    if (row?.submission_id) {
+      await supabase
+        .from("business_ads_submissions")
+        .update({ status: "submitted" })
+        .eq("submission_id", row.submission_id);
+    }
+    if (row?.mosque_id) {
+      await logActivity(row.mosque_id, "ad_subscription_activated", "subscription", subscriptionId, {
+        amount: invoice.amount_paid / 100,
+      });
+    }
+    console.log(`Ad subscription activated: ${subscriptionId}`);
+  } else {
+    await supabase
+      .from("ad_subscriptions")
+      .update({
+        status: "active",
+        stripe_payment_intent_id: paymentIntentId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("stripe_subscription_id", subscriptionId);
+    console.log(`Ad subscription renewed: ${subscriptionId}`);
+  }
+}
+
+async function handleAdSubscriptionUpdated(subscription: Stripe.Subscription) {
+  await supabase
+    .from("ad_subscriptions")
+    .update({ status: mapAdStatus(subscription.status), updated_at: new Date().toISOString() })
+    .eq("stripe_subscription_id", subscription.id);
+  console.log(`Ad subscription updated: ${subscription.id} → ${subscription.status}`);
+}
+
+async function handleAdSubscriptionDeleted(subscription: Stripe.Subscription) {
+  await supabase
+    .from("ad_subscriptions")
+    .update({
+      status: "canceled",
+      end_date: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subscription.id);
+  console.log(`Ad subscription canceled: ${subscription.id}`);
+}
+
 async function logActivity(
   mosqueId: string,
   action: string,
@@ -658,10 +764,10 @@ Deno.serve(async (req: Request) => {
         await handleChargeRefunded(event.data.object as Stripe.Charge);
         break;
       case "invoice.paid":
-        await handleInvoicePaid(event.data.object as Stripe.Invoice);
+        await handleInvoicePaid(event.data.object as Stripe.Invoice, event.account);
         break;
       case "invoice.payment_failed":
-        await handleInvoiceFailed(event.data.object as Stripe.Invoice);
+        await handleInvoiceFailed(event.data.object as Stripe.Invoice, event.account);
         break;
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -674,6 +780,8 @@ Deno.serve(async (req: Request) => {
         const sub = event.data.object as Stripe.Subscription;
         if (isSaasSubscription(sub)) {
           await handleSaasSubscriptionUpdated(sub);
+        } else if (sub.metadata?.type === "business_ad") {
+          await handleAdSubscriptionUpdated(sub);
         }
         break;
       }
@@ -681,6 +789,8 @@ Deno.serve(async (req: Request) => {
         const sub = event.data.object as Stripe.Subscription;
         if (isSaasSubscription(sub)) {
           await handleSaasSubscriptionDeleted(sub);
+        } else if (sub.metadata?.type === "business_ad") {
+          await handleAdSubscriptionDeleted(sub);
         }
         break;
       }

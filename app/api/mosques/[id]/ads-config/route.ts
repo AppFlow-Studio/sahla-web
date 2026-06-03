@@ -29,9 +29,26 @@ export async function POST(
     progress.ads_config = true;
   }
 
+  // Persist the chosen pricing to the real mosques columns the app's
+  // create-ad-subscription edge function reads (dollars in the form → cents in
+  // the DB). Without this the app silently falls back to its default pricing.
+  const update: Record<string, unknown> = { onboarding_progress: progress };
+  const monthlyCents = Math.round(parseFloat(config?.monthlyRate) * 100);
+  const onboardingCents = Math.round(parseFloat(config?.onboardingFee) * 100);
+  if (Number.isFinite(monthlyCents) && monthlyCents >= 0) {
+    update.ad_monthly_price_cents = monthlyCents;
+  }
+  if (Number.isFinite(onboardingCents) && onboardingCents >= 0) {
+    update.ad_onboarding_fee_cents = onboardingCents;
+  }
+  // The enable toggle gates whether the app shows the advertise flow at all.
+  if (typeof config?.enabled === "boolean") {
+    update.ads_enabled = config.enabled;
+  }
+
   const { error } = await supabase
     .from("mosques")
-    .update({ onboarding_progress: progress })
+    .update(update)
     .eq("id", mosqueId);
 
   if (error) {
