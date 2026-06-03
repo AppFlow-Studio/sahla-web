@@ -127,6 +127,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: insErr.message }, { status: 500 });
   }
 
+  // Re-sync athan times for this mosque so a calculation-method/school change
+  // takes effect immediately, instead of waiting for the bi-weekly cron.
+  void fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/sync-prayer-times`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mosque_id: access.mosqueId }),
+  }).catch((err) => console.error("prayer-times re-sync trigger failed:", err));
+
   // D3 from the CRM gap plan: surface prayer-time edits on the activity feed.
   const session = await auth();
   const actorName =
