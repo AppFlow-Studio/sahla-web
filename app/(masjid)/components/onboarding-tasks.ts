@@ -80,6 +80,20 @@ export const ONBOARDING_CATEGORIES: TaskCategory[] = [
         badge: "REC",
         timeEstimate: "5 min",
       },
+      {
+        id: "categories",
+        label: "Categories",
+        description: "Customize the filter pills on your Discover tab",
+        badge: "REC",
+        timeEstimate: "3 min",
+      },
+      {
+        id: "reels",
+        label: "Reels",
+        description: "Upload short videos and choose your reels scope",
+        badge: "REC",
+        timeEstimate: "5 min",
+      },
     ],
   },
   {

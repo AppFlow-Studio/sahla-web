@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ONBOARDING_CATEGORIES, ALL_TASKS } from "../components/onboarding-tasks";
 import { getMosqueOnboardingData } from "../data";
 import OnboardingDashboardClient from "../OnboardingDashboardClient";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export default async function OnboardingDashboard() {
   const session = await auth();
@@ -24,6 +25,22 @@ export default async function OnboardingDashboard() {
   // Find first incomplete task
   const nextTask = ALL_TASKS.find((t) => progress[t.id] !== true);
 
+  // CRM CTA — surface only when the mosque is past onboarding AND has the
+  // CRM tier active. Same feature-flags view the (crm) layout gate uses.
+  let crmAvailable = false;
+  if (
+    mosque?.id &&
+    (onboardingStatus === "ready" || onboardingStatus === "live")
+  ) {
+    const supabase = createAdminSupabaseClient();
+    const { data: flags } = await supabase
+      .from("mosque_feature_flags")
+      .select("has_crm_access")
+      .eq("mosque_id", mosque.id)
+      .maybeSingle();
+    crmAvailable = !!flags?.has_crm_access;
+  }
+
   return (
     <OnboardingDashboardClient
       mosqueName={mosqueName}
@@ -38,6 +55,8 @@ export default async function OnboardingDashboard() {
         tasks: cat.tasks.map((t) => ({ id: t.id, label: t.label })),
       }))}
       progress={progress}
+      crmAvailable={crmAvailable}
+      onboardingStatus={onboardingStatus}
     />
   );
 }

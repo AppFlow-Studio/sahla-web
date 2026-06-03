@@ -1,18 +1,9 @@
-import PlaceholderPage from "../../_components/PlaceholderPage";
+import ReelsClient from "./ReelsClient";
+
+export const metadata = {
+  title: "Reels · Mosque CRM",
+};
 
 export default function ReelsPage() {
-  return (
-    <PlaceholderPage
-      section="Content"
-      title="Reels"
-      description="Short-form vertical videos that surface in your mosque app's Discover tab."
-      comingSoon
-      shipTarget="Late 2026"
-      bullets={[
-        "Upload short videos with captions and thumbnails",
-        "Reorder, pin, schedule for later",
-        "View counts and engagement stats",
-      ]}
-    />
-  );
+  return <ReelsClient />;
 }

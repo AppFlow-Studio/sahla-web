@@ -2,7 +2,43 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth, useClerk } from "@clerk/nextjs";
+import { OrganizationSwitcher, useAuth, useClerk } from "@clerk/nextjs";
+import { useIsSahlaHQ } from "@/lib/auth/useIsSahlaHQ";
+
+const DRAWER_SWITCHER_APPEARANCE = {
+  variables: {
+    colorBackground: "#0A261E",
+    colorText: "#fffbf2",
+    colorTextSecondary: "rgba(255,251,242,0.55)",
+    colorPrimary: "#fffbf2",
+    colorTextOnPrimaryBackground: "#0A261E",
+    colorInputBackground: "rgba(255,251,242,0.06)",
+    colorInputText: "#fffbf2",
+  },
+  elements: {
+    rootBox: { width: "100%" },
+    organizationSwitcherTrigger: {
+      width: "100%",
+      padding: "10px 14px",
+      borderRadius: "9999px",
+      border: "1px solid rgba(255,251,242,0.1)",
+      color: "#fffbf2",
+      backgroundColor: "transparent",
+      justifyContent: "center",
+      "&:hover": { backgroundColor: "rgba(255,255,255,0.04)" },
+      "&:focus": { boxShadow: "none" },
+    },
+    organizationPreviewMainIdentifier: {
+      fontSize: "13px",
+      fontWeight: 500,
+      color: "#fffbf2",
+    },
+    organizationPreviewSecondaryIdentifier: {
+      fontSize: "11px",
+      color: "rgba(255,251,242,0.5)",
+    },
+  },
+};
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ArrowRight, LogIn, LogOut } from "lucide-react";
@@ -20,6 +56,7 @@ const navLinks = [
 export default function Navbar() {
   const pathname = usePathname();
   const { isSignedIn, isLoaded, orgId } = useAuth();
+  const { isHQ } = useIsSahlaHQ();
   const { signOut } = useClerk();
   const [scrolled, setScrolled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -95,7 +132,7 @@ export default function Navbar() {
 
           {/* Right — CTA buttons */}
           <div className="flex items-center gap-3">
-            {isSahlaAdmin && (
+            {isSahlaAdmin ? (
               <Link
                 href="/overview"
                 className={`hidden items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 sm:inline-flex ${
@@ -107,7 +144,22 @@ export default function Navbar() {
                 Go to App
                 <ArrowRight size={14} />
               </Link>
-            )}
+            ) : isSignedIn && orgId ? (
+              // Signed-in mosque admin — link to /launch, which the proxy
+              // routes to /dashboard. From there the "Open your CRM" CTA
+              // takes them into /home if they have CRM access.
+              <Link
+                href="/launch"
+                className={`hidden items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 sm:inline-flex ${
+                  isLightHero
+                    ? "border border-dark-green/20 text-dark-green hover:bg-dark-green/[0.06]"
+                    : "border border-white/15 text-white hover:bg-white/[0.06]"
+                }`}
+              >
+                Dashboard
+                <ArrowRight size={14} />
+              </Link>
+            ) : null}
             <Link href="/waitlist" className="group relative overflow-hidden rounded-full bg-dark-green px-6 py-2.5 text-[13px] font-semibold text-sand transition-all duration-300 hover:shadow-lg hover:shadow-dark-green/15">
               <span className="relative z-10">Reserve Now</span>
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-accent/10 to-transparent transition-transform duration-500 group-hover:translate-x-full" />
@@ -196,13 +248,25 @@ export default function Navbar() {
                 )}
 
                 {isLoaded && isSignedIn ? (
-                  <button
-                    onClick={() => { signOut({ redirectUrl: "/" }); setSidebarOpen(false); }}
-                    className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-sand/10 px-6 py-3 text-[13px] font-medium text-sand/50 transition-all duration-300 hover:border-sand/20 hover:text-sand"
-                  >
-                    <LogOut size={14} />
-                    Sign Out
-                  </button>
+                  <>
+                    {isHQ && (
+                      <div className="mt-3">
+                        <OrganizationSwitcher
+                          hidePersonal
+                          afterSelectOrganizationUrl="/launch"
+                          afterSelectPersonalUrl="/select-org"
+                          appearance={DRAWER_SWITCHER_APPEARANCE}
+                        />
+                      </div>
+                    )}
+                    <button
+                      onClick={() => { signOut({ redirectUrl: "/" }); setSidebarOpen(false); }}
+                      className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-sand/10 px-6 py-3 text-[13px] font-medium text-sand/50 transition-all duration-300 hover:border-sand/20 hover:text-sand"
+                    >
+                      <LogOut size={14} />
+                      Sign Out
+                    </button>
+                  </>
                 ) : isLoaded ? (
                   <Link
                     href="/login"

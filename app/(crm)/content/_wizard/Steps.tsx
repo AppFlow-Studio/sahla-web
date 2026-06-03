@@ -5,11 +5,10 @@ import {
   Calendar,
   Clock,
   ImageIcon,
-  Repeat,
   Users,
   DollarSign,
   Mic2,
-  Tag,
+  Repeat,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,29 +22,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import HelpButton from "../../_components/HelpButton";
-import {
-  EVENT_CATEGORIES,
-  PROGRAM_CATEGORIES,
-} from "../../_mock/programs";
 import { useSpeakers } from "../../_hooks/useSpeakers";
 import { useMosque } from "../../_lib/mock-mosque";
 import { formatUsd } from "../../_lib/format";
-import type { ContentFormValues } from "./contentSchema";
+import { WEEKDAYS, type ContentFormValues, type Weekday } from "./contentSchema";
+import { cn } from "@/lib/utils";
 
 type StepProps = {
   kind: "program" | "event";
 };
 
+const WEEKDAY_LABELS: Record<Weekday, string> = {
+  sunday: "Sun",
+  monday: "Mon",
+  tuesday: "Tue",
+  wednesday: "Wed",
+  thursday: "Thu",
+  friday: "Fri",
+  saturday: "Sat",
+};
+
 export function StepBasics({ kind }: StepProps) {
   const form = useFormContext<ContentFormValues>();
   const { data: speakers } = useSpeakers();
-  const cats = kind === "program" ? PROGRAM_CATEGORIES : EVENT_CATEGORIES;
   const errs = form.formState.errors;
 
   return (
     <Section
       title={`Tell us about your ${kind}`}
-      description={`A clear name and one-sentence description helps your members decide whether to ${kind === "program" ? "attend the next session" : "RSVP"}.`}
+      description={`A clear name and short description helps members decide whether to ${kind === "program" ? "attend the next session" : "RSVP"}.`}
     >
       <Field
         label="Name"
@@ -61,56 +66,39 @@ export function StepBasics({ kind }: StepProps) {
         />
       </Field>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Category" required error={errs.category?.message}>
-          <Select
-            value={form.watch("category")}
-            onValueChange={(v) =>
-              form.setValue("category", v ?? "", { shouldValidate: true })
-            }
-          >
-            <SelectTrigger>
-              <Tag size={13} className="text-[#0A261E]/45" />
-              <SelectValue placeholder="Pick a category" />
-            </SelectTrigger>
-            <SelectContent>
-              {cats.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
-        <Field label="Speaker" required error={errs.speakerName?.message}>
-          <Select
-            value={form.watch("speakerName")}
-            onValueChange={(v) => {
-              const next = v ?? "";
-              const speaker = speakers.find((s) => s.name === next);
-              form.setValue("speakerName", next, { shouldValidate: true });
-              form.setValue("speakerId", speaker?.id);
-            }}
-          >
-            <SelectTrigger>
-              <Mic2 size={13} className="text-[#0A261E]/45" />
-              <SelectValue placeholder="From your speaker registry" />
-            </SelectTrigger>
-            <SelectContent>
-              {speakers.map((s) => (
+      <Field label="Speaker" required error={errs.speakerName?.message}>
+        <Select
+          value={form.watch("speakerName")}
+          onValueChange={(v) => {
+            const next = v ?? "";
+            const speaker = speakers.find((s) => s.name === next);
+            form.setValue("speakerName", next, { shouldValidate: true });
+            form.setValue("speakerId", speaker?.id);
+          }}
+        >
+          <SelectTrigger>
+            <Mic2 size={13} className="text-[#0A261E]/45" />
+            <SelectValue placeholder="From your speaker registry" />
+          </SelectTrigger>
+          <SelectContent>
+            {speakers.length === 0 ? (
+              <div className="px-3 py-2 text-[12px] text-[#0A261E]/55">
+                No speakers yet — add one in People &gt; Speakers.
+              </div>
+            ) : (
+              speakers.map((s) => (
                 <SelectItem key={s.id} value={s.name}>
                   {s.name}
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-      </div>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+      </Field>
 
       <Field
         label="Description"
-        helpText="Optional. One or two sentences. Markdown not supported here yet."
+        helpText="Optional. One or two sentences."
         error={errs.description?.message}
       >
         <Textarea
@@ -126,19 +114,28 @@ export function StepBasics({ kind }: StepProps) {
 export function StepSchedule({ kind }: StepProps) {
   const form = useFormContext<ContentFormValues>();
   const errs = form.formState.errors;
-  const recurrence = form.watch("recurrence");
+  const days = form.watch("days") ?? [];
+  const endDate = form.watch("endDate");
+  const indefinite = !endDate;
+
+  function toggleDay(day: Weekday) {
+    const next = days.includes(day)
+      ? days.filter((d) => d !== day)
+      : [...days, day];
+    form.setValue("days", next as Weekday[], { shouldValidate: true });
+  }
 
   return (
     <Section
       title="When does it happen?"
       description={
         kind === "program"
-          ? "Programs usually recur. Pick the first occurrence and how often it repeats."
+          ? "Programs run on the days you pick, between a start date and (optionally) an end date."
           : "Events are one-off. Pick the date and start time."
       }
     >
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Date" required error={errs.startsAtDate?.message}>
+        <Field label="Start date" required error={errs.startDate?.message}>
           <div className="relative">
             <Calendar
               size={14}
@@ -147,11 +144,11 @@ export function StepSchedule({ kind }: StepProps) {
             <Input
               type="date"
               className="pl-9"
-              {...form.register("startsAtDate")}
+              {...form.register("startDate")}
             />
           </div>
         </Field>
-        <Field label="Start time" required error={errs.startsAtTime?.message}>
+        <Field label="Start time" required error={errs.startTime?.message}>
           <div className="relative">
             <Clock
               size={14}
@@ -160,54 +157,71 @@ export function StepSchedule({ kind }: StepProps) {
             <Input
               type="time"
               className="pl-9"
-              {...form.register("startsAtTime")}
+              {...form.register("startTime")}
             />
           </div>
         </Field>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field
-          label="Duration (minutes)"
-          required
-          error={errs.durationMin?.message}
-        >
-          <Input
-            type="number"
-            min={15}
-            max={480}
-            step={5}
-            {...form.register("durationMin", { valueAsNumber: true })}
-          />
-        </Field>
-
-        {kind === "program" ? (
+      {kind === "program" ? (
+        <>
           <Field
-            label="Repeats"
-            helpText="How often the program runs after the first session."
+            label="Repeats on"
+            required
+            helpText="Pick one or more weekdays. Leave empty for a one-off session."
           >
-            <Select
-              value={recurrence}
-              onValueChange={(v) =>
-                form.setValue(
-                  "recurrence",
-                  (v ?? "weekly") as ContentFormValues["recurrence"]
-                )
-              }
-            >
-              <SelectTrigger>
-                <Repeat size={13} className="text-[#0A261E]/45" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="none">Just once</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-1.5">
+              {WEEKDAYS.map((d) => {
+                const active = days.includes(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => toggleDay(d)}
+                    className={cn(
+                      "rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors",
+                      active
+                        ? "border-[#0A261E] bg-[#0A261E] text-[#fffbf2]"
+                        : "border-[#0A261E]/15 bg-white text-[#0A261E]/65 hover:border-[#0A261E]/30"
+                    )}
+                  >
+                    {WEEKDAY_LABELS[d]}
+                  </button>
+                );
+              })}
+            </div>
           </Field>
-        ) : null}
-      </div>
+
+          <ToggleRow
+            title="Runs indefinitely"
+            description="Leave on if the program has no planned end date."
+            checked={indefinite}
+            onChange={(c) => form.setValue("endDate", c ? null : new Date().toISOString().slice(0, 10))}
+            icon={<Repeat size={13} />}
+          />
+
+          {!indefinite ? (
+            <Field label="End date" error={errs.endDate?.message}>
+              <div className="relative">
+                <Calendar
+                  size={14}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#0A261E]/40"
+                />
+                <Input
+                  type="date"
+                  className="pl-9"
+                  value={endDate ?? ""}
+                  onChange={(e) =>
+                    form.setValue("endDate", e.target.value || null, {
+                      shouldValidate: true,
+                    })
+                  }
+                />
+              </div>
+            </Field>
+          ) : null}
+        </>
+      ) : null}
     </Section>
   );
 }
@@ -259,11 +273,7 @@ export function StepCapacity({ kind: _kind }: StepProps) {
       />
 
       {isPaid ? (
-        <Field
-          label="Price (USD)"
-          required
-          error={errs.priceUsd?.message}
-        >
+        <Field label="Price (USD)" required error={errs.priceUsd?.message}>
           <div className="relative">
             <DollarSign
               size={14}
@@ -332,11 +342,21 @@ export function StepImage({ kind }: StepProps) {
   );
 }
 
-export function StepReview({ kind: _kind }: StepProps) {
+export function StepReview({ kind }: StepProps) {
   const form = useFormContext<ContentFormValues>();
   const v = form.watch();
-  const start = `${v.startsAtDate}T${v.startsAtTime}:00`;
-  const startDate = new Date(start);
+  const startDateTime = new Date(`${v.startDate}T${v.startTime}:00`);
+
+  const daysLabel =
+    !v.days || v.days.length === 0
+      ? kind === "event"
+        ? "Once"
+        : "Not scheduled"
+      : v.days.length === 7
+      ? "Every day"
+      : v.days
+          .map((d) => WEEKDAY_LABELS[d])
+          .join(", ");
 
   return (
     <Section
@@ -346,17 +366,10 @@ export function StepReview({ kind: _kind }: StepProps) {
       <div className="overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-white">
         {v.imageUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={v.imageUrl}
-            alt=""
-            className="h-40 w-full object-cover"
-          />
+          <img src={v.imageUrl} alt="" className="h-40 w-full object-cover" />
         ) : null}
         <div className="space-y-3 p-5">
           <div>
-            <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[#B8922A]">
-              {v.category || "—"}
-            </p>
             <h3 className="mt-1 font-display text-[22px] leading-tight text-[#0A261E]">
               {v.name || "Untitled"}
             </h3>
@@ -373,11 +386,11 @@ export function StepReview({ kind: _kind }: StepProps) {
 
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#0A261E]/6 pt-3 text-[12.5px]">
             <Detail
-              label="When"
+              label="First session"
               value={
-                Number.isNaN(startDate.getTime())
+                Number.isNaN(startDateTime.getTime())
                   ? "—"
-                  : startDate.toLocaleString(undefined, {
+                  : startDateTime.toLocaleString(undefined, {
                       weekday: "short",
                       month: "short",
                       day: "numeric",
@@ -386,22 +399,23 @@ export function StepReview({ kind: _kind }: StepProps) {
                     })
               }
             />
-            <Detail label="Length" value={`${v.durationMin} min`} />
+            <Detail label="Repeats" value={daysLabel} />
             <Detail
-              label="Repeats"
+              label="Until"
               value={
-                v.recurrence === "weekly"
-                  ? "Weekly"
-                  : v.recurrence === "monthly"
-                  ? "Monthly"
-                  : "Once"
+                v.endDate
+                  ? new Date(v.endDate).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : kind === "program"
+                  ? "No end date"
+                  : "—"
               }
             />
             <Detail label="Capacity" value={`${v.maxCapacity} seats`} />
-            <Detail
-              label="Waitlist"
-              value={v.enableWaitlist ? "On" : "Off"}
-            />
+            <Detail label="Waitlist" value={v.enableWaitlist ? "On" : "Off"} />
             <Detail
               label="Price"
               value={v.isPaid && v.priceUsd ? formatUsd(v.priceUsd) : "Free"}
@@ -478,17 +492,26 @@ function ToggleRow({
   description,
   checked,
   onChange,
+  icon,
 }: {
   title: string;
   description: string;
   checked: boolean;
   onChange: (c: boolean) => void;
+  icon?: React.ReactNode;
 }) {
   return (
     <div className="flex items-start justify-between gap-4 rounded-xl border border-[#0A261E]/8 bg-white p-3.5">
-      <div>
-        <p className="text-[13px] font-semibold text-[#0A261E]">{title}</p>
-        <p className="text-[12px] text-[#0A261E]/55">{description}</p>
+      <div className="flex items-start gap-2.5">
+        {icon ? (
+          <span className="mt-0.5 text-[#0A261E]/45" aria-hidden>
+            {icon}
+          </span>
+        ) : null}
+        <div>
+          <p className="text-[13px] font-semibold text-[#0A261E]">{title}</p>
+          <p className="text-[12px] text-[#0A261E]/55">{description}</p>
+        </div>
       </div>
       <Switch checked={checked} onCheckedChange={onChange} />
     </div>

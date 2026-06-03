@@ -90,6 +90,10 @@ export async function POST(
   // 6. Compute and upsert todays_prayers
   await supabase.from("todays_prayers").delete().eq("mosque_id", mosqueId);
 
+  // todays_prayers.date is NOT NULL. Use the same calendar day we just
+  // pulled from AlAdhan so the row's date matches the times in it.
+  const todayIsoDate = `${year}-${mm}-${dd}`;
+
   const todaysRows = PRAYER_NAMES.map((prayer) => {
     const athanRaw = todayData.timings[ALADHAN_KEY_MAP[prayer]];
     const athanTime = parseAlAdhanTime(athanRaw);
@@ -105,6 +109,7 @@ export async function POST(
       prayer_name: prayer,
       athan_time: athanTime,
       iqamah_time: iqamahTime || athanTime,
+      date: todayIsoDate,
     };
   });
 

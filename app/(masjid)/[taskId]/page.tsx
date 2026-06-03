@@ -8,6 +8,7 @@ import { ALL_TASKS, ONBOARDING_CATEGORIES } from "../components/onboarding-tasks
 import { getMosqueOnboardingData } from "../data";
 import TaskPageTransition from "./TaskPageTransition";
 import { createStripeClient } from "@/lib/stripe";
+import { markOnboardingStep } from "@/lib/supabase/onboarding";
 
 // Lazy-load panels — only the active panel is compiled/loaded per request.
 // This prevents Turbopack from parsing all 13 panels + their deps on every page load.
@@ -18,6 +19,8 @@ const JummahSetupPanel = dynamic(() => import("./panels/JummahSetupPanel"));
 const SpeakersPanel = dynamic(() => import("./panels/SpeakersPanel"));
 const ProgramsPanel = dynamic(() => import("./panels/ProgramsPanel"));
 const EventsPanel = dynamic(() => import("./panels/EventsPanel"));
+const ReelsOnboardingPanel = dynamic(() => import("./panels/ReelsOnboardingPanel"));
+const CategoriesOnboardingPanel = dynamic(() => import("./panels/CategoriesOnboardingPanel"));
 const StripeConnectPanel = dynamic(() => import("./panels/StripeConnectPanel"));
 const InviteAdminsPanel = dynamic(() => import("./panels/InviteAdminsPanel"));
 const DonationsPanel = dynamic(() => import("./panels/DonationsPanel"));
@@ -96,6 +99,43 @@ export default async function TaskPage({
     speakersData = speakersRes.data ?? [];
     if (taskId === "programs") programsData = contentRes.data ?? [];
     else eventsData = contentRes.data ?? [];
+  }
+
+  let categoriesData: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    icon: string | null;
+    display_order: number;
+    is_active: boolean;
+  }> = [];
+  if (taskId === "categories") {
+    const { data } = await supabase
+      .from("display_categories")
+      .select("id, name, slug, icon, display_order, is_active")
+      .eq("mosque_id", mosque.id)
+      .order("display_order", { ascending: true });
+    categoriesData = data ?? [];
+  }
+
+  let reelsData: Array<{
+    reel_id: string;
+    title: string | null;
+    caption: string | null;
+    video_url: string;
+    thumbnail_url: string | null;
+    duration_sec: number | null;
+    created_at: string;
+  }> = [];
+  if (taskId === "reels") {
+    const { data } = await supabase
+      .from("reels")
+      .select(
+        "reel_id, title, caption, video_url, thumbnail_url, duration_sec, created_at"
+      )
+      .eq("mosque_id", mosque.id)
+      .order("created_at", { ascending: false });
+    reelsData = data ?? [];
   }
 
   const progress = ((mosque.onboarding_progress ?? {}) as Record<string, unknown>);
@@ -189,6 +229,23 @@ export default async function TaskPage({
           },
           business_profile: { name: account.business_profile?.name ?? null },
         };
+        // Self-heal: if charges are enabled but the task isn't marked
+        // complete, mark it now. The API-route path (panel useEffect on
+        // ?stripe_return) only fires once and can miss this when Stripe
+        // activates asynchronously after the redirect.
+        if (account.charges_enabled) {
+          const progress = (mosque as Record<string, unknown>).onboarding_progress as
+            | Record<string, boolean>
+            | null;
+          if (!progress?.stripe_connect) {
+            const supabase = createAdminSupabaseClient();
+            await markOnboardingStep(
+              supabase,
+              (mosque as Record<string, unknown>).id as string,
+              "stripe_connect"
+            );
+          }
+        }
       } catch {
         stripeStatus = { status: "not_connected" as const };
       }
@@ -244,6 +301,19 @@ export default async function TaskPage({
         )}
         {taskId === "events" && (
           <EventsPanel mosqueId={mosque.id} initialEvents={eventsData ?? []} speakers={speakersData ?? []} />
+        )}
+        {taskId === "reels" && (
+          <ReelsOnboardingPanel
+            mosqueId={mosque.id}
+            initialScope={(mosque as { reels_scope?: "own" | "global" }).reels_scope ?? "own"}
+            initialReels={reelsData}
+          />
+        )}
+        {taskId === "categories" && (
+          <CategoriesOnboardingPanel
+            mosqueId={mosque.id}
+            initialCategories={categoriesData}
+          />
         )}
         {taskId === "stripe_connect" && stripeStatus && (
           <StripeConnectPanel

@@ -37,4 +37,4 @@ SELECT cron.schedule(
   'refresh-mosque-dashboard-stats',
   '0 * * * *',
   $cron$REFRESH MATERIALIZED VIEW CONCURRENTLY public.mosque_dashboard_stats$cron$
-);;
+);

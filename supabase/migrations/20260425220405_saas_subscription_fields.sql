@@ -1,7 +1,5 @@
 -- ST-SAAS-01: Add SaaS subscription fields to mosques table
--- Supports Stripe Billing subscriptions on Sahla's platform account
 
--- New columns for SaaS billing
 ALTER TABLE mosques
   ADD COLUMN IF NOT EXISTS email TEXT,
   ADD COLUMN IF NOT EXISTS saas_stripe_customer_id TEXT,
@@ -28,9 +26,7 @@ CREATE TABLE IF NOT EXISTS stripe_webhook_events (
 CREATE INDEX IF NOT EXISTS idx_stripe_webhook_events_processed_at
   ON stripe_webhook_events (processed_at);
 
--- Price IDs stored in platform env vars (STRIPE_PRICE_CORE, STRIPE_PRICE_CORE_CRM, STRIPE_PRICE_COMPLETE)
-
--- Daily cron: check past_due mosques and cancel after 7-day grace period
+-- Daily cron: cancel past-due mosques after 7-day grace period
 SELECT cron.schedule(
   'check-past-due-subscriptions',
   '0 6 * * *',

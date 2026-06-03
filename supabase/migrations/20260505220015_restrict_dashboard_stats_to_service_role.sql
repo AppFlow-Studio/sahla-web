@@ -7,4 +7,4 @@
 -- Author: Ahmad Hamoudeh
 -- Applied to staging: 2026-05-05
 
-REVOKE SELECT ON public.mosque_dashboard_stats FROM anon, authenticated;;
+REVOKE SELECT ON public.mosque_dashboard_stats FROM anon, authenticated;

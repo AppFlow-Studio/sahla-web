@@ -1,13 +1,4 @@
-
-create table public.demo_requests (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  email text not null,
-  mosque_name text not null,
-  city_state text,
-  notes text,
-  created_at timestamptz not null default now()
-);
-
--- RLS: only service role can insert (from the API route)
-alter table public.demo_requests enable row level security;
+-- backfilled placeholder: schema already applied on staging.
+-- Remote schema_migrations row is a repaired/history-only entry — the DDL
+-- was applied separately and then marked as a history entry. This file
+-- exists purely to align local CLI history with remote.

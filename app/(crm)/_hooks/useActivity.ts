@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { seedDonations } from "../_mock/donations";
 import { seedMembers } from "../_mock/members";
 import { seedContent, generateRsvps } from "../_mock/programs";
 import { seedHistory as seedNotifications } from "../_mock/notifications";
+import { useMosque } from "../_lib/mock-mosque";
 
 export type ActivityEvent =
   | {
@@ -30,77 +32,122 @@ export type ActivityEvent =
       memberName: string;
     }
   | {
+      kind: "content";
+      id: string;
+      occurredAt: string;
+      contentName: string;
+      contentKind: "program" | "event";
+      actorName: string | null;
+    }
+  | {
       kind: "notification";
       id: string;
       occurredAt: string;
       title: string;
       recipientCount: number;
+    }
+  | {
+      kind: "settings";
+      id: string;
+      occurredAt: string;
+      label: string;
+      actorName: string | null;
     };
 
-/** Synthesize a unified activity feed from the other modules' fixtures. */
-export function useActivity(limit = 18) {
-  return useMemo(() => {
-    const items: ActivityEvent[] = [];
+function synthesizeFromMocks(limit: number): ActivityEvent[] {
+  const items: ActivityEvent[] = [];
 
-    // Donations (most recent 10 succeeded)
-    seedDonations
-      .filter((d) => d.status === "succeeded")
-      .slice(0, 10)
-      .forEach((d) => {
-        items.push({
-          kind: "donation",
-          id: `act-don-${d.id}`,
-          occurredAt: d.occurredAt,
-          donorHash: d.donorHash,
-          amountUsd: d.amountUsd,
-          fundLabel: d.fundLabel,
-        });
-      });
-
-    // RSVPs (sample from a few content items)
-    seedContent.slice(0, 5).forEach((c) => {
-      const rsvps = generateRsvps(c).slice(0, 3);
-      rsvps.forEach((r, i) => {
-        items.push({
-          kind: "rsvp",
-          id: `act-rsvp-${c.id}-${i}`,
-          occurredAt: r.reservedAt,
-          memberName: r.memberName,
-          contentName: c.name,
-          contentKind: c.kind,
-        });
-      });
-    });
-
-    // New members (most recent signups)
-    seedMembers
-      .filter((m) => m.membershipKind === "new")
-      .slice(0, 6)
-      .forEach((m) => {
-        items.push({
-          kind: "member",
-          id: `act-mem-${m.id}`,
-          occurredAt: m.signupAt,
-          memberName: m.name,
-        });
-      });
-
-    // Notifications
-    seedNotifications.slice(0, 4).forEach((n) => {
+  seedDonations
+    .filter((d) => d.status === "succeeded")
+    .slice(0, 10)
+    .forEach((d) => {
       items.push({
-        kind: "notification",
-        id: `act-ntf-${n.id}`,
-        occurredAt: n.sentAt,
-        title: n.title,
-        recipientCount: n.recipientCount,
+        kind: "donation",
+        id: `act-don-${d.id}`,
+        occurredAt: d.occurredAt,
+        donorHash: d.donorHash,
+        amountUsd: d.amountUsd,
+        fundLabel: d.fundLabel,
       });
     });
 
-    return items
-      .sort(
-        (a, b) =>
-          new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
-      )
-      .slice(0, limit);
-  }, [limit]);
+  seedContent.slice(0, 5).forEach((c) => {
+    const rsvps = generateRsvps(c).slice(0, 3);
+    rsvps.forEach((r, i) => {
+      items.push({
+        kind: "rsvp",
+        id: `act-rsvp-${c.id}-${i}`,
+        occurredAt: r.reservedAt,
+        memberName: r.memberName,
+        contentName: c.name,
+        contentKind: c.kind,
+      });
+    });
+  });
+
+  seedMembers
+    .filter((m) => m.membershipKind === "new")
+    .slice(0, 6)
+    .forEach((m) => {
+      items.push({
+        kind: "member",
+        id: `act-mem-${m.id}`,
+        occurredAt: m.signupAt,
+        memberName: m.name,
+      });
+    });
+
+  seedNotifications.slice(0, 4).forEach((n) => {
+    items.push({
+      kind: "notification",
+      id: `act-ntf-${n.id}`,
+      occurredAt: n.sentAt,
+      title: n.title,
+      recipientCount: n.recipientCount,
+    });
+  });
+
+  return items
+    .sort(
+      (a, b) =>
+        new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
+    )
+    .slice(0, limit);
+}
+
+async function fetchActivity(limit: number): Promise<ActivityEvent[]> {
+  const res = await fetch(`/api/crm/activity?limit=${limit}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to load activity (${res.status})`);
+  const body = (await res.json()) as { events: ActivityEvent[] };
+  return body.events ?? [];
+}
+
+/**
+ * Unified activity feed for the CRM Home dashboard.
+ *
+ * Real data comes from `activity_log` via `/api/crm/activity`. HQ previews
+ * fall back to the synthesized mock feed so the dashboard renders something
+ * while QA'ing.
+ */
+export function useActivity(limit = 18) {
+  const mosque = useMosque();
+
+  const mockSnapshot = useMemo(
+    () => (mosque.isHQ ? synthesizeFromMocks(limit) : []),
+    [mosque.isHQ, limit]
+  );
+
+  const query = useQuery({
+    queryKey: ["crm", "activity", mosque.id, limit],
+    queryFn: () => fetchActivity(limit),
+    placeholderData: [],
+    enabled: !mosque.isHQ,
+    staleTime: 15_000,
+  });
+
+  if (mosque.isHQ) return mockSnapshot;
+
+  return query.data ?? [];
 }

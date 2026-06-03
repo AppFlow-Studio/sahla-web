@@ -49,7 +49,7 @@ async function resolveCta(): Promise<Cta> {
   const supabase = createAdminSupabaseClient();
   const { data: mosque } = await supabase
     .from("mosques")
-    .select("onboarding_status")
+    .select("id, onboarding_status")
     .or(`clerk_org_id.eq.${session.orgId},id.eq.${session.orgId}`)
     .limit(1)
     .single();
@@ -58,7 +58,20 @@ async function resolveCta(): Promise<Cta> {
     return { label: "Finish Onboarding", href: "/onboarding" };
   }
 
-  return { label: "Open App", href: "/launch" };
+  // Past onboarding — if their plan includes the CRM, drop them
+  // straight into it. Otherwise fall back to the masjid dashboard.
+  if (mosque?.id) {
+    const { data: flags } = await supabase
+      .from("mosque_feature_flags")
+      .select("has_crm_access")
+      .eq("mosque_id", mosque.id)
+      .maybeSingle();
+    if (flags?.has_crm_access) {
+      return { label: "Open CRM", href: "/home" };
+    }
+  }
+
+  return { label: "Open Dashboard", href: "/dashboard" };
 }
 
 export default async function Home() {

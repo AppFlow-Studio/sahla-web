@@ -13,6 +13,7 @@ type JummahRecord = {
   id: number;
   mosque_id: string;
   prayer_time: string;
+  khateeb_name: string | null;
   topic: string | null;
   capacity_status: string | null;
 };
@@ -37,7 +38,7 @@ export default function JummahSetupPanel({
     if (existingJummah.length > 0) {
       return existingJummah.map((j) => ({
         time: j.prayer_time || "12:15",
-        khateeb_name: "",
+        khateeb_name: j.khateeb_name || "",
         topic: j.topic || "",
       }));
     }

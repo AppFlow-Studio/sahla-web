@@ -20,6 +20,7 @@ import {
   UserCog,
   CreditCard,
   LifeBuoy,
+  Building2,
 } from "lucide-react";
 
 export type CrmRoute = {
@@ -89,15 +90,13 @@ export const CRM_NAV: CrmSection[] = [
         href: "/content/reels",
         label: "Reels",
         icon: Film,
-        comingSoon: true,
         description: "Short-form vertical videos for the Discover tab",
       },
       {
         href: "/content/jummah",
         label: "Jummah",
         icon: BookOpenText,
-        comingSoon: true,
-        description: "Friday prayer scheduling",
+        description: "Friday prayer slots — time, khateeb, topic",
       },
     ],
   },
@@ -117,8 +116,7 @@ export const CRM_NAV: CrmSection[] = [
         href: "/money/business-ads",
         label: "Business Ads",
         icon: Megaphone,
-        comingSoon: true,
-        description: "Pricing config + submissions queue",
+        description: "Local business ads — creatives, contacts, placement",
       },
     ],
   },
@@ -144,8 +142,7 @@ export const CRM_NAV: CrmSection[] = [
         href: "/setup/categories",
         label: "Categories",
         icon: Tags,
-        comingSoon: true,
-        description: "Rename program and event categories",
+        description: "Discover-tab filter pills (Kids, Youth, Adults, …)",
       },
       {
         href: "/setup/notifications",
@@ -161,6 +158,12 @@ export const CRM_NAV: CrmSection[] = [
     href: "/settings",
     icon: Cog,
     children: [
+      {
+        href: "/settings/profile",
+        label: "Profile",
+        icon: Building2,
+        description: "Mosque name, app branding name, contact info, timezone",
+      },
       {
         href: "/settings/team",
         label: "Team",

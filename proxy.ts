@@ -8,6 +8,7 @@
 
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID!;
 
@@ -100,8 +101,32 @@ export const proxy = clerkMiddleware(async (auth, req) => {
       url.pathname = "/onboarding";
       return NextResponse.redirect(url);
     }
-    url.pathname =
-      session.orgId === SAHLA_HQ_ORG_ID ? ADMIN_LANDING : MASJID_LANDING;
+    if (session.orgId === SAHLA_HQ_ORG_ID) {
+      url.pathname = ADMIN_LANDING;
+      return NextResponse.redirect(url);
+    }
+    // For mosque admins: route to /home if onboarding has shipped (ready/live),
+    // otherwise drop them in the onboarding dashboard. Single DB hit so the
+    // OrganizationSwitcher → /launch → final-destination chain is one hop.
+    let landing: string = MASJID_LANDING;
+    try {
+      const supabase = createAdminSupabaseClient();
+      const { data: mosque } = await supabase
+        .from("mosques")
+        .select("onboarding_status")
+        .eq("clerk_org_id", session.orgId)
+        .maybeSingle();
+      if (
+        mosque?.onboarding_status === "ready" ||
+        mosque?.onboarding_status === "live"
+      ) {
+        landing = "/home";
+      }
+    } catch {
+      // Fall back to /dashboard if the lookup fails; the masjid layout has
+      // its own redirect-to-/home guard for already-shipped mosques.
+    }
+    url.pathname = landing;
     return NextResponse.redirect(url);
   }
 
@@ -126,15 +151,25 @@ export const proxy = clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // Allow HQ + mosque admins to preview the CRM while it's being built.
+  // CRM routes — the (crm) server layout enforces tier + onboarding state
+  // for non-HQ mosque admins. Proxy just passes through; defense-in-depth
+  // is the layout + per-route requireCrmAccess() helper.
   if (isCrmPath(url.pathname)) {
     return NextResponse.next();
   }
 
-  if (isHQ) {
-    url.pathname = ADMIN_LANDING;
-    return NextResponse.redirect(url);
+  // The "no CRM access" upsell page must be reachable by mosque admins
+  // whose tier doesn't grant CRM — i.e. the (crm) layout's redirect target.
+  if (url.pathname === "/no-crm-access") {
+    return NextResponse.next();
   }
+
+  // Catch-all "if isHQ, send to /overview" was here. Removed because it
+  // false-fires on masjid onboarding routes (/dashboard, /<taskId>) during
+  // session-cookie races after `setActive(...)` calls or `router.refresh()`,
+  // bouncing the admin to /overview mid-onboarding. The explicit isMarketing
+  // branch above still routes HQ from `/` to `/overview`; the (masjid)
+  // layout enforces orgId presence; (crm) layout enforces CRM access.
 
   return NextResponse.next();
 });

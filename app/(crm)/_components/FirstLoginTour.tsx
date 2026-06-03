@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
@@ -15,13 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useMosque } from "../_lib/mock-mosque";
 
-const STORAGE_KEY = "sahla.crm.tour_seen.v1";
 const EASE = [0.16, 1, 0.3, 1] as const;
-
-// During the UI build phase we want to see the tour on every reload so we can
-// iterate on the design quickly. Flip this to true to bring back the
-// "show once per browser" behavior backed by localStorage.
-const REMEMBER_DISMISSAL = false;
+// HQ-preview session storage key so QA isn't pestered after dismissing once
+// in a session. Real mosque admins persist via mosques.onboarding_progress.
+const HQ_SESSION_KEY = "sahla.crm.tour_seen.hq";
 
 type Step = {
   id: string;
@@ -36,20 +34,44 @@ export default function FirstLoginTour() {
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const mosque = useMosque();
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (REMEMBER_DISMISSAL && window.localStorage.getItem(STORAGE_KEY)) return;
-    // Tiny delay so the shell has a chance to paint first
+    // Real mosque admins — gate on the DB-persisted dismissal flag.
+    if (!mosque.isHQ && mosque.tourDismissed) return;
+    // HQ previews — soft gate via sessionStorage so QA isn't pestered
+    // after dismissing once in the same session.
+    if (mosque.isHQ && window.sessionStorage.getItem(HQ_SESSION_KEY) === "1") {
+      return;
+    }
     const t = setTimeout(() => setOpen(true), 350);
     return () => clearTimeout(t);
-  }, []);
+  }, [mosque.isHQ, mosque.tourDismissed]);
 
-  function complete() {
-    if (REMEMBER_DISMISSAL && typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, new Date().toISOString());
-    }
+  async function complete() {
     setOpen(false);
+    if (mosque.isHQ) {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(HQ_SESSION_KEY, "1");
+      }
+      return;
+    }
+    // Persist to mosques.onboarding_progress.crm_tour_dismissed via the
+    // existing PATCH endpoint's markComplete helper. Fire-and-forget so
+    // closing the dialog feels instant.
+    try {
+      await fetch(`/api/mosques/${mosque.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markComplete: "crm_tour_dismissed" }),
+      });
+      // Refresh the server-resolved mosque profile so a subsequent navigation
+      // sees `tourDismissed: true` and skips this effect's open trigger.
+      router.refresh();
+    } catch {
+      // Don't bother the user — worst case they see the tour once more.
+    }
   }
 
   function next() {

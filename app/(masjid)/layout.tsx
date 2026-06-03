@@ -8,6 +8,8 @@ import OnboardingPreviewProvider from "./components/OnboardingPreviewContext";
 import OnboardingPhonePreview from "./components/OnboardingPhonePreview";
 import { getMosqueOnboardingData } from "./data";
 
+const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
+
 export default async function MasjidLayout({
   children,
 }: {
@@ -21,6 +23,18 @@ export default async function MasjidLayout({
   }
 
   const mosque = await getMosqueOnboardingData(orgId);
+
+  // Once a mosque has paid (`ready`) or shipped (`live`), onboarding is a
+  // closed chapter — bounce them into the CRM. HQ admins keep access so they
+  // can QA the onboarding flow at any time.
+  const isHQ = SAHLA_HQ_ORG_ID && orgId === SAHLA_HQ_ORG_ID;
+  if (
+    !isHQ &&
+    (mosque?.onboarding_status === "ready" ||
+      mosque?.onboarding_status === "live")
+  ) {
+    redirect("/home");
+  }
 
   const mosqueName = mosque?.name || "Your Mosque";
   const progress = (mosque?.onboarding_progress as Record<string, boolean>) || {};

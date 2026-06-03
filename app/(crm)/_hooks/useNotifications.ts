@@ -1,104 +1,192 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback } from "react";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   seedTemplates,
   seedHistory,
   type NotificationTemplate,
   type NotificationHistoryItem,
 } from "../_mock/notifications";
-
-type Listener = () => void;
-
-type Snapshot = {
-  templates: NotificationTemplate[];
-  history: NotificationHistoryItem[];
-};
-
-let templates: NotificationTemplate[] = [...seedTemplates];
-let history: NotificationHistoryItem[] = [...seedHistory];
-const listeners = new Set<Listener>();
-
-// Cached snapshot — useSyncExternalStore + getServerSnapshot must return the
-// same reference across calls until the underlying state changes, otherwise
-// React detects "new state" every render and trips into an infinite loop.
-let cached: Snapshot = { templates, history };
-
-function snapshot() {
-  return cached;
-}
-
-function subscribe(cb: Listener) {
-  listeners.add(cb);
-  return () => listeners.delete(cb);
-}
-
-function emit() {
-  templates = [...templates];
-  history = [...history];
-  cached = { templates, history };
-  for (const l of listeners) l();
-}
-
-function genId(prefix: string) {
-  return `${prefix}_${Math.random().toString(36).slice(2, 7)}`;
-}
+import { useMosque } from "../_lib/mock-mosque";
 
 export type SendInput = {
   title: string;
   body: string;
   audienceLabel: string;
   recipientCount: number;
-  /** When non-null this send was made from a template, so we bump usageCount. */
   templateId?: string | null;
+  scheduledFor?: string | null;
 };
 
-export function useNotifications() {
-  const data = useSyncExternalStore(subscribe, snapshot, snapshot);
+async function fetchTemplates(): Promise<NotificationTemplate[]> {
+  const res = await fetch("/api/crm/notifications/templates", {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to load templates (${res.status})`);
+  const body = (await res.json()) as { templates: NotificationTemplate[] };
+  return body.templates ?? [];
+}
 
-  const send = useCallback((input: SendInput) => {
-    const item: NotificationHistoryItem = {
-      id: genId("ntf"),
+async function fetchHistory(): Promise<NotificationHistoryItem[]> {
+  const res = await fetch("/api/crm/notifications/history", {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to load history (${res.status})`);
+  const body = (await res.json()) as { history: NotificationHistoryItem[] };
+  return body.history ?? [];
+}
+
+async function postTemplate(
+  input: Omit<NotificationTemplate, "id" | "lastUsedAt" | "usageCount">
+): Promise<NotificationTemplate> {
+  const res = await fetch("/api/crm/notifications/templates", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: input.name,
       title: input.title,
       body: input.body,
-      sentAt: new Date().toISOString(),
+      audience: input.audience,
       audienceLabel: input.audienceLabel,
-      recipientCount: input.recipientCount,
-      openRate: 0,
-    };
-    history = [item, ...history];
-    if (input.templateId) {
-      templates = templates.map((t) =>
-        t.id === input.templateId
-          ? { ...t, usageCount: t.usageCount + 1, lastUsedAt: item.sentAt }
-          : t
-      );
-    }
-    emit();
-    return item;
-  }, []);
+    }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `Save failed (${res.status})`);
+  }
+  const body = (await res.json()) as { template: NotificationTemplate };
+  return body.template;
+}
+
+async function deleteTemplate(id: string): Promise<void> {
+  const res = await fetch(
+    `/api/crm/notifications/templates?id=${encodeURIComponent(id)}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `Delete failed (${res.status})`);
+  }
+}
+
+async function postSend(input: SendInput): Promise<void> {
+  const res = await fetch("/api/crm/notifications/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `Send failed (${res.status})`);
+  }
+}
+
+/**
+ * Notifications backed by `notification_templates` (templates) and
+ * `activity_log` rows with action='notification_sent' (history).
+ *
+ * Send is stubbed — it writes the history row but doesn't fire actual
+ * push notifications to devices. Real Expo/APNs/FCM delivery is the
+ * separately-tracked phase (see plan §"Out of scope").
+ */
+export function useNotifications() {
+  const mosque = useMosque();
+  const queryClient = useQueryClient();
+  const tplKey = ["crm", "notifications", "templates", mosque.id] as const;
+  const histKey = ["crm", "notifications", "history", mosque.id] as const;
+
+  const templatesQuery = useQuery({
+    queryKey: tplKey,
+    queryFn: fetchTemplates,
+    enabled: !mosque.isHQ,
+    placeholderData: [],
+    staleTime: 30_000,
+  });
+
+  const historyQuery = useQuery({
+    queryKey: histKey,
+    queryFn: fetchHistory,
+    enabled: !mosque.isHQ,
+    placeholderData: [],
+    staleTime: 15_000,
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: postSend,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: histKey });
+      queryClient.invalidateQueries({ queryKey: tplKey });
+      queryClient.invalidateQueries({
+        queryKey: ["crm", "activity", mosque.id],
+      });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Couldn't send.");
+    },
+  });
+
+  const saveTemplateMutation = useMutation({
+    mutationFn: postTemplate,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: tplKey }),
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Couldn't save template.");
+    },
+  });
+
+  const removeTemplateMutation = useMutation({
+    mutationFn: deleteTemplate,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: tplKey }),
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Couldn't remove template.");
+    },
+  });
+
+  const send = useCallback(
+    (input: SendInput) => {
+      if (mosque.isHQ) {
+        toast("HQ preview — won't actually send.");
+        return;
+      }
+      sendMutation.mutate(input);
+    },
+    [sendMutation, mosque.isHQ]
+  );
 
   const saveTemplate = useCallback(
     (input: Omit<NotificationTemplate, "id" | "lastUsedAt" | "usageCount">) => {
-      const t: NotificationTemplate = {
-        id: genId("tpl"),
-        usageCount: 0,
-        lastUsedAt: null,
-        ...input,
-      };
-      templates = [t, ...templates];
-      emit();
-      return t;
+      if (mosque.isHQ) {
+        toast("HQ preview — won't persist.");
+        return;
+      }
+      saveTemplateMutation.mutate(input);
     },
-    []
+    [saveTemplateMutation, mosque.isHQ]
   );
 
-  const removeTemplate = useCallback((id: string) => {
-    templates = templates.filter((t) => t.id !== id);
-    emit();
-  }, []);
+  const removeTemplate = useCallback(
+    (id: string) => {
+      if (mosque.isHQ) {
+        toast("HQ preview — won't persist.");
+        return;
+      }
+      removeTemplateMutation.mutate(id);
+    },
+    [removeTemplateMutation, mosque.isHQ]
+  );
 
-  return { ...data, send, saveTemplate, removeTemplate };
+  return {
+    templates: mosque.isHQ ? seedTemplates : templatesQuery.data ?? [],
+    history: mosque.isHQ ? seedHistory : historyQuery.data ?? [],
+    send,
+    saveTemplate,
+    removeTemplate,
+  };
 }
 
 export type { NotificationTemplate, NotificationHistoryItem };
