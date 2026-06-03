@@ -62,9 +62,10 @@ function stripePeriodEndIso(
 
 // ─── Notifications ───
 
-function sahlaEmailHtml(body: string, preheader?: string): string {
+function sahlaEmailHtml(body: string, preheader?: string, opts?: { signature?: boolean }): string {
   const logoUrl = "https://www.sahla.co/sahla-logo.png";
   const sans = "-apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif";
+  const showSignature = opts?.signature !== false;
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -94,13 +95,14 @@ function sahlaEmailHtml(body: string, preheader?: string): string {
   <td align="center" valign="top" bgcolor="#fffbf2" style="background-color:#fffbf2;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;" align="center">
     <tr><td align="center" style="padding:48px 16px 28px;">
-      <img src="${logoUrl}" alt="Sahla" width="80" height="80" style="display:block;width:80px;height:auto;border:0;outline:none;" />
+      <img src="${logoUrl}" alt="Sahla" width="120" height="120" style="display:block;width:120px;height:auto;border:0;outline:none;" />
     </td></tr>
     <tr><td align="center" style="padding:0 12px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-card" bgcolor="#ffffff" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;">
-        <tr><td class="email-body" style="padding:40px 36px 0;font-family:${sans};font-size:15px;line-height:1.7;color:#0A261E;">
+        <tr><td class="email-body" style="padding:40px 36px ${showSignature ? "0" : "40px"};font-family:${sans};font-size:15px;line-height:1.7;color:#0A261E;">
           ${body}
         </td></tr>
+        ${showSignature ? `
         <tr><td class="email-body" style="padding:36px 36px 0;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
             <td style="height:1px;font-size:1px;line-height:1px;background-color:rgba(10,38,30,0.08);">&nbsp;</td>
@@ -119,7 +121,7 @@ function sahlaEmailHtml(body: string, preheader?: string): string {
             </td></tr>
             <tr><td align="center" style="padding-top:12px;font-family:${sans};font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:rgba(10,38,30,0.3);">New York &middot; 2026</td></tr>
           </table>
-        </td></tr>
+        </td></tr>` : ""}
       </table>
     </td></tr>
     <tr><td align="center" class="email-footer" style="padding:24px 16px 48px;font-family:${sans};font-size:11px;color:rgba(10,38,30,0.55);">
@@ -135,12 +137,14 @@ function sahlaEmailHtml(body: string, preheader?: string): string {
 </html>`;
 }
 
-async function sendEmail(to: string, subject: string, html: string) {
+async function sendEmail(to: string, subject: string, html: string, fromName = "Sahla") {
   if (!resendApiKey) {
     console.warn("RESEND_API_KEY not set, skipping email");
     return;
   }
   try {
+    // Strip characters that would break the "Name <addr>" From header.
+    const safeName = fromName.replace(/[<>"\r\n]/g, "").trim() || "Sahla";
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -148,7 +152,7 @@ async function sendEmail(to: string, subject: string, html: string) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Sahla <noreply@sahla.co>",
+        from: `${safeName} <noreply@sahla.co>`,
         to,
         subject,
         html,
@@ -631,40 +635,106 @@ function mapAdStatus(status: Stripe.Subscription.Status): string {
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 
-async function sendAdReceiptEmail(
-  to: string,
-  r: {
-    name?: string | null;
-    businessName?: string | null;
-    totalPaid: number;
-    onboarding?: number | null;
-    monthly?: number | null;
-  },
-) {
+type AdReceipt = {
+  name?: string | null;
+  businessName?: string | null;
+  masjidName?: string | null;
+  masjidLogo?: string | null;
+  masjidLocation?: string | null;
+  masjidEmail?: string | null;
+  masjidPhone?: string | null;
+  brandColor?: string | null;
+  accentColor?: string | null;
+  totalPaid: number;
+  onboarding?: number | null;
+  monthly?: number | null;
+  reference?: string | null;
+  date?: string | null;
+};
+
+/** Fully masjid-branded receipt — no Sahla branding. */
+function adReceiptHtml(r: AdReceipt): string {
+  const sans = "-apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif";
+  const brand = r.brandColor || "#0A261E";
+  const accent = r.accentColor || "#B8922A";
+  const masjid = r.masjidName ?? "the masjid";
   const greeting = r.name ? `Assalamu alaikum ${r.name},` : "Assalamu alaikum,";
-  const row = (label: string, value: string, bold = false) =>
-    `<tr>
-      <td style="padding:8px 0;color:rgba(10,38,30,${bold ? "1" : "0.6"});font-size:${bold ? "15px" : "14px"};font-weight:${bold ? "700" : "400"};">${label}</td>
-      <td align="right" style="padding:8px 0;color:#0A261E;font-size:${bold ? "15px" : "14px"};font-weight:${bold ? "700" : "600"};">${value}</td>
+  const refNo = (r.reference ?? "").replace(/[^a-zA-Z0-9]/g, "").slice(-10).toUpperCase();
+  const line = (label: string, value: string, opts: { bold?: boolean; last?: boolean } = {}) => {
+    const edge = opts.last ? "" : "border-bottom:1px solid rgba(0,0,0,0.06);";
+    return `<tr>
+      <td style="padding:12px 18px;color:rgba(0,0,0,${opts.bold ? "0.85" : "0.55"});font-size:${opts.bold ? "15px" : "13px"};font-weight:${opts.bold ? "700" : "500"};${edge}">${label}</td>
+      <td align="right" style="padding:12px 18px;color:#111;font-size:${opts.bold ? "16px" : "14px"};font-weight:${opts.bold ? "700" : "600"};${edge}">${value}</td>
     </tr>`;
-  await sendEmail(
-    to,
-    "Your Business Ad receipt",
-    sahlaEmailHtml(
-      `
-      <p style="margin:0 0 6px;font-size:10px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#B8922A;">Payment received</p>
-      <h1 style="font-size:22px;font-weight:600;color:#0A261E;margin:0 0 6px;line-height:1.3;">Thank you${r.businessName ? ` — ${r.businessName}` : ""}</h1>
-      <p style="margin:0 0 20px;color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">${greeting} your business ad subscription is active. Here's your receipt:</p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid rgba(10,38,30,0.08);border-bottom:1px solid rgba(10,38,30,0.08);margin-bottom:20px;">
-        ${r.onboarding != null ? row("One-time onboarding fee", money(r.onboarding)) : ""}
-        ${r.monthly != null ? row("First month", money(r.monthly)) : ""}
-        ${row("Total paid", money(r.totalPaid), true)}
+  };
+  const footerBits = [r.masjidLocation, r.masjidEmail, r.masjidPhone].filter(Boolean).join("&nbsp;&nbsp;&middot;&nbsp;&nbsp;");
+
+  return `<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <title>Receipt</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1efe9;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Receipt — ${money(r.totalPaid)} paid · ${masjid}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1efe9" style="background-color:#f1efe9;">
+  <tr><td align="center" valign="top">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;" align="center">
+
+    <!-- Masjid header -->
+    <tr><td align="center" style="padding:40px 16px 24px;font-family:${sans};">
+      ${r.masjidLogo ? `<img src="${r.masjidLogo}" alt="${masjid}" width="72" style="width:72px;height:auto;border-radius:14px;display:block;margin:0 auto 12px;" />` : ""}
+      <div style="font-size:20px;font-weight:700;color:${brand};">${masjid}</div>
+      ${r.masjidLocation ? `<div style="margin-top:4px;font-size:12px;color:rgba(0,0,0,0.45);">${r.masjidLocation}</div>` : ""}
+    </td></tr>
+
+    <!-- Card -->
+    <tr><td align="center" style="padding:0 12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;">
+        <tr><td style="padding:36px 32px;font-family:${sans};">
+          <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${accent};">Payment received</p>
+          <h1 style="font-size:22px;font-weight:700;color:${brand};margin:0 0 16px;">Receipt</h1>
+          <p style="margin:0 0 24px;color:rgba(0,0,0,0.65);font-size:15px;line-height:1.7;">${greeting} your Business Ad subscription with <strong style="color:#111;">${masjid}</strong> is now active. Here&rsquo;s your receipt.</p>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,0.08);margin-bottom:22px;">
+            <tr><td colspan="2" style="background-color:${brand};padding:14px 18px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td style="color:#ffffff;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;">Payment Receipt</td>
+                ${refNo ? `<td align="right" style="color:rgba(255,255,255,0.7);font-size:11px;font-family:'Courier New',monospace;">No. ${refNo}</td>` : ""}
+              </tr></table>
+            </td></tr>
+            ${r.date ? line("Date", r.date) : ""}
+            ${r.businessName ? line("Business", r.businessName) : ""}
+            ${r.onboarding != null ? line("One-time onboarding fee", money(r.onboarding)) : ""}
+            ${r.monthly != null ? line("First month", money(r.monthly)) : ""}
+            ${line("Total paid", money(r.totalPaid), { bold: true, last: true })}
+          </table>
+
+          <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 22px;"><tr>
+            <td style="border:1.5px solid ${accent};border-radius:999px;padding:8px 20px;color:${accent};font-weight:700;letter-spacing:0.12em;font-size:12px;">&#10003;&nbsp; PAID &middot; CERTIFIED</td>
+          </tr></table>
+
+          ${r.monthly != null ? `<p style="margin:0;color:rgba(0,0,0,0.5);font-size:13px;line-height:1.6;text-align:center;">You&rsquo;ll then be billed ${money(r.monthly)}/month. We&rsquo;ll review your ad and get back to you within 1&ndash;3 business days.</p>` : ""}
+        </td></tr>
       </table>
-      ${r.monthly != null ? `<p style="margin:0;color:rgba(10,38,30,0.5);font-size:13px;">You'll then be billed ${money(r.monthly)}/month. We'll review your ad and get back to you within 1–3 business days.</p>` : ""}
-      `,
-      `Receipt — ${money(r.totalPaid)} paid`,
-    ),
-  );
+    </td></tr>
+
+    <!-- Masjid footer -->
+    <tr><td align="center" style="padding:24px 16px 44px;font-family:${sans};font-size:11px;line-height:1.6;color:rgba(0,0,0,0.45);">
+      <div style="font-weight:600;color:rgba(0,0,0,0.6);">${masjid}</div>
+      ${footerBits ? `<div style="margin-top:4px;">${footerBits}</div>` : ""}
+    </td></tr>
+  </table>
+  </td></tr>
+  </table>
+</body></html>`;
+}
+
+async function sendAdReceiptEmail(to: string, r: AdReceipt) {
+  // Sender shows the masjid's name (address stays on the verified sahla.co
+  // domain since masjids don't have their own verified sending domain).
+  await sendEmail(to, "Your Business Ad receipt", adReceiptHtml(r), r.masjidName ?? undefined);
 }
 
 async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: string) {
@@ -704,12 +774,31 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
         .eq("submission_id", row.submission_id)
         .single();
       if (sub?.personal_email) {
+        const { data: mosque } = await supabase
+          .from("mosques")
+          .select("name, app_name, logo_url, brand_color, accent_color, city, state, email, phone")
+          .eq("id", row.mosque_id)
+          .single();
+        const location = [mosque?.city, mosque?.state].filter(Boolean).join(", ");
         await sendAdReceiptEmail(sub.personal_email, {
           name: sub.personal_full_name,
           businessName: sub.business_name,
+          masjidName: mosque?.app_name || mosque?.name,
+          masjidLogo: mosque?.logo_url,
+          masjidLocation: location || null,
+          masjidEmail: mosque?.email,
+          masjidPhone: mosque?.phone,
+          brandColor: mosque?.brand_color,
+          accentColor: mosque?.accent_color,
           totalPaid: invoice.amount_paid / 100,
           onboarding: row.onboarding_amount,
           monthly: row.recurring_amount,
+          reference: subscriptionId,
+          date: new Date().toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
         });
       }
     }
