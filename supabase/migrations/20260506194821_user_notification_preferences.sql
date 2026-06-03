@@ -1,3 +1,9 @@
+-- Per-user, per-mosque master switches for notifications that are NOT tied to a
+-- specific content_id (Event reminders for RSVPs, New programs recommendations,
+-- Masjid announcements). The existing prayer_notification_settings and
+-- jummah_notifications tables continue to hold the per-prayer / per-jummah
+-- preferences.
+
 CREATE TABLE IF NOT EXISTS public.user_notification_preferences (
   user_id text NOT NULL,
   mosque_id text NOT NULL REFERENCES public.mosques(id) ON DELETE CASCADE,
@@ -38,4 +44,4 @@ DROP POLICY IF EXISTS "user_notification_preferences_user_delete"
 CREATE POLICY "user_notification_preferences_user_delete"
   ON public.user_notification_preferences
   FOR DELETE TO public
-  USING (user_id = requesting_user_id());;
+  USING (user_id = requesting_user_id());

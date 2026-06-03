@@ -21,4 +21,4 @@ COMMENT ON VIEW public.mosque_feature_flags IS
   'Live-derived feature flags per mosque. has_crm_access is the canonical check for granting CRM features. Sourced from mosques.subscription_tier, subscription_status, stripe_charges_enabled.';
 
 GRANT SELECT ON public.mosque_feature_flags TO authenticated;
-GRANT SELECT ON public.mosque_feature_flags TO service_role;;
+GRANT SELECT ON public.mosque_feature_flags TO service_role;

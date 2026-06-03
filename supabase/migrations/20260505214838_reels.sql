@@ -30,4 +30,4 @@ CREATE POLICY reels_mosque_select ON public.reels
 CREATE POLICY reels_admin_all ON public.reels
   FOR ALL USING (mosque_id = public.requesting_mosque_id());
 CREATE POLICY reels_sahla_all ON public.reels
-  FOR ALL USING (public.is_sahla_team());;
+  FOR ALL USING (public.is_sahla_team());

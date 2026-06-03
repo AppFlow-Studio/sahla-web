@@ -15,4 +15,4 @@
 
 ALTER VIEW public.mosque_feature_flags SET (security_invoker = true);
 
-ALTER TABLE public.stripe_webhook_events ENABLE ROW LEVEL SECURITY;;
+ALTER TABLE public.stripe_webhook_events ENABLE ROW LEVEL SECURITY;

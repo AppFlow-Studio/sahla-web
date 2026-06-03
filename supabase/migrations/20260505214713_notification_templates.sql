@@ -29,4 +29,4 @@ ALTER TABLE public.notification_templates ENABLE ROW LEVEL SECURITY;
 CREATE POLICY notification_templates_mosque_all ON public.notification_templates
   FOR ALL USING (mosque_id = public.requesting_mosque_id());
 CREATE POLICY notification_templates_sahla ON public.notification_templates
-  FOR SELECT USING (public.is_sahla_team());;
+  FOR SELECT USING (public.is_sahla_team());
