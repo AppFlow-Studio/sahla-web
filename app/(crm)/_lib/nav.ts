@@ -15,7 +15,7 @@ import {
   Megaphone,
   Clock,
   Palette,
-  Tags,
+  LayoutGrid,
   BellRing,
   UserCog,
   CreditCard,
@@ -139,10 +139,10 @@ export const CRM_NAV: CrmSection[] = [
         description: "Brand colors and accent",
       },
       {
-        href: "/setup/categories",
-        label: "Categories",
-        icon: Tags,
-        description: "Discover-tab filter pills (Kids, Youth, Adults, …)",
+        href: "/setup/program-cards",
+        label: "Program Cards",
+        icon: LayoutGrid,
+        description: "Discover “Programs” cover cards — image, color, audience",
       },
       {
         href: "/setup/notifications",

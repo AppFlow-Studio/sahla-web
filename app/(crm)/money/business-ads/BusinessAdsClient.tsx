@@ -11,9 +11,15 @@ import {
   MapPin,
   Mail,
   Phone,
+  Check,
+  X,
+  Ban,
+  Receipt,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import StatCard from "../../_components/StatCard";
 import {
   Dialog,
   DialogContent,
@@ -35,10 +41,15 @@ import BusinessAdForm, {
   type BusinessAdFormValues,
   PLACEMENT_LABELS,
 } from "./BusinessAdForm";
+import BusinessAdDetail, {
+  STATUS_META,
+  adImageLayoutId,
+} from "./BusinessAdDetail";
 import {
   useBusinessAds,
   type BusinessAd,
 } from "../../_hooks/useBusinessAds";
+import { formatMoneyCents } from "../../_lib/format";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -48,9 +59,35 @@ type DialogState =
   | { mode: "edit"; ad: BusinessAd };
 
 export default function BusinessAdsClient() {
-  const { data: ads, isLoading, add, update, remove } = useBusinessAds();
+  const { data: ads, isLoading, add, update, remove, approve, decide } = useBusinessAds();
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+
+  // Derive the open ad from the live list so optimistic updates (approve,
+  // take down, edit) reflect in the detail panel without stale copies.
+  const detailAd = detailId ? ads.find((a) => a.id === detailId) ?? null : null;
+
+  const totalCollectedCents = ads.reduce((sum, a) => sum + a.totalPaidCents, 0);
+  const paymentCount = ads.reduce((sum, a) => sum + a.paymentCount, 0);
+  const payingCount = ads.filter((a) => a.paymentCount > 0).length;
+  const summaryCurrency = ads.find((a) => a.currency)?.currency ?? "usd";
+  const hasRevenue = paymentCount > 0;
+
+  function handleApprove(ad: BusinessAd) {
+    approve(ad.id);
+    toast.success(`${ad.businessName} approved — now live`);
+  }
+
+  function handleDecline(ad: BusinessAd) {
+    decide(ad.id, "decline");
+    toast.success(`${ad.businessName} declined — subscription canceled`);
+  }
+
+  function handleCancel(ad: BusinessAd) {
+    decide(ad.id, "cancel");
+    toast.success(`${ad.businessName} taken down — subscription canceled`);
+  }
 
   function handleSubmit(values: BusinessAdFormValues) {
     if (dialog.mode === "add") {
@@ -85,6 +122,27 @@ export default function BusinessAdsClient() {
         }
       />
 
+      {hasRevenue ? (
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard
+            label="Total collected"
+            value={Math.round(totalCollectedCents / 100)}
+            prefix={summaryCurrency.toUpperCase() === "USD" ? "$" : ""}
+            deltaLabel="from paid ad invoices"
+          />
+          <StatCard
+            label="Paying advertisers"
+            value={payingCount}
+            deltaLabel={payingCount === 1 ? "business" : "businesses"}
+          />
+          <StatCard
+            label="Payments"
+            value={paymentCount}
+            deltaLabel="invoices paid"
+          />
+        </div>
+      ) : null}
+
       {isEmpty ? (
         <EmptyState
           title="No active business ads"
@@ -108,10 +166,21 @@ export default function BusinessAdsClient() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.22, ease: EASE }}
-                className="overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-white"
+                onClick={() => {
+                  if (confirmId !== ad.id) setDetailId(ad.id);
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if ((e.key === "Enter" || e.key === " ") && confirmId !== ad.id) {
+                    e.preventDefault();
+                    setDetailId(ad.id);
+                  }
+                }}
+                className="cursor-pointer overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-white transition-shadow duration-300 hover:shadow-[0_8px_24px_-12px_rgba(10,38,30,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8922A]/40"
               >
                 {confirmId === ad.id ? (
-                  <div className="p-5">
+                  <div className="p-5" onClick={(e) => e.stopPropagation()}>
                     <ConfirmInline
                       open
                       message={`Remove the ${ad.businessName} ad?`}
@@ -122,23 +191,40 @@ export default function BusinessAdsClient() {
                 ) : (
                   <>
                     {ad.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <motion.img
+                        layoutId={adImageLayoutId(ad.id)}
                         src={ad.imageUrl}
                         alt={ad.businessName}
+                        transition={{ duration: 0.45, ease: EASE }}
                         className="aspect-video w-full object-cover"
                       />
                     ) : (
-                      <div className="flex aspect-video w-full items-center justify-center bg-[#0A261E]/[0.04] text-[#0A261E]/35">
+                      <motion.div
+                        layoutId={adImageLayoutId(ad.id)}
+                        transition={{ duration: 0.45, ease: EASE }}
+                        className="flex aspect-video w-full items-center justify-center bg-[#0A261E]/[0.04] text-[#0A261E]/35"
+                      >
                         <Megaphone size={28} />
-                      </div>
+                      </motion.div>
                     )}
 
                     <div className="flex items-start gap-3 px-5 py-4">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-display text-[16px] text-[#0A261E]">
-                          {ad.businessName}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-display text-[16px] text-[#0A261E]">
+                            {ad.businessName}
+                          </p>
+                          {(() => {
+                            const meta = STATUS_META[ad.status];
+                            return meta ? (
+                              <span
+                                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${meta.className}`}
+                              >
+                                {meta.label}
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
                         <div className="mt-2 space-y-1 text-[12px] text-[#0A261E]/60">
                           {ad.businessAddress ? (
                             <p className="flex items-start gap-1.5">
@@ -173,6 +259,7 @@ export default function BusinessAdsClient() {
                           ) : null}
                         </div>
                       </div>
+                      <div onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           aria-label="Ad actions"
@@ -181,6 +268,34 @@ export default function BusinessAdsClient() {
                           <MoreHorizontal size={16} />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44">
+                          {ad.status === "submitted" ? (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleApprove(ad)}
+                                className="text-emerald-700 data-[highlighted]:text-emerald-700"
+                              >
+                                <Check size={13} /> Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDecline(ad)}
+                                className="text-red-600 data-[highlighted]:text-red-600"
+                              >
+                                <X size={13} /> Decline
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          ) : null}
+                          {ad.status === "approved" ? (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleCancel(ad)}
+                                className="text-red-600 data-[highlighted]:text-red-600"
+                              >
+                                <Ban size={13} /> Take down
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          ) : null}
                           <DropdownMenuItem
                             onClick={() => setDialog({ mode: "edit", ad })}
                           >
@@ -195,7 +310,28 @@ export default function BusinessAdsClient() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      </div>
                     </div>
+
+                    {ad.paymentCount > 0 || ad.hasMissedPayment ? (
+                      <div className="flex items-center justify-between gap-3 border-t border-[#0A261E]/8 px-5 py-3">
+                        <span className="flex items-center gap-2 text-[13px] text-[#0A261E]">
+                          <Receipt size={13} className="shrink-0 text-[#B8922A]" />
+                          <span className="font-display text-[15px]">
+                            {formatMoneyCents(ad.totalPaidCents, ad.currency)}
+                          </span>
+                          <span className="text-[12px] text-[#0A261E]/55">
+                            collected · {ad.paymentCount}{" "}
+                            {ad.paymentCount === 1 ? "payment" : "payments"}
+                          </span>
+                        </span>
+                        {ad.hasMissedPayment ? (
+                          <span className="flex shrink-0 items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-red-700">
+                            <AlertTriangle size={11} /> Past due
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </>
                 )}
               </motion.li>
@@ -227,6 +363,29 @@ export default function BusinessAdsClient() {
           />
         </DialogContent>
       </Dialog>
+
+      <AnimatePresence>
+        {detailAd ? (
+          <BusinessAdDetail
+            ad={detailAd}
+            onClose={() => setDetailId(null)}
+            onEdit={(ad) => {
+              setDetailId(null);
+              setDialog({ mode: "edit", ad });
+            }}
+            onApprove={handleApprove}
+            onDecline={(ad) => {
+              handleDecline(ad);
+              setDetailId(null);
+            }}
+            onCancel={handleCancel}
+            onDelete={(ad) => {
+              setDetailId(null);
+              handleDelete(ad);
+            }}
+          />
+        ) : null}
+      </AnimatePresence>
     </>
   );
 }

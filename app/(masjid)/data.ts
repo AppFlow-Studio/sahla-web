@@ -48,7 +48,7 @@ export const getMosqueOnboardingData = cache(async (orgId: string) => {
         .eq("mosque_id", mosque.id)
         .eq("type", "event"),
       supabase
-        .from("display_categories")
+        .from("program_categories")
         .select("id", { count: "exact", head: true })
         .eq("mosque_id", mosque.id),
       supabase

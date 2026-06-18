@@ -20,7 +20,7 @@ const SpeakersPanel = dynamic(() => import("./panels/SpeakersPanel"));
 const ProgramsPanel = dynamic(() => import("./panels/ProgramsPanel"));
 const EventsPanel = dynamic(() => import("./panels/EventsPanel"));
 const ReelsOnboardingPanel = dynamic(() => import("./panels/ReelsOnboardingPanel"));
-const CategoriesOnboardingPanel = dynamic(() => import("./panels/CategoriesOnboardingPanel"));
+const ProgramCardsOnboardingPanel = dynamic(() => import("./panels/ProgramCardsOnboardingPanel"));
 const StripeConnectPanel = dynamic(() => import("./panels/StripeConnectPanel"));
 const InviteAdminsPanel = dynamic(() => import("./panels/InviteAdminsPanel"));
 const DonationsPanel = dynamic(() => import("./panels/DonationsPanel"));
@@ -101,20 +101,23 @@ export default async function TaskPage({
     else eventsData = contentRes.data ?? [];
   }
 
+  // The "categories" onboarding task now configures the Discover Program Cards
+  // (program_categories). Task id kept as "categories" for onboarding_progress
+  // continuity.
   let categoriesData: Array<{
-    id: number;
-    name: string;
-    slug: string;
-    icon: string | null;
-    display_order: number;
-    is_active: boolean;
+    id: string;
+    title: string;
+    image_url: string | null;
+    bg_color: string | null;
+    audience_filter: string;
+    sort_order: number;
   }> = [];
   if (taskId === "categories") {
     const { data } = await supabase
-      .from("display_categories")
-      .select("id, name, slug, icon, display_order, is_active")
+      .from("program_categories")
+      .select("id, title, image_url, bg_color, audience_filter, sort_order")
       .eq("mosque_id", mosque.id)
-      .order("display_order", { ascending: true });
+      .order("sort_order", { ascending: true });
     categoriesData = data ?? [];
   }
 
@@ -310,9 +313,9 @@ export default async function TaskPage({
           />
         )}
         {taskId === "categories" && (
-          <CategoriesOnboardingPanel
+          <ProgramCardsOnboardingPanel
             mosqueId={mosque.id}
-            initialCategories={categoriesData}
+            initialCards={categoriesData}
           />
         )}
         {taskId === "stripe_connect" && stripeStatus && (

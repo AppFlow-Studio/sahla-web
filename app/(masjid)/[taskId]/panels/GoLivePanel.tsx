@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "../../components/ToastProvider";
 
@@ -147,7 +148,7 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
         </div>
 
         <div className="space-y-2">
-          <a
+          <Link
             href="/home"
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-[13px] font-semibold text-white shadow-lg shadow-emerald-200 transition-colors hover:bg-emerald-700"
           >
@@ -155,7 +156,7 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
             </svg>
             Open CRM Dashboard
-          </a>
+          </Link>
           <button
             onClick={handleManageSubscription}
             disabled={openingPortal}
@@ -278,7 +279,7 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
           {TIERS.map((tier) => (
             <label
               key={tier.id}
-              className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-all ${
+              className={`relative flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-all ${
                 selectedTier === tier.id
                   ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500"
                   : "border-stone-200 hover:border-stone-300"

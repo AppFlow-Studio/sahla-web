@@ -129,7 +129,7 @@ const CHILD_TABLES = [
   "content_notification_settings",
   "content_notifications",
   "content_tags",
-  "display_categories",
+  "program_categories",
   "donations",
   "jummah",
   "jummah_notifications",

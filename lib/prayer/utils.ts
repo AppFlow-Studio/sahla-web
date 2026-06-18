@@ -60,6 +60,37 @@ export function addMinutes(time: string, minutes: number): string {
 }
 
 /**
+ * Parses 'HH:MM' or 'HH:MM:SS' into minutes-of-day. Returns null when the
+ * value is missing or unparseable so callers can skip validation safely.
+ */
+export function timeToMinutes(time: string | null | undefined): number | null {
+  if (typeof time !== "string") return null;
+  const [h, m] = time.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+/**
+ * Returns the prayer names whose FIXED iqamah time falls before that prayer's
+ * athan — an impossible configuration. Offset/seasonal modes, and prayers whose
+ * athan is unknown, are skipped (nothing to validate against).
+ */
+export function fixedIqamahBeforeAthan(
+  configs: Pick<IqamahConfig, "prayer_name" | "mode" | "fixed_time">[],
+  athanByPrayer: Partial<Record<PrayerName, string>>
+): PrayerName[] {
+  const bad: PrayerName[] = [];
+  for (const c of configs) {
+    if (c.mode !== "fixed" || !c.fixed_time) continue;
+    const fixedMin = timeToMinutes(c.fixed_time);
+    const athanMin = timeToMinutes(athanByPrayer[c.prayer_name]);
+    if (fixedMin == null || athanMin == null) continue;
+    if (fixedMin < athanMin) bad.push(c.prayer_name);
+  }
+  return bad;
+}
+
+/**
  * Checks if a date (MM-DD) falls within a seasonal rule range.
  * Handles ranges that wrap around year-end (e.g., 11-01 to 02-28).
  */
