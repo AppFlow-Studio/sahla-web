@@ -737,6 +737,37 @@ async function sendAdReceiptEmail(to: string, r: AdReceipt) {
   await sendEmail(to, "Your Business Ad receipt", adReceiptHtml(r), r.masjidName ?? undefined);
 }
 
+/**
+ * Record a paid invoice into ad_payments so the mosque admin panel can show
+ * payment history. Idempotent on stripe_invoice_id (the webhook may redeliver).
+ */
+async function recordAdPayment(
+  invoice: Stripe.Invoice,
+  subscriptionId: string,
+  paymentIntentId: string | null,
+  mosqueId: string | null,
+  submissionId: string | null,
+  kind: "first" | "recurring",
+) {
+  if (!mosqueId) return;
+  const paidUnix = invoice.status_transitions?.paid_at ?? invoice.created;
+  await supabase.from("ad_payments").upsert(
+    {
+      mosque_id: mosqueId,
+      submission_id: submissionId,
+      stripe_subscription_id: subscriptionId,
+      stripe_invoice_id: invoice.id,
+      stripe_payment_intent_id: paymentIntentId,
+      amount_cents: invoice.amount_paid,
+      currency: invoice.currency,
+      kind,
+      status: "paid",
+      paid_at: new Date(paidUnix * 1000).toISOString(),
+    },
+    { onConflict: "stripe_invoice_id", ignoreDuplicates: true },
+  );
+}
+
 async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: string) {
   const paymentIntentId = typeof invoice.payment_intent === "string"
     ? invoice.payment_intent
@@ -761,6 +792,14 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
       .select("submission_id, mosque_id, onboarding_amount, recurring_amount");
 
     const row = updated?.[0];
+    await recordAdPayment(
+      invoice,
+      subscriptionId,
+      paymentIntentId,
+      row?.mosque_id ?? null,
+      row?.submission_id ?? null,
+      "first",
+    );
     if (row?.submission_id) {
       await supabase
         .from("business_ads_submissions")
@@ -809,14 +848,24 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
     }
     console.log(`Ad subscription activated: ${subscriptionId}`);
   } else {
-    await supabase
+    const { data: updated } = await supabase
       .from("ad_subscriptions")
       .update({
         status: "active",
         stripe_payment_intent_id: paymentIntentId,
         updated_at: new Date().toISOString(),
       })
-      .eq("stripe_subscription_id", subscriptionId);
+      .eq("stripe_subscription_id", subscriptionId)
+      .select("submission_id, mosque_id");
+    const row = updated?.[0];
+    await recordAdPayment(
+      invoice,
+      subscriptionId,
+      paymentIntentId,
+      row?.mosque_id ?? null,
+      row?.submission_id ?? null,
+      "recurring",
+    );
     console.log(`Ad subscription renewed: ${subscriptionId}`);
   }
 }

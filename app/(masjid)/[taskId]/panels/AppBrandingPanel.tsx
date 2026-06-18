@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Upload, X } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import { usePreview } from "../../components/OnboardingPreviewContext";
+import ColorPicker from "../../components/ColorPicker";
 import { cn } from "@/lib/utils";
 import { INPUT_CLASS, BTN_PRIMARY, BTN_PRIMARY_DISABLED, BTN_GHOST } from "@/lib/ui-classes";
 
@@ -185,35 +186,32 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
           </p>
         </div>
         <div className="px-6 py-5">
-          <div className="flex items-center gap-2 mb-3">
-            <input
-              type="color"
+          <div className="flex flex-wrap gap-6">
+            <ColorPicker
               value={brandColor}
-              onChange={(e) => { setBrandColor(e.target.value); updatePreview({ brandColor: e.target.value }); }}
-              className="h-8 w-8 cursor-pointer rounded-lg border border-stone-200 p-0.5"
-            />
-            <input
-              type="text"
-              value={brandColor}
-              onChange={(e) => { setBrandColor(e.target.value); updatePreview({ brandColor: e.target.value }); }}
+              onChange={(c) => { setBrandColor(c); updatePreview({ brandColor: c }); }}
               placeholder="#0A261E"
-              className="w-24 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-[12px] font-mono text-stone-700 outline-none focus:border-stone-400"
             />
-          </div>
-          <div className="flex gap-1.5 flex-wrap">
-            {PRESET_BRAND_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => { setBrandColor(c); updatePreview({ brandColor: c }); }}
-                className="h-7 w-7 rounded-full border-2 transition-transform hover:scale-110"
-                style={{
-                  backgroundColor: c,
-                  borderColor: brandColor === c ? "white" : "transparent",
-                  boxShadow: brandColor === c ? `0 0 0 2px ${c}` : "0 0 0 1px rgba(0,0,0,0.08)",
-                }}
-              />
-            ))}
+            <div className="flex-1 min-w-[160px]">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+                Presets
+              </p>
+              <div className="flex gap-1.5 flex-wrap">
+                {PRESET_BRAND_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => { setBrandColor(c); updatePreview({ brandColor: c }); }}
+                    className="h-7 w-7 rounded-full border-2 transition-transform hover:scale-110"
+                    style={{
+                      backgroundColor: c,
+                      borderColor: brandColor === c ? "white" : "transparent",
+                      boxShadow: brandColor === c ? `0 0 0 2px ${c}` : "0 0 0 1px rgba(0,0,0,0.08)",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -227,35 +225,32 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
           </p>
         </div>
         <div className="px-6 py-5">
-          <div className="flex items-center gap-2 mb-3">
-            <input
-              type="color"
+          <div className="flex flex-wrap gap-6">
+            <ColorPicker
               value={accentColor}
-              onChange={(e) => { setAccentColor(e.target.value); updatePreview({ accentColor: e.target.value }); }}
-              className="h-8 w-8 cursor-pointer rounded-lg border border-stone-200 p-0.5"
-            />
-            <input
-              type="text"
-              value={accentColor}
-              onChange={(e) => { setAccentColor(e.target.value); updatePreview({ accentColor: e.target.value }); }}
+              onChange={(c) => { setAccentColor(c); updatePreview({ accentColor: c }); }}
               placeholder="#B8922A"
-              className="w-24 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-[12px] font-mono text-stone-700 outline-none focus:border-stone-400"
             />
-          </div>
-          <div className="flex gap-1.5 flex-wrap">
-            {PRESET_ACCENT_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => { setAccentColor(c); updatePreview({ accentColor: c }); }}
-                className="h-7 w-7 rounded-full border-2 transition-transform hover:scale-110"
-                style={{
-                  backgroundColor: c,
-                  borderColor: accentColor === c ? "white" : "transparent",
-                  boxShadow: accentColor === c ? `0 0 0 2px ${c}` : "0 0 0 1px rgba(0,0,0,0.08)",
-                }}
-              />
-            ))}
+            <div className="flex-1 min-w-[160px]">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+                Presets
+              </p>
+              <div className="flex gap-1.5 flex-wrap">
+                {PRESET_ACCENT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => { setAccentColor(c); updatePreview({ accentColor: c }); }}
+                    className="h-7 w-7 rounded-full border-2 transition-transform hover:scale-110"
+                    style={{
+                      backgroundColor: c,
+                      borderColor: accentColor === c ? "white" : "transparent",
+                      boxShadow: accentColor === c ? `0 0 0 2px ${c}` : "0 0 0 1px rgba(0,0,0,0.08)",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
