@@ -81,9 +81,11 @@ export const ONBOARDING_CATEGORIES: TaskCategory[] = [
         timeEstimate: "5 min",
       },
       {
+        // id kept as "categories" for onboarding_progress continuity; this step
+        // now configures the Discover Program cover cards (program_categories).
         id: "categories",
-        label: "Categories",
-        description: "Customize the filter pills on your Discover tab",
+        label: "Program Cards",
+        description: "Customize the Discover program cover cards",
         badge: "REC",
         timeEstimate: "3 min",
       },

@@ -126,6 +126,15 @@ function makeOptimistic(input: BusinessAdInput): BusinessAd {
     imageUrl: input.imageUrl,
     status: "approved",
     createdAt: new Date().toISOString(),
+    payments: [],
+    totalPaidCents: 0,
+    paymentCount: 0,
+    lastPaymentAt: null,
+    currency: null,
+    subscriptionStatus: null,
+    subscribedSince: null,
+    subscriptionEndsAt: null,
+    hasMissedPayment: false,
   };
 }
 
