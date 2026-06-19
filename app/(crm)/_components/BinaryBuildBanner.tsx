@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Hammer, X, ArrowUpRight } from "lucide-react";
@@ -17,10 +17,14 @@ const DISMISS_KEY = "sahla.crm.binary_build_banner.dismissed";
 
 export default function BinaryBuildBanner() {
   const mosque = useMosque();
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.sessionStorage.getItem(DISMISS_KEY) === "1";
-  });
+  // Start `false` on both server and client so the first client render matches
+  // the SSR output (reading sessionStorage during render causes a hydration
+  // mismatch). The real dismissal state is applied in the effect below.
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (window.sessionStorage.getItem(DISMISS_KEY) === "1") setDismissed(true);
+  }, []);
 
   const shouldShow =
     !mosque.isHQ && mosque.onboardingStatus === "ready" && !dismissed;
