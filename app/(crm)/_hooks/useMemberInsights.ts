@@ -2,18 +2,18 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMosque } from "../_lib/mock-mosque";
-import { seedEnrichedMembers, seedPopular } from "../_mock/member-insights";
+import {
+  seedEnrichedMembers,
+  seedPopular,
+  SEED_NOW,
+  SEED_YEAR,
+} from "../_mock/member-insights";
 import {
   aggregateInsights,
   emptyInsights,
   type MemberInsights,
   type SegmentKey,
 } from "@/app/api/crm/members/insights/shared";
-
-// Captured once at module load so the HQ aggregation below stays pure (no clock
-// reads during render).
-const NOW = Date.now();
-const CURRENT_YEAR = new Date(NOW).getFullYear();
 
 async function fetchInsights(segment: SegmentKey): Promise<MemberInsights> {
   const res = await fetch(`/api/crm/members/insights?segment=${segment}`, {
@@ -46,7 +46,7 @@ export function useMemberInsights(segment: SegmentKey) {
 
   if (mosque.isHQ) {
     return {
-      data: aggregateInsights(seedEnrichedMembers, segment, seedPopular, NOW, CURRENT_YEAR),
+      data: aggregateInsights(seedEnrichedMembers, segment, seedPopular, SEED_NOW, SEED_YEAR),
       isIllustrative: true,
       isLoading: false,
     };

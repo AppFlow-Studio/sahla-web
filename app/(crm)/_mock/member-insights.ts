@@ -20,9 +20,16 @@ function rng(seed: number) {
   };
 }
 
-const NOW = new Date("2026-06-18T12:00:00Z").getTime();
+// Fixed reference the whole illustrative seed is anchored to. Exported so the
+// HQ aggregation uses the SAME instant the seed was built around — both for
+// correct "new this month" semantics and, critically, so the value is
+// identical on the server and the client (a runtime clock read here would
+// differ between SSR and hydration and break the page with a mismatch).
+export const SEED_NOW = new Date("2026-06-18T12:00:00Z").getTime();
+export const SEED_YEAR = 2026;
+const NOW = SEED_NOW;
 const DAY = 86_400_000;
-const CURRENT_YEAR = 2026;
+const CURRENT_YEAR = SEED_YEAR;
 
 // Age-bucket weights → [minAge, maxAge], matching the 6/19/31/27/12/5 shape.
 const AGE_BUCKETS: { weight: number; min: number; max: number }[] = [

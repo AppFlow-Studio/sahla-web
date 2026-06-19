@@ -11,6 +11,15 @@ verify_jwt = false
 import_map = "./functions/stripe-webhooks/deno.json"
 entrypoint = "./functions/stripe-webhooks/index.ts"
 
+[functions.send-push]
+enabled = true
+# Drained by the per-minute cron via net.http_post (no Authorization header).
+# Safe to leave unauthenticated: it only delivers rows the auth-gated enqueue
+# route already wrote — it never accepts a push payload over the wire.
+verify_jwt = false
+import_map = "./functions/send-push/deno.json"
+entrypoint = "./functions/send-push/index.ts"
+
 [functions.clerk-webhooks]
 enabled = true
 # Clerk uses Svix HMAC signatures, not Supabase JWTs. Keep this off or
