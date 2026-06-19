@@ -3,13 +3,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMosque } from "../_lib/mock-mosque";
 import {
-  seedEnrichedMembers,
-  seedPopular,
-  SEED_NOW,
-  SEED_YEAR,
-} from "../_mock/member-insights";
-import {
-  aggregateInsights,
   emptyInsights,
   type MemberInsights,
   type SegmentKey,
@@ -25,8 +18,7 @@ async function fetchInsights(segment: SegmentKey): Promise<MemberInsights> {
 
 /**
  * Aggregated member-insights for the signed-in mosque, scoped to `segment`.
- * Real query against `/api/crm/members/insights`; HQ previews aggregate the
- * illustrative seed locally so the chips still re-scope.
+ * Real query against `/api/crm/members/insights`.
  *
  * Polls + refetches on focus so the screen stays current without a manual
  * refresh (locked team standard).
@@ -37,24 +29,14 @@ export function useMemberInsights(segment: SegmentKey) {
   const query = useQuery({
     queryKey: ["crm", "member-insights", mosque.id, segment],
     queryFn: () => fetchInsights(segment),
-    enabled: !mosque.isHQ,
     placeholderData: keepPreviousData,
     staleTime: 20_000,
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
   });
 
-  if (mosque.isHQ) {
-    return {
-      data: aggregateInsights(seedEnrichedMembers, segment, seedPopular, SEED_NOW, SEED_YEAR),
-      isIllustrative: true,
-      isLoading: false,
-    };
-  }
-
   return {
     data: query.data ?? emptyInsights(segment),
-    isIllustrative: false,
     isLoading: query.isLoading,
   };
 }

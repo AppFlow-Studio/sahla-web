@@ -15,6 +15,10 @@ const GOLD = "#B8922A";
 const TRACK = "#E7E1D2";
 // Dark → light greens for the age distribution.
 const AGE_COLORS = ["#0A261E", "#1E4D3A", "#356A50", "#548C6E", "#83AE95", "#B4D0C0"];
+// Zero-count rows so the age bar chart still renders its bands when there's no data.
+const AGE_BAND_PLACEHOLDER = ["13-17", "18-24", "25-34", "35-49", "50-64", "65+"].map(
+  (band) => ({ band, count: 0 })
+);
 const GENDER_COLORS: Record<string, string> = {
   Male: DARK,
   Female: GOLD,
@@ -36,7 +40,7 @@ function pct(part: number, whole: number): number {
 
 export default function MemberInsights() {
   const [segment, setSegment] = useState<SegmentKey>("all");
-  const { data, isIllustrative, isLoading } = useMemberInsights(segment);
+  const { data, isLoading } = useMemberInsights(segment);
   const [chartMode, setChartMode] = useState<"bar" | "pie">("bar");
 
   const activeSegment = SEGMENTS.find((s) => s.key === segment) ?? SEGMENTS[0];
@@ -98,8 +102,8 @@ export default function MemberInsights() {
         />
       </div>
 
-      {total === 0 ? (
-        <EmptyInsights isLoading={isLoading} />
+      {isLoading ? (
+        <LoadingInsights />
       ) : (
         <div className="mt-4 space-y-4">
           {/* Who your members are */}
@@ -115,9 +119,7 @@ export default function MemberInsights() {
               {/* Gender */}
               <div>
                 <SubLabel>Gender</SubLabel>
-                {genderTotal === 0 ? (
-                  <NA />
-                ) : chartMode === "pie" ? (
+                {chartMode === "pie" ? (
                   <div className="mt-3 flex items-center gap-5">
                     <Donut
                       size={132}
@@ -139,7 +141,10 @@ export default function MemberInsights() {
                   </div>
                 ) : (
                   <div className="mt-3">
-                    <div className="flex h-3.5 w-full overflow-hidden rounded-full">
+                    <div
+                      className="flex h-3.5 w-full overflow-hidden rounded-full"
+                      style={{ background: TRACK }}
+                    >
                       {data.gender.map((g) => (
                         <div
                           key={g.label}
@@ -168,9 +173,7 @@ export default function MemberInsights() {
               {/* Age groups */}
               <div>
                 <SubLabel>Age groups</SubLabel>
-                {ageTotal === 0 ? (
-                  <NA />
-                ) : chartMode === "pie" ? (
+                {chartMode === "pie" ? (
                   <div className="mt-3 flex items-center gap-5">
                     <Donut
                       size={132}
@@ -192,7 +195,10 @@ export default function MemberInsights() {
                   </div>
                 ) : (
                   <ul className="mt-3 space-y-2.5">
-                    {data.ageBands.map((b) => (
+                    {(data.ageBands.length > 0
+                      ? data.ageBands
+                      : AGE_BAND_PLACEHOLDER
+                    ).map((b) => (
                       <li key={b.band} className="flex items-center gap-3">
                         <span className="w-11 shrink-0 text-[12px] tabular-nums text-[#0A261E]/60">
                           {b.band}
@@ -311,11 +317,6 @@ export default function MemberInsights() {
             </article>
           ) : null}
 
-          {isIllustrative ? (
-            <p className="text-center text-[11.5px] text-[#0A261E]/40">
-              Illustrative data · figures populate from your app as members join
-            </p>
-          ) : null}
         </div>
       )}
     </section>
@@ -517,19 +518,13 @@ function ReachBar({ label, count, total }: { label: string; count: number; total
   );
 }
 
-function NA() {
-  return <p className="mt-3 text-[13px] font-medium text-[#0A261E]/35">N/A</p>;
-}
-
-function EmptyInsights({ isLoading }: { isLoading: boolean }) {
+function LoadingInsights() {
   return (
     <div className="mt-4 rounded-2xl border border-dashed border-[#0A261E]/12 bg-white px-6 py-12 text-center">
       <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#f6f1e4]">
         <Users size={18} className="text-[#B8922A]" />
       </div>
-      <h3 className="font-display text-[17px] text-[#0A261E]">
-        {isLoading ? "Loading insights…" : "No member data yet"}
-      </h3>
+      <h3 className="font-display text-[17px] text-[#0A261E]">Loading insights…</h3>
       <p className="mx-auto mt-1 max-w-sm text-[13px] text-[#0A261E]/55">
         Insights populate from your app as members join and personalize their
         experience.
