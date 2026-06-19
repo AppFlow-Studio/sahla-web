@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import PageHeader from "../../_components/PageHeader";
-import StatCard from "../../_components/StatCard";
+import MemberInsights from "./MemberInsights";
 import { useMembers, type Member } from "../../_hooks/useMembers";
 import { maskEmail, relativeShort } from "../../_lib/format";
 import { cn } from "@/lib/utils";
@@ -77,21 +77,6 @@ export default function MembersClient() {
     }
     return rows;
   }, [members, debouncedQuery, pushFilter]);
-
-  const stats = useMemo(() => {
-    const total = members.length;
-    const newThisMonth = members.filter(
-      (m) =>
-        Date.now() - new Date(m.signupAt).getTime() < 30 * 86_400_000
-    ).length;
-    const withPush = members.filter((m) => m.hasPushToken).length;
-    const activeRecently = members.filter(
-      (m) =>
-        m.lastActiveAt &&
-        Date.now() - new Date(m.lastActiveAt).getTime() < 30 * 86_400_000
-    ).length;
-    return { total, newThisMonth, withPush, activeRecently };
-  }, [members]);
 
   const columns = useMemo<ColumnDef<Member>[]>(
     () => [
@@ -226,12 +211,17 @@ export default function MembersClient() {
         }
       />
 
-      {/* Quick stats */}
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Total members" value={stats.total} />
-        <StatCard label="New this month" value={stats.newThisMonth} />
-        <StatCard label="Push enabled" value={stats.withPush} />
-        <StatCard label="Active 30d" value={stats.activeRecently} />
+      {/* Insights dashboard */}
+      <MemberInsights />
+
+      {/* Directory */}
+      <div className="mb-4">
+        <h2 className="font-display text-[22px] leading-tight text-[#0A261E]">
+          Member directory
+        </h2>
+        <p className="mt-1 text-[13.5px] text-[#0A261E]/60">
+          Search everyone who has signed in to your mosque app.
+        </p>
       </div>
 
       {/* Filters */}

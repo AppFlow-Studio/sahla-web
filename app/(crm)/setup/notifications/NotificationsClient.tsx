@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
@@ -33,14 +34,13 @@ import { useMembers } from "../../_hooks/useMembers";
 import {
   useNotifications,
   type NotificationTemplate,
+  type SendAudienceType,
 } from "../../_hooks/useNotifications";
 import { useContent } from "../../_hooks/useContent";
 import { relativeShort } from "../../_lib/format";
 import { cn } from "@/lib/utils";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-
-type Audience = NotificationTemplate["audience"];
 
 export default function NotificationsClient() {
   const { templates, history, send, saveTemplate, removeTemplate } =
@@ -49,9 +49,12 @@ export default function NotificationsClient() {
   const { data: programs } = useContent("program");
   const { data: events } = useContent("event");
 
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [audience, setAudience] = useState<Audience>("all");
+  // Deep-link prefill — e.g. the Member Insights "Draft a nudge" button lands
+  // here with ?title=&body= so the composer opens on a ready-to-review draft.
+  const searchParams = useSearchParams();
+  const [title, setTitle] = useState(() => searchParams.get("title") ?? "");
+  const [body, setBody] = useState(() => searchParams.get("body") ?? "");
+  const [audience, setAudience] = useState<SendAudienceType>("all");
   const [audienceTarget, setAudienceTarget] = useState<string>("all-members");
   const [scheduleNow, setScheduleNow] = useState(true);
   const [scheduleDate, setScheduleDate] = useState(
@@ -69,12 +72,8 @@ export default function NotificationsClient() {
       const prog = programs.find((p) => p.id === audienceTarget);
       return prog?.currentCount ?? 0;
     }
-    if (audience === "event") {
-      const evt = events.find((e) => e.id === audienceTarget);
-      return evt?.currentCount ?? 0;
-    }
-    // tag — return a stable demo count
-    return Math.floor(members.length * 0.32);
+    const evt = events.find((e) => e.id === audienceTarget);
+    return evt?.currentCount ?? 0;
   }, [audience, audienceTarget, members, programs, events]);
 
   const audienceLabel = useMemo(() => {
@@ -83,11 +82,8 @@ export default function NotificationsClient() {
       const prog = programs.find((p) => p.id === audienceTarget);
       return prog ? `${prog.name} RSVPs (${recipientCount})` : "Program RSVPs";
     }
-    if (audience === "event") {
-      const evt = events.find((e) => e.id === audienceTarget);
-      return evt ? `${evt.name} RSVPs (${recipientCount})` : "Event RSVPs";
-    }
-    return `Tagged members (${recipientCount})`;
+    const evt = events.find((e) => e.id === audienceTarget);
+    return evt ? `${evt.name} RSVPs (${recipientCount})` : "Event RSVPs";
   }, [audience, audienceTarget, recipientCount, programs, events]);
 
   function clearForm() {
@@ -102,7 +98,12 @@ export default function NotificationsClient() {
     setActiveTemplateId(tpl.id);
     setTitle(tpl.title);
     setBody(tpl.body);
-    setAudience(tpl.audience);
+    // 'tag' templates predate real segments — fall back to Everyone.
+    setAudience(
+      tpl.audience === "program" || tpl.audience === "event"
+        ? tpl.audience
+        : "all"
+    );
     setAudienceTarget("all-members");
     toast.success(`Loaded template: ${tpl.name}`);
   }
@@ -126,19 +127,23 @@ export default function NotificationsClient() {
       });
       toast.success(`Template saved: ${templateName}`);
     }
+    // Combine the date + time pickers into an ISO instant; immediate sends
+    // pass no schedule. The server treats anything in the past as immediate.
+    const scheduledFor = scheduleNow
+      ? null
+      : new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+
+    // The success/error toast is fired from the mutation once the server
+    // responds with the real delivery counts.
     send({
       title,
       body,
+      audienceType: audience,
+      audienceTarget: audience === "all" ? null : audienceTarget,
       audienceLabel,
-      recipientCount,
       templateId: activeTemplateId,
+      scheduledFor,
     });
-    toast.success(
-      scheduleNow
-        ? `Sent to ${recipientCount} members`
-        : `Scheduled for ${scheduleDate} at ${scheduleTime}`,
-      { description: title }
-    );
     clearForm();
   }
 
@@ -190,7 +195,7 @@ export default function NotificationsClient() {
                   <Select
                     value={audience}
                     onValueChange={(v) => {
-                      const next = (v ?? "all") as Audience;
+                      const next = (v ?? "all") as SendAudienceType;
                       setAudience(next);
                       setAudienceTarget("all-members");
                     }}
@@ -203,7 +208,6 @@ export default function NotificationsClient() {
                       <SelectItem value="all">Every member</SelectItem>
                       <SelectItem value="program">Program RSVPs</SelectItem>
                       <SelectItem value="event">Event RSVPs</SelectItem>
-                      <SelectItem value="tag">Tagged group</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -230,25 +234,6 @@ export default function NotificationsClient() {
                             </SelectItem>
                           )
                         )}
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                ) : audience === "tag" ? (
-                  <Field label="Tag" required>
-                    <Select
-                      value={audienceTarget}
-                      onValueChange={(v) =>
-                        setAudienceTarget(v ?? "all-members")
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pick a tag" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="sisters">Sisters</SelectItem>
-                        <SelectItem value="volunteers">Volunteers</SelectItem>
-                        <SelectItem value="recent-donors">Recent donors</SelectItem>
-                        <SelectItem value="board">Board members</SelectItem>
                       </SelectContent>
                     </Select>
                   </Field>

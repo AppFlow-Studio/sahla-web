@@ -15,14 +15,28 @@ import {
 } from "../_mock/notifications";
 import { useMosque } from "../_lib/mock-mosque";
 
+export type SendAudienceType = "all" | "program" | "event";
+
 export type SendInput = {
   title: string;
   body: string;
+  audienceType: SendAudienceType;
+  audienceTarget?: string | null;
   audienceLabel: string;
-  recipientCount: number;
   templateId?: string | null;
+  /** ISO string for a future send; omit/null for immediate. */
   scheduledFor?: string | null;
 };
+
+export type SendResult =
+  | { scheduled: true; scheduledFor: string }
+  | {
+      scheduled: false;
+      status: string;
+      sentCount: number | null;
+      failedCount: number | null;
+      recipientCount: number | null;
+    };
 
 async function fetchTemplates(): Promise<NotificationTemplate[]> {
   const res = await fetch("/api/crm/notifications/templates", {
@@ -75,7 +89,7 @@ async function deleteTemplate(id: string): Promise<void> {
   }
 }
 
-async function postSend(input: SendInput): Promise<void> {
+async function postSend(input: SendInput): Promise<SendResult> {
   const res = await fetch("/api/crm/notifications/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -85,15 +99,17 @@ async function postSend(input: SendInput): Promise<void> {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? `Send failed (${res.status})`);
   }
+  return (await res.json()) as SendResult;
 }
 
 /**
  * Notifications backed by `notification_templates` (templates) and
  * `activity_log` rows with action='notification_sent' (history).
  *
- * Send is stubbed — it writes the history row but doesn't fire actual
- * push notifications to devices. Real Expo/APNs/FCM delivery is the
- * separately-tracked phase (see plan §"Out of scope").
+ * Send enqueues onto `scheduled_notifications`; the `send-push` edge function
+ * (drain worker) resolves the audience to Expo push tokens and delivers via
+ * exp.host. Immediate sends kick the worker inline and return real counts;
+ * scheduled sends are drained by a per-minute cron.
  */
 export function useNotifications() {
   const mosque = useMosque();
@@ -119,7 +135,25 @@ export function useNotifications() {
 
   const sendMutation = useMutation({
     mutationFn: postSend,
-    onSuccess: () => {
+    onSuccess: (result, input) => {
+      if (result.scheduled) {
+        toast.success(
+          `Scheduled for ${new Date(result.scheduledFor).toLocaleString()}`,
+          { description: input.title }
+        );
+      } else if (result.sentCount != null) {
+        const failed = result.failedCount ?? 0;
+        toast.success(
+          `Sent to ${result.sentCount} ${
+            result.sentCount === 1 ? "device" : "devices"
+          }${failed > 0 ? ` · ${failed} failed` : ""}`,
+          { description: input.title }
+        );
+      } else {
+        // Worker hasn't finished yet (the inline kick didn't return counts);
+        // the cron will deliver shortly.
+        toast.success("Queued — delivering now", { description: input.title });
+      }
       queryClient.invalidateQueries({ queryKey: histKey });
       queryClient.invalidateQueries({ queryKey: tplKey });
       queryClient.invalidateQueries({

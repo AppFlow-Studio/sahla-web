@@ -410,6 +410,14 @@ export async function DELETE(request: Request) {
     .eq("submission_id", id)
     .eq("mosque_id", access.mosqueId);
 
+  // ad_subscriptions.submission_id FKs business_ads_submissions (NO ACTION),
+  // so the child subscription row must go before the submission can be deleted.
+  await supabase
+    .from("ad_subscriptions")
+    .delete()
+    .eq("submission_id", id)
+    .eq("mosque_id", access.mosqueId);
+
   const { error } = await supabase
     .from("business_ads_submissions")
     .delete()
