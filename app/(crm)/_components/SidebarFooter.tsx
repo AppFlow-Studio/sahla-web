@@ -4,6 +4,7 @@ import Link from "next/link";
 import { OrganizationSwitcher, useClerk, useUser } from "@clerk/nextjs";
 import { LogOut, UserCircle, ArrowLeft } from "lucide-react";
 import { useIsSahlaHQ } from "@/lib/auth/useIsSahlaHQ";
+import { crmProfileAppearance } from "../_lib/clerkAppearance";
 
 const SWITCHER_APPEARANCE = {
   variables: {
@@ -60,7 +61,7 @@ export default function SidebarFooter() {
           )}
           <button
             type="button"
-            onClick={() => openUserProfile()}
+            onClick={() => openUserProfile({ appearance: crmProfileAppearance })}
             className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[#fffbf2]/60 transition-colors hover:bg-white/[0.04] hover:text-[#fffbf2]"
           >
             <UserCircle size={15} strokeWidth={1.5} />
