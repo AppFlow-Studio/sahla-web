@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import NotificationsClient from "./NotificationsClient";
 
 export const metadata = {
@@ -5,5 +6,9 @@ export const metadata = {
 };
 
 export default function NotificationsPage() {
-  return <NotificationsClient />;
+  return (
+    <Suspense fallback={null}>
+      <NotificationsClient />
+    </Suspense>
+  );
 }

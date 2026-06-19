@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
@@ -49,8 +50,11 @@ export default function NotificationsClient() {
   const { data: programs } = useContent("program");
   const { data: events } = useContent("event");
 
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+  // Deep-link prefill — e.g. the Member Insights "Draft a nudge" button lands
+  // here with ?title=&body= so the composer opens on a ready-to-review draft.
+  const searchParams = useSearchParams();
+  const [title, setTitle] = useState(() => searchParams.get("title") ?? "");
+  const [body, setBody] = useState(() => searchParams.get("body") ?? "");
   const [audience, setAudience] = useState<Audience>("all");
   const [audienceTarget, setAudienceTarget] = useState<string>("all-members");
   const [scheduleNow, setScheduleNow] = useState(true);
