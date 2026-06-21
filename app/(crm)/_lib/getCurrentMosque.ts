@@ -31,6 +31,8 @@ export type MosqueProfile = {
   tier: "core" | "core_crm" | "complete";
   primaryColor: string;
   accentColor: string;
+  /** Font theme key — one of FONT_THEMES in lib/font-themes.ts. */
+  fontTheme: string;
   logoUrl: string | null;
   logoInitials: string;
   onboardingStatus: string;
@@ -64,6 +66,7 @@ const HQ_PLACEHOLDER: MosqueProfile = {
   tier: "core_crm",
   primaryColor: "#0A261E",
   accentColor: "#B8922A",
+  fontTheme: "classic",
   logoUrl: null,
   logoInitials: "SH",
   onboardingStatus: "live",
@@ -102,7 +105,7 @@ export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => 
   const { data: mosque, error: mosqueErr } = await supabase
     .from("mosques")
     .select(
-      "id, name, city, state, app_name, address, phone, email, timezone, brand_color, accent_color, logo_url, subscription_tier, onboarding_status, onboarding_progress"
+      "id, name, city, state, app_name, address, phone, email, timezone, brand_color, accent_color, font_theme, logo_url, subscription_tier, onboarding_status, onboarding_progress"
     )
     .eq("clerk_org_id", session.orgId)
     .maybeSingle();
@@ -154,6 +157,7 @@ export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => 
     tier: (mosque.subscription_tier as MosqueProfile["tier"]) ?? "core",
     primaryColor: mosque.brand_color ?? "#0A261E",
     accentColor: mosque.accent_color ?? "#B8922A",
+    fontTheme: mosque.font_theme ?? "classic",
     logoUrl: mosque.logo_url ?? null,
     logoInitials: initialsFrom(mosque.name ?? "Mosque"),
     onboardingStatus: mosque.onboarding_status ?? "in_progress",

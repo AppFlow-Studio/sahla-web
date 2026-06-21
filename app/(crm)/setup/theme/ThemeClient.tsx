@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/popover";
 import PageHeader from "../../_components/PageHeader";
 import { useMosque } from "../../_lib/mock-mosque";
+import FontThemePicker from "@/components/FontThemePicker";
+import { normalizeFontTheme, type FontThemeKey } from "@/lib/font-themes";
 import { cn } from "@/lib/utils";
 
 const PRESETS = [
@@ -33,15 +35,21 @@ export default function ThemeClient() {
   const queryClient = useQueryClient();
   const [primary, setPrimary] = useState(mosque.primaryColor);
   const [accent, setAccent] = useState(mosque.accentColor);
+  const [fontTheme, setFontTheme] = useState<FontThemeKey>(
+    normalizeFontTheme(mosque.fontTheme),
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const dirty =
-    primary !== mosque.primaryColor || accent !== mosque.accentColor;
+    primary !== mosque.primaryColor ||
+    accent !== mosque.accentColor ||
+    fontTheme !== normalizeFontTheme(mosque.fontTheme);
 
   function reset() {
     setPrimary(mosque.primaryColor);
     setAccent(mosque.accentColor);
-    toast.success("Reverted to current colors");
+    setFontTheme(normalizeFontTheme(mosque.fontTheme));
+    toast.success("Reverted to current theme");
   }
 
   async function save() {
@@ -60,7 +68,11 @@ export default function ThemeClient() {
       const res = await fetch(`/api/mosques/${mosque.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand_color: primary, accent_color: accent }),
+        body: JSON.stringify({
+          brand_color: primary,
+          accent_color: accent,
+          font_theme: fontTheme,
+        }),
       });
       const body = (await res.json().catch(() => ({}))) as {
         success?: boolean;
@@ -90,7 +102,7 @@ export default function ThemeClient() {
       <PageHeader
         eyebrow="Mosque Setup"
         title="Theme"
-        description="Pick the two colors that define your mosque app. Saves auto when you click Apply."
+        description="Pick the colors and font that define your mosque app. Saves when you click Apply."
         action={
           <div className="flex items-center gap-2">
             <Button
@@ -124,6 +136,17 @@ export default function ThemeClient() {
             value={accent}
             onChange={setAccent}
           />
+
+          <section className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
+            <header className="mb-3">
+              <h2 className="text-[13.5px] font-semibold text-[#0A261E]">Font</h2>
+              <p className="text-[12px] text-[#0A261E]/55">
+                The typeface for headings and text across your app. Arabic and
+                Qur&apos;an text always use their dedicated font.
+              </p>
+            </header>
+            <FontThemePicker value={fontTheme} onChange={setFontTheme} />
+          </section>
 
           <div className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
             <header className="mb-3 flex items-center justify-between">
