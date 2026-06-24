@@ -2,7 +2,11 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { requireCrmAccess } from "@/lib/supabase/requireCrmAccess";
+import { fetchAthanByPrayer } from "@/lib/prayer/athan-server";
+import { fixedIqamahBeforeAthan } from "@/lib/prayer/utils";
 import type { IqamahConfig, PrayerName } from "@/lib/prayer/types";
+
+const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const PRAYERS: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 
@@ -86,6 +90,20 @@ export async function POST(request: Request) {
 
   const supabase = createAdminSupabaseClient();
 
+  // Reject impossible configs: a fixed iqamah time can't fall before its athan.
+  const athanByPrayer = await fetchAthanByPrayer(supabase, access.mosqueId);
+  const offending = fixedIqamahBeforeAthan(body.iqamah, athanByPrayer);
+  if (offending.length > 0) {
+    return NextResponse.json(
+      {
+        error: `Iqamah can't be before athan for ${offending
+          .map(titleCase)
+          .join(", ")}.`,
+      },
+      { status: 422 }
+    );
+  }
+
   const { error: mosqueErr } = await supabase
     .from("mosques")
     .update({
@@ -126,6 +144,14 @@ export async function POST(request: Request) {
   if (insErr) {
     return NextResponse.json({ error: insErr.message }, { status: 500 });
   }
+
+  // Re-sync athan times for this mosque so a calculation-method/school change
+  // takes effect immediately, instead of waiting for the bi-weekly cron.
+  void fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/sync-prayer-times`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mosque_id: access.mosqueId }),
+  }).catch((err) => console.error("prayer-times re-sync trigger failed:", err));
 
   // D3 from the CRM gap plan: surface prayer-time edits on the activity feed.
   const session = await auth();

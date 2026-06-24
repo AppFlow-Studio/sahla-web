@@ -19,6 +19,8 @@ const JummahSetupPanel = dynamic(() => import("./panels/JummahSetupPanel"));
 const SpeakersPanel = dynamic(() => import("./panels/SpeakersPanel"));
 const ProgramsPanel = dynamic(() => import("./panels/ProgramsPanel"));
 const EventsPanel = dynamic(() => import("./panels/EventsPanel"));
+const ReelsOnboardingPanel = dynamic(() => import("./panels/ReelsOnboardingPanel"));
+const ProgramCardsOnboardingPanel = dynamic(() => import("./panels/ProgramCardsOnboardingPanel"));
 const StripeConnectPanel = dynamic(() => import("./panels/StripeConnectPanel"));
 const InviteAdminsPanel = dynamic(() => import("./panels/InviteAdminsPanel"));
 const DonationsPanel = dynamic(() => import("./panels/DonationsPanel"));
@@ -97,6 +99,46 @@ export default async function TaskPage({
     speakersData = speakersRes.data ?? [];
     if (taskId === "programs") programsData = contentRes.data ?? [];
     else eventsData = contentRes.data ?? [];
+  }
+
+  // The "categories" onboarding task now configures the Discover Program Cards
+  // (program_categories). Task id kept as "categories" for onboarding_progress
+  // continuity.
+  let categoriesData: Array<{
+    id: string;
+    title: string;
+    image_url: string | null;
+    bg_color: string | null;
+    audience_filter: string;
+    sort_order: number;
+  }> = [];
+  if (taskId === "categories") {
+    const { data } = await supabase
+      .from("program_categories")
+      .select("id, title, image_url, bg_color, audience_filter, sort_order")
+      .eq("mosque_id", mosque.id)
+      .order("sort_order", { ascending: true });
+    categoriesData = data ?? [];
+  }
+
+  let reelsData: Array<{
+    reel_id: string;
+    title: string | null;
+    caption: string | null;
+    video_url: string;
+    thumbnail_url: string | null;
+    duration_sec: number | null;
+    created_at: string;
+  }> = [];
+  if (taskId === "reels") {
+    const { data } = await supabase
+      .from("reels")
+      .select(
+        "reel_id, title, caption, video_url, thumbnail_url, duration_sec, created_at"
+      )
+      .eq("mosque_id", mosque.id)
+      .order("created_at", { ascending: false });
+    reelsData = data ?? [];
   }
 
   const progress = ((mosque.onboarding_progress ?? {}) as Record<string, unknown>);
@@ -262,6 +304,19 @@ export default async function TaskPage({
         )}
         {taskId === "events" && (
           <EventsPanel mosqueId={mosque.id} initialEvents={eventsData ?? []} speakers={speakersData ?? []} />
+        )}
+        {taskId === "reels" && (
+          <ReelsOnboardingPanel
+            mosqueId={mosque.id}
+            initialScope={(mosque as { reels_scope?: "own" | "global" }).reels_scope ?? "own"}
+            initialReels={reelsData}
+          />
+        )}
+        {taskId === "categories" && (
+          <ProgramCardsOnboardingPanel
+            mosqueId={mosque.id}
+            initialCards={categoriesData}
+          />
         )}
         {taskId === "stripe_connect" && stripeStatus && (
           <StripeConnectPanel

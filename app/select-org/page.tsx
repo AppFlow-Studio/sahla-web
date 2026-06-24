@@ -1,21 +1,15 @@
 "use client";
 
-import { OrganizationList, useAuth } from "@clerk/nextjs";
+import { OrganizationList } from "@clerk/nextjs";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
 
 export default function SelectOrgPage() {
-  const { orgId } = useAuth();
-  const hasRedirected = useRef(false);
-
-  // Redirect once an org is active (either already set on mount, or just selected)
-  useEffect(() => {
-    if (orgId && !hasRedirected.current) {
-      hasRedirected.current = true;
-      window.location.href = "/dashboard";
-    }
-  }, [orgId]);
-
+  // Routing is delegated to Clerk's built-in `afterSelectOrganizationUrl` —
+  // the redirect fires only when the user actually picks an org (no race
+  // against the session-cookie write, no "already-active org → bounce
+  // straight back" trap that the old useEffect-based logic suffered from).
+  // /launch is our virtual middleware route that forwards to /overview (HQ)
+  // or /dashboard (mosque) based on the newly-active orgId.
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[#f8f6f1]">
       {/* Subtle top accent */}
@@ -47,6 +41,8 @@ export default function SelectOrgPage() {
 
         <OrganizationList
           hidePersonal={true}
+          afterSelectOrganizationUrl="/launch"
+          afterCreateOrganizationUrl="/launch"
           appearance={{
             variables: {
               colorPrimary: "#0A261E",

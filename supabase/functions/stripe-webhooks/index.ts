@@ -62,9 +62,10 @@ function stripePeriodEndIso(
 
 // ─── Notifications ───
 
-function sahlaEmailHtml(body: string, preheader?: string): string {
+function sahlaEmailHtml(body: string, preheader?: string, opts?: { signature?: boolean }): string {
   const logoUrl = "https://www.sahla.co/sahla-logo.png";
   const sans = "-apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif";
+  const showSignature = opts?.signature !== false;
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -94,13 +95,14 @@ function sahlaEmailHtml(body: string, preheader?: string): string {
   <td align="center" valign="top" bgcolor="#fffbf2" style="background-color:#fffbf2;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;" align="center">
     <tr><td align="center" style="padding:48px 16px 28px;">
-      <img src="${logoUrl}" alt="Sahla" width="80" height="80" style="display:block;width:80px;height:auto;border:0;outline:none;" />
+      <img src="${logoUrl}" alt="Sahla" width="120" height="120" style="display:block;width:120px;height:auto;border:0;outline:none;" />
     </td></tr>
     <tr><td align="center" style="padding:0 12px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-card" bgcolor="#ffffff" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;">
-        <tr><td class="email-body" style="padding:40px 36px 0;font-family:${sans};font-size:15px;line-height:1.7;color:#0A261E;">
+        <tr><td class="email-body" style="padding:40px 36px ${showSignature ? "0" : "40px"};font-family:${sans};font-size:15px;line-height:1.7;color:#0A261E;">
           ${body}
         </td></tr>
+        ${showSignature ? `
         <tr><td class="email-body" style="padding:36px 36px 0;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
             <td style="height:1px;font-size:1px;line-height:1px;background-color:rgba(10,38,30,0.08);">&nbsp;</td>
@@ -119,7 +121,7 @@ function sahlaEmailHtml(body: string, preheader?: string): string {
             </td></tr>
             <tr><td align="center" style="padding-top:12px;font-family:${sans};font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:rgba(10,38,30,0.3);">New York &middot; 2026</td></tr>
           </table>
-        </td></tr>
+        </td></tr>` : ""}
       </table>
     </td></tr>
     <tr><td align="center" class="email-footer" style="padding:24px 16px 48px;font-family:${sans};font-size:11px;color:rgba(10,38,30,0.55);">
@@ -135,25 +137,33 @@ function sahlaEmailHtml(body: string, preheader?: string): string {
 </html>`;
 }
 
-async function sendEmail(to: string, subject: string, html: string) {
+async function sendEmail(to: string, subject: string, html: string, fromName = "Sahla") {
   if (!resendApiKey) {
     console.warn("RESEND_API_KEY not set, skipping email");
     return;
   }
   try {
-    await fetch("https://api.resend.com/emails", {
+    // Strip characters that would break the "Name <addr>" From header.
+    const safeName = fromName.replace(/[<>"\r\n]/g, "").trim() || "Sahla";
+    const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${resendApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Sahla <noreply@sahla.co>",
+        from: `${safeName} <noreply@sahla.co>`,
         to,
         subject,
         html,
       }),
     });
+    const body = await res.text();
+    if (!res.ok) {
+      console.error(`[email] Resend ${res.status} sending "${subject}" to ${to}: ${body}`);
+    } else {
+      console.log(`[email] sent "${subject}" to ${to}: ${body}`);
+    }
   } catch (err) {
     console.error("Failed to send email:", err);
   }
@@ -282,12 +292,34 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   });
 }
 
-async function handleInvoicePaid(invoice: Stripe.Invoice) {
-  if (!invoice.subscription) return;
+// Stripe Dahlia (2025+) removed invoice.subscription; the subscription id now
+// lives under invoice.parent.subscription_details.subscription. Read both so
+// the handler works regardless of the account's API version.
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const direct =
+    typeof invoice.subscription === "string"
+      ? invoice.subscription
+      : invoice.subscription?.id;
+  if (direct) return direct;
+  const parent = (invoice as unknown as {
+    parent?: { subscription_details?: { subscription?: string | { id: string } } };
+  }).parent;
+  const fromParent = parent?.subscription_details?.subscription;
+  return (typeof fromParent === "string" ? fromParent : fromParent?.id) ?? null;
+}
 
-  const subscriptionId = typeof invoice.subscription === "string"
-    ? invoice.subscription
-    : invoice.subscription.id;
+async function handleInvoicePaid(invoice: Stripe.Invoice, connectedAccountId?: string) {
+  const subscriptionId = invoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
+
+  // Connected-account invoice → business-ad subscription. Ad subs live on the
+  // mosque's connected account, so they can't be retrieved from the platform
+  // (the SaaS path below would throw). The ad_subscriptions row already holds
+  // everything we need, keyed by stripe_subscription_id.
+  if (connectedAccountId) {
+    await handleAdInvoicePaid(invoice, subscriptionId);
+    return;
+  }
 
   // Check if this is a SaaS subscription by fetching from Stripe
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -322,12 +354,18 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   console.log(`Invoice paid for subscription ${subscriptionId}`);
 }
 
-async function handleInvoiceFailed(invoice: Stripe.Invoice) {
-  if (!invoice.subscription) return;
+async function handleInvoiceFailed(invoice: Stripe.Invoice, connectedAccountId?: string) {
+  const subscriptionId = invoiceSubscriptionId(invoice);
+  if (!subscriptionId) return;
 
-  const subscriptionId = typeof invoice.subscription === "string"
-    ? invoice.subscription
-    : invoice.subscription.id;
+  // Connected-account invoice → business-ad subscription (see handleInvoicePaid).
+  if (connectedAccountId) {
+    await supabase
+      .from("ad_subscriptions")
+      .update({ status: "past_due", updated_at: new Date().toISOString() })
+      .eq("stripe_subscription_id", subscriptionId);
+    return;
+  }
 
   // Check if this is a SaaS subscription
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -576,6 +614,287 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
   });
 }
 
+// ─── Business-ad Subscription Handlers ───
+
+/** Map a Stripe subscription status onto our ad_subscriptions.status vocabulary. */
+function mapAdStatus(status: Stripe.Subscription.Status): string {
+  switch (status) {
+    case "active":
+    case "trialing":
+      return "active";
+    case "past_due":
+    case "unpaid":
+      return "past_due";
+    case "canceled":
+    case "incomplete_expired":
+      return "canceled";
+    default:
+      return "pending";
+  }
+}
+
+const money = (n: number) => `$${n.toFixed(2)}`;
+
+type AdReceipt = {
+  name?: string | null;
+  businessName?: string | null;
+  masjidName?: string | null;
+  masjidLogo?: string | null;
+  masjidLocation?: string | null;
+  masjidEmail?: string | null;
+  masjidPhone?: string | null;
+  brandColor?: string | null;
+  accentColor?: string | null;
+  totalPaid: number;
+  onboarding?: number | null;
+  monthly?: number | null;
+  reference?: string | null;
+  date?: string | null;
+};
+
+/** Fully masjid-branded receipt — no Sahla branding. */
+function adReceiptHtml(r: AdReceipt): string {
+  const sans = "-apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif";
+  const brand = r.brandColor || "#0A261E";
+  const accent = r.accentColor || "#B8922A";
+  const masjid = r.masjidName ?? "the masjid";
+  const greeting = r.name ? `Assalamu alaikum ${r.name},` : "Assalamu alaikum,";
+  const refNo = (r.reference ?? "").replace(/[^a-zA-Z0-9]/g, "").slice(-10).toUpperCase();
+  const line = (label: string, value: string, opts: { bold?: boolean; last?: boolean } = {}) => {
+    const edge = opts.last ? "" : "border-bottom:1px solid rgba(0,0,0,0.06);";
+    return `<tr>
+      <td style="padding:12px 18px;color:rgba(0,0,0,${opts.bold ? "0.85" : "0.55"});font-size:${opts.bold ? "15px" : "13px"};font-weight:${opts.bold ? "700" : "500"};${edge}">${label}</td>
+      <td align="right" style="padding:12px 18px;color:#111;font-size:${opts.bold ? "16px" : "14px"};font-weight:${opts.bold ? "700" : "600"};${edge}">${value}</td>
+    </tr>`;
+  };
+  const footerBits = [r.masjidLocation, r.masjidEmail, r.masjidPhone].filter(Boolean).join("&nbsp;&nbsp;&middot;&nbsp;&nbsp;");
+
+  return `<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <title>Receipt</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1efe9;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Receipt — ${money(r.totalPaid)} paid · ${masjid}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1efe9" style="background-color:#f1efe9;">
+  <tr><td align="center" valign="top">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;" align="center">
+
+    <!-- Masjid header -->
+    <tr><td align="center" style="padding:40px 16px 24px;font-family:${sans};">
+      ${r.masjidLogo ? `<img src="${r.masjidLogo}" alt="${masjid}" width="72" style="width:72px;height:auto;border-radius:14px;display:block;margin:0 auto 12px;" />` : ""}
+      <div style="font-size:20px;font-weight:700;color:${brand};">${masjid}</div>
+      ${r.masjidLocation ? `<div style="margin-top:4px;font-size:12px;color:rgba(0,0,0,0.45);">${r.masjidLocation}</div>` : ""}
+    </td></tr>
+
+    <!-- Card -->
+    <tr><td align="center" style="padding:0 12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;">
+        <tr><td style="padding:36px 32px;font-family:${sans};">
+          <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${accent};">Payment received</p>
+          <h1 style="font-size:22px;font-weight:700;color:${brand};margin:0 0 16px;">Receipt</h1>
+          <p style="margin:0 0 24px;color:rgba(0,0,0,0.65);font-size:15px;line-height:1.7;">${greeting} your Business Ad subscription with <strong style="color:#111;">${masjid}</strong> is now active. Here&rsquo;s your receipt.</p>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,0.08);margin-bottom:22px;">
+            <tr><td colspan="2" style="background-color:${brand};padding:14px 18px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td style="color:#ffffff;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;">Payment Receipt</td>
+                ${refNo ? `<td align="right" style="color:rgba(255,255,255,0.7);font-size:11px;font-family:'Courier New',monospace;">No. ${refNo}</td>` : ""}
+              </tr></table>
+            </td></tr>
+            ${r.date ? line("Date", r.date) : ""}
+            ${r.businessName ? line("Business", r.businessName) : ""}
+            ${r.onboarding != null ? line("One-time onboarding fee", money(r.onboarding)) : ""}
+            ${r.monthly != null ? line("First month", money(r.monthly)) : ""}
+            ${line("Total paid", money(r.totalPaid), { bold: true, last: true })}
+          </table>
+
+          <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 22px;"><tr>
+            <td style="border:1.5px solid ${accent};border-radius:999px;padding:8px 20px;color:${accent};font-weight:700;letter-spacing:0.12em;font-size:12px;">&#10003;&nbsp; PAID &middot; CERTIFIED</td>
+          </tr></table>
+
+          ${r.monthly != null ? `<p style="margin:0;color:rgba(0,0,0,0.5);font-size:13px;line-height:1.6;text-align:center;">You&rsquo;ll then be billed ${money(r.monthly)}/month. We&rsquo;ll review your ad and get back to you within 1&ndash;3 business days.</p>` : ""}
+        </td></tr>
+      </table>
+    </td></tr>
+
+    <!-- Masjid footer -->
+    <tr><td align="center" style="padding:24px 16px 44px;font-family:${sans};font-size:11px;line-height:1.6;color:rgba(0,0,0,0.45);">
+      <div style="font-weight:600;color:rgba(0,0,0,0.6);">${masjid}</div>
+      ${footerBits ? `<div style="margin-top:4px;">${footerBits}</div>` : ""}
+    </td></tr>
+  </table>
+  </td></tr>
+  </table>
+</body></html>`;
+}
+
+async function sendAdReceiptEmail(to: string, r: AdReceipt) {
+  // Sender shows the masjid's name (address stays on the verified sahla.co
+  // domain since masjids don't have their own verified sending domain).
+  await sendEmail(to, "Your Business Ad receipt", adReceiptHtml(r), r.masjidName ?? undefined);
+}
+
+/**
+ * Record a paid invoice into ad_payments so the mosque admin panel can show
+ * payment history. Idempotent on stripe_invoice_id (the webhook may redeliver).
+ */
+async function recordAdPayment(
+  invoice: Stripe.Invoice,
+  subscriptionId: string,
+  paymentIntentId: string | null,
+  mosqueId: string | null,
+  submissionId: string | null,
+  kind: "first" | "recurring",
+) {
+  if (!mosqueId) return;
+  const paidUnix = invoice.status_transitions?.paid_at ?? invoice.created;
+  await supabase.from("ad_payments").upsert(
+    {
+      mosque_id: mosqueId,
+      submission_id: submissionId,
+      stripe_subscription_id: subscriptionId,
+      stripe_invoice_id: invoice.id,
+      stripe_payment_intent_id: paymentIntentId,
+      amount_cents: invoice.amount_paid,
+      currency: invoice.currency,
+      kind,
+      status: "paid",
+      paid_at: new Date(paidUnix * 1000).toISOString(),
+    },
+    { onConflict: "stripe_invoice_id", ignoreDuplicates: true },
+  );
+}
+
+async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: string) {
+  const paymentIntentId = typeof invoice.payment_intent === "string"
+    ? invoice.payment_intent
+    : invoice.payment_intent?.id ?? null;
+
+  // First invoice (onboarding fee + first month) activates the subscription and
+  // queues the submission for review. Renewals just keep it alive — they must
+  // not re-stamp start_date or clobber a later review decision.
+  const isFirstInvoice = invoice.billing_reason === "subscription_create";
+
+  if (isFirstInvoice) {
+    const { data: updated } = await supabase
+      .from("ad_subscriptions")
+      .update({
+        status: "active",
+        onboarding_paid: true,
+        stripe_payment_intent_id: paymentIntentId,
+        start_date: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("stripe_subscription_id", subscriptionId)
+      .select("submission_id, mosque_id, onboarding_amount, recurring_amount");
+
+    const row = updated?.[0];
+    await recordAdPayment(
+      invoice,
+      subscriptionId,
+      paymentIntentId,
+      row?.mosque_id ?? null,
+      row?.submission_id ?? null,
+      "first",
+    );
+    if (row?.submission_id) {
+      await supabase
+        .from("business_ads_submissions")
+        .update({ status: "submitted" })
+        .eq("submission_id", row.submission_id);
+
+      // Email a receipt to the applicant.
+      const { data: sub } = await supabase
+        .from("business_ads_submissions")
+        .select("personal_email, personal_full_name, business_name")
+        .eq("submission_id", row.submission_id)
+        .single();
+      if (sub?.personal_email) {
+        const { data: mosque } = await supabase
+          .from("mosques")
+          .select("name, app_name, logo_url, brand_color, accent_color, city, state, email, phone")
+          .eq("id", row.mosque_id)
+          .single();
+        const location = [mosque?.city, mosque?.state].filter(Boolean).join(", ");
+        await sendAdReceiptEmail(sub.personal_email, {
+          name: sub.personal_full_name,
+          businessName: sub.business_name,
+          masjidName: mosque?.app_name || mosque?.name,
+          masjidLogo: mosque?.logo_url,
+          masjidLocation: location || null,
+          masjidEmail: mosque?.email,
+          masjidPhone: mosque?.phone,
+          brandColor: mosque?.brand_color,
+          accentColor: mosque?.accent_color,
+          totalPaid: invoice.amount_paid / 100,
+          onboarding: row.onboarding_amount,
+          monthly: row.recurring_amount,
+          reference: subscriptionId,
+          date: new Date().toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+        });
+      }
+    }
+    if (row?.mosque_id) {
+      await logActivity(row.mosque_id, "ad_subscription_activated", "subscription", subscriptionId, {
+        amount: invoice.amount_paid / 100,
+      });
+    }
+    console.log(`Ad subscription activated: ${subscriptionId}`);
+  } else {
+    const { data: updated } = await supabase
+      .from("ad_subscriptions")
+      .update({
+        status: "active",
+        stripe_payment_intent_id: paymentIntentId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("stripe_subscription_id", subscriptionId)
+      .select("submission_id, mosque_id");
+    const row = updated?.[0];
+    await recordAdPayment(
+      invoice,
+      subscriptionId,
+      paymentIntentId,
+      row?.mosque_id ?? null,
+      row?.submission_id ?? null,
+      "recurring",
+    );
+    console.log(`Ad subscription renewed: ${subscriptionId}`);
+  }
+}
+
+async function handleAdSubscriptionUpdated(subscription: Stripe.Subscription) {
+  // A pending cancellation (cancel_at_period_end) keeps Stripe status 'active',
+  // so surface it as 'canceling' for the in-app Manage screen.
+  const status = subscription.cancel_at_period_end
+    ? "canceling"
+    : mapAdStatus(subscription.status);
+  await supabase
+    .from("ad_subscriptions")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("stripe_subscription_id", subscription.id);
+  console.log(`Ad subscription updated: ${subscription.id} → ${subscription.status}`);
+}
+
+async function handleAdSubscriptionDeleted(subscription: Stripe.Subscription) {
+  await supabase
+    .from("ad_subscriptions")
+    .update({
+      status: "canceled",
+      end_date: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subscription.id);
+  console.log(`Ad subscription canceled: ${subscription.id}`);
+}
+
 async function logActivity(
   mosqueId: string,
   action: string,
@@ -658,10 +977,10 @@ Deno.serve(async (req: Request) => {
         await handleChargeRefunded(event.data.object as Stripe.Charge);
         break;
       case "invoice.paid":
-        await handleInvoicePaid(event.data.object as Stripe.Invoice);
+        await handleInvoicePaid(event.data.object as Stripe.Invoice, event.account);
         break;
       case "invoice.payment_failed":
-        await handleInvoiceFailed(event.data.object as Stripe.Invoice);
+        await handleInvoiceFailed(event.data.object as Stripe.Invoice, event.account);
         break;
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -674,6 +993,8 @@ Deno.serve(async (req: Request) => {
         const sub = event.data.object as Stripe.Subscription;
         if (isSaasSubscription(sub)) {
           await handleSaasSubscriptionUpdated(sub);
+        } else if (sub.metadata?.type === "business_ad") {
+          await handleAdSubscriptionUpdated(sub);
         }
         break;
       }
@@ -681,6 +1002,8 @@ Deno.serve(async (req: Request) => {
         const sub = event.data.object as Stripe.Subscription;
         if (isSaasSubscription(sub)) {
           await handleSaasSubscriptionDeleted(sub);
+        } else if (sub.metadata?.type === "business_ad") {
+          await handleAdSubscriptionDeleted(sub);
         }
         break;
       }

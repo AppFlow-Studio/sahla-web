@@ -11,7 +11,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Search,
   Mail,
@@ -36,16 +36,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import PageHeader from "../../_components/PageHeader";
-import StatCard from "../../_components/StatCard";
+import MemberInsights from "./MemberInsights";
+import MemberProfile from "./MemberProfile";
 import { useMembers, type Member } from "../../_hooks/useMembers";
 import { maskEmail, relativeShort } from "../../_lib/format";
 import { cn } from "@/lib/utils";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
+const LAYOUT_SPRING = { type: "spring", stiffness: 480, damping: 42, mass: 0.9 } as const;
 type PushFilter = "all" | "yes" | "no";
+
+/** Track the desktop breakpoint so only the visible row variant (table vs
+ *  card) carries the shared-element layoutId — a hidden, display:none source
+ *  would morph from a zero rect. Desktop-first default for the CRM. */
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(true);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const sync = () => setIsDesktop(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return isDesktop;
+}
 
 export default function MembersClient() {
   const { data: members } = useMembers();
+  const isDesktop = useIsDesktop();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [pushFilter, setPushFilter] = useState<PushFilter>("all");
@@ -55,6 +73,35 @@ export default function MembersClient() {
   const [revealedEmails, setRevealedEmails] = useState<Record<string, boolean>>(
     {}
   );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = useMemo(
+    () => members.find((m) => m.id === selectedId) ?? null,
+    [members, selectedId]
+  );
+
+  // Sync the open profile to the URL (?member=<id>) so the back button and
+  // deep links work — without a route change, which would unmount the table
+  // and break the shared-element morph.
+  useEffect(() => {
+    const readFromUrl = () =>
+      setSelectedId(new URLSearchParams(window.location.search).get("member"));
+    readFromUrl();
+    window.addEventListener("popstate", readFromUrl);
+    return () => window.removeEventListener("popstate", readFromUrl);
+  }, []);
+
+  const openMember = (m: Member) => {
+    setSelectedId(m.id);
+    const url = `${window.location.pathname}?member=${encodeURIComponent(m.id)}`;
+    window.history.pushState(null, "", url);
+  };
+
+  const closeMember = () => {
+    setSelectedId(null);
+    if (window.location.search) {
+      window.history.pushState(null, "", window.location.pathname);
+    }
+  };
 
   // Debounce search
   useEffect(() => {
@@ -78,21 +125,6 @@ export default function MembersClient() {
     return rows;
   }, [members, debouncedQuery, pushFilter]);
 
-  const stats = useMemo(() => {
-    const total = members.length;
-    const newThisMonth = members.filter(
-      (m) =>
-        Date.now() - new Date(m.signupAt).getTime() < 30 * 86_400_000
-    ).length;
-    const withPush = members.filter((m) => m.hasPushToken).length;
-    const activeRecently = members.filter(
-      (m) =>
-        m.lastActiveAt &&
-        Date.now() - new Date(m.lastActiveAt).getTime() < 30 * 86_400_000
-    ).length;
-    return { total, newThisMonth, withPush, activeRecently };
-  }, [members]);
-
   const columns = useMemo<ColumnDef<Member>[]>(
     () => [
       {
@@ -101,12 +133,19 @@ export default function MembersClient() {
         accessorKey: "name",
         cell: ({ row }) => (
           <div className="flex items-center gap-3 py-1">
-            <Avatar name={row.original.name} />
+            <Avatar
+              name={row.original.name}
+              layoutId={isDesktop ? `member-avatar-${row.original.id}` : undefined}
+            />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <p className="truncate text-[13.5px] font-semibold text-[#0A261E]">
+                <motion.p
+                  layoutId={isDesktop ? `member-name-${row.original.id}` : undefined}
+                  transition={LAYOUT_SPRING}
+                  className="truncate text-[13.5px] font-semibold text-[#0A261E]"
+                >
                   {row.original.name}
-                </p>
+                </motion.p>
                 {row.original.membershipKind === "new" ? (
                   <span className="inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-700">
                     New
@@ -190,7 +229,7 @@ export default function MembersClient() {
           ),
       },
     ],
-    [revealedEmails]
+    [revealedEmails, isDesktop]
   );
 
   const table = useReactTable({
@@ -226,12 +265,17 @@ export default function MembersClient() {
         }
       />
 
-      {/* Quick stats */}
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Total members" value={stats.total} />
-        <StatCard label="New this month" value={stats.newThisMonth} />
-        <StatCard label="Push enabled" value={stats.withPush} />
-        <StatCard label="Active 30d" value={stats.activeRecently} />
+      {/* Insights dashboard */}
+      <MemberInsights />
+
+      {/* Directory */}
+      <div className="mb-4">
+        <h2 className="font-display text-[22px] leading-tight text-[#0A261E]">
+          Member directory
+        </h2>
+        <p className="mt-1 text-[13.5px] text-[#0A261E]/60">
+          Search everyone who has signed in to your mosque app.
+        </p>
       </div>
 
       {/* Filters */}
@@ -329,7 +373,8 @@ export default function MembersClient() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.15 }}
-                  className="border-b border-[#0A261E]/6 last:border-b-0 transition-colors hover:bg-[#fffbf2]/60"
+                  onClick={() => openMember(row.original)}
+                  className="cursor-pointer border-b border-[#0A261E]/6 last:border-b-0 transition-colors hover:bg-[#fffbf2]/60"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-5 py-3 align-middle">
@@ -388,15 +433,23 @@ export default function MembersClient() {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.15, ease: EASE }}
-                className="rounded-xl border border-[#0A261E]/8 bg-white p-4"
+                onClick={() => openMember(m)}
+                className="cursor-pointer rounded-xl border border-[#0A261E]/8 bg-white p-4 transition-colors active:bg-[#fffbf2]"
               >
                 <div className="flex items-start gap-3">
-                  <Avatar name={m.name} />
+                  <Avatar
+                    name={m.name}
+                    layoutId={!isDesktop ? `member-avatar-${m.id}` : undefined}
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <p className="truncate text-[14px] font-semibold text-[#0A261E]">
+                      <motion.p
+                        layoutId={!isDesktop ? `member-name-${m.id}` : undefined}
+                        transition={LAYOUT_SPRING}
+                        className="truncate text-[14px] font-semibold text-[#0A261E]"
+                      >
                         {m.name}
-                      </p>
+                      </motion.p>
                       {m.membershipKind === "new" ? (
                         <span className="inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-700">
                           New
@@ -450,17 +503,37 @@ export default function MembersClient() {
           </li>
         ) : null}
       </ul>
+
+      <AnimatePresence>
+        {selected ? (
+          <MemberProfile key={selected.id} member={selected} onClose={closeMember} />
+        ) : null}
+      </AnimatePresence>
     </>
   );
 }
 
-function Avatar({ name }: { name: string }) {
+function Avatar({ name, layoutId }: { name: string; layoutId?: string }) {
   const initials = name
     .split(/\s+/)
     .slice(0, 2)
     .map((p) => p[0])
     .join("")
     .toUpperCase();
+  // With a layoutId the avatar is the shared element that morphs into the
+  // full-page header; framer crossfades the grey row chip into the green
+  // header circle, so the row keeps its own styling.
+  if (layoutId) {
+    return (
+      <motion.div
+        layoutId={layoutId}
+        transition={LAYOUT_SPRING}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0A261E]/8 text-[11.5px] font-semibold text-[#0A261E]/70"
+      >
+        {initials}
+      </motion.div>
+    );
+  }
   return (
     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0A261E]/8 text-[11.5px] font-semibold text-[#0A261E]/70">
       {initials}
@@ -485,7 +558,10 @@ function EmailCell({
   ) : (
     <button
       type="button"
-      onClick={onReveal}
+      onClick={(e) => {
+        e.stopPropagation();
+        onReveal();
+      }}
       className="group inline-flex items-center gap-1 text-[11.5px] text-[#0A261E]/55 transition-colors hover:text-[#0A261E]"
       aria-label="Reveal email"
     >

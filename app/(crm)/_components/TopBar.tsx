@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
-import { Menu, Search, Bell, ChevronRight } from "lucide-react";
+import { useClerk, useUser } from "@clerk/nextjs";
+import { Menu, Search, ChevronRight } from "lucide-react";
 import { breadcrumbFor } from "../_lib/nav";
 import { useMosque } from "../_lib/mock-mosque";
 import { useCommandPalette } from "./CommandPalette";
-import HelpButton from "./HelpButton";
+import NotificationInbox from "./NotificationInbox";
+import { crmProfileAppearance } from "../_lib/clerkAppearance";
 
 export default function TopBar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   const pathname = usePathname();
   const mosque = useMosque();
   const { user } = useUser();
+  const { openUserProfile } = useClerk();
   const { open } = useCommandPalette();
 
   const trail = breadcrumbFor(pathname);
@@ -76,26 +78,19 @@ export default function TopBar({ onOpenMobileNav }: { onOpenMobileNav: () => voi
         <Search size={16} />
       </button>
 
-      <HelpButton text="Stuck? Tap a question mark anywhere — every screen has one." />
-
       {/* Notifications */}
-      <button
-        type="button"
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg text-[#0A261E]/65 transition-colors hover:bg-[#0A261E]/[0.05] hover:text-[#0A261E]"
-        aria-label="Notifications"
-      >
-        <Bell size={16} strokeWidth={1.75} />
-        <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#B8922A]" aria-hidden />
-      </button>
+      <NotificationInbox />
 
       {/* Avatar */}
-      <div
-        aria-hidden
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0A261E] text-[12px] font-semibold text-[#fffbf2] ring-2 ring-white"
+      <button
+        type="button"
+        onClick={() => openUserProfile({ appearance: crmProfileAppearance })}
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0A261E] text-[12px] font-semibold text-[#fffbf2] ring-2 ring-white transition-opacity hover:opacity-85 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B8922A]"
         title={user?.fullName ?? "Account"}
+        aria-label="Open profile"
       >
         {initials}
-      </div>
+      </button>
     </header>
   );
 }

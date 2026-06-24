@@ -4,7 +4,40 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Check, LogIn, LogOut } from "lucide-react";
-import { useClerk, useUser } from "@clerk/nextjs";
+import { OrganizationSwitcher, useClerk, useUser } from "@clerk/nextjs";
+import { useIsSahlaHQ } from "@/lib/auth/useIsSahlaHQ";
+
+const SWITCHER_APPEARANCE = {
+  variables: {
+    colorBackground: "#0e2b22",
+    colorText: "#fffbf2",
+    colorTextSecondary: "rgba(255,251,242,0.55)",
+    colorPrimary: "#fffbf2",
+    colorTextOnPrimaryBackground: "#0A261E",
+    colorInputBackground: "rgba(255,251,242,0.06)",
+    colorInputText: "#fffbf2",
+  },
+  elements: {
+    rootBox: { width: "100%" },
+    organizationSwitcherTrigger: {
+      width: "100%",
+      padding: "8px 10px",
+      borderRadius: "6px",
+      color: "#fffbf2",
+      backgroundColor: "transparent",
+      "&:hover": { backgroundColor: "rgba(255,255,255,0.04)" },
+      "&:focus": { boxShadow: "none" },
+    },
+    organizationPreviewMainIdentifier: {
+      fontSize: "12.5px",
+      color: "#fffbf2",
+    },
+    organizationPreviewSecondaryIdentifier: {
+      fontSize: "11px",
+      color: "rgba(255,251,242,0.5)",
+    },
+  },
+};
 import { ONBOARDING_CATEGORIES } from "./onboarding-tasks";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +65,7 @@ export default function OnboardingSidebar({
   const pathname = usePathname();
   const { signOut } = useClerk();
   const { isSignedIn } = useUser();
+  const { isHQ } = useIsSahlaHQ();
 
   const allTasks = ONBOARDING_CATEGORIES.flatMap((c) => c.tasks);
   const totalTasks = allTasks.length;
@@ -139,18 +173,28 @@ export default function OnboardingSidebar({
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-sidebar-border px-3 py-3">
+      <div className="space-y-1 border-t border-sidebar-border px-3 py-3">
         {isSignedIn ? (
-          <button
-            onClick={() => {
-              pingLeaveNotify();
-              signOut({ redirectUrl: "/" });
-            }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-text-muted transition-colors hover:bg-sidebar-hover-bg hover:text-sidebar-text"
-          >
-            <LogOut size={14} />
-            Sign out
-          </button>
+          <>
+            {isHQ && (
+              <OrganizationSwitcher
+                hidePersonal
+                afterSelectOrganizationUrl="/launch"
+                afterSelectPersonalUrl="/select-org"
+                appearance={SWITCHER_APPEARANCE}
+              />
+            )}
+            <button
+              onClick={() => {
+                pingLeaveNotify();
+                signOut({ redirectUrl: "/" });
+              }}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-sidebar-text-muted transition-colors hover:bg-sidebar-hover-bg hover:text-sidebar-text"
+            >
+              <LogOut size={14} />
+              Sign out
+            </button>
+          </>
         ) : (
           <Link
             href="/login"

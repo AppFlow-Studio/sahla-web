@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "../../components/ToastProvider";
 
@@ -19,14 +20,14 @@ type GoLiveData = {
 
 const TIERS = [
   { id: "core", label: "Sahla Core", price: "$300/mo" },
-  { id: "complete", label: "Sahla Complete", price: "$350/mo" },
+  { id: "core_crm", label: "Sahla Core + CRM", price: "$325/mo" },
 ] as const;
 
 export default function GoLivePanel({ data }: { data: GoLiveData }) {
   const { showToast } = useToast();
   const [launching, setLaunching] = useState(false);
   const [launched, setLaunched] = useState(false);
-  const [selectedTier, setSelectedTier] = useState("complete");
+  const [selectedTier, setSelectedTier] = useState("core_crm");
   const [openingPortal, setOpeningPortal] = useState(false);
 
   const requiredTasks = data.tasks.filter((t) => t.required);
@@ -66,13 +67,15 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
 
       const result = await res.json();
 
-      // If we get a Stripe checkout URL, redirect
+      // Real Stripe Checkout, the dev bypass, and re-launches all return a
+      // `checkoutUrl`. Always redirect — flow ends at /launching → /home.
       if (result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
         return;
       }
 
-      // Otherwise, show celebration
+      // Fallback if for some reason the API returned no URL: show the
+      // local celebration screen so the admin sees confirmation.
       setLaunched(true);
       showToast("Your mosque is live!", "success");
     } catch (e) {
@@ -144,13 +147,24 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
           </div>
         </div>
 
-        <button
-          onClick={handleManageSubscription}
-          disabled={openingPortal}
-          className="w-full rounded-xl border border-stone-200 bg-white py-3 text-[13px] font-semibold text-stone-700 transition-colors hover:bg-stone-50 disabled:opacity-60"
-        >
-          {openingPortal ? "Opening portal..." : "Manage Subscription"}
-        </button>
+        <div className="space-y-2">
+          <Link
+            href="/home"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-[13px] font-semibold text-white shadow-lg shadow-emerald-200 transition-colors hover:bg-emerald-700"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+            Open CRM Dashboard
+          </Link>
+          <button
+            onClick={handleManageSubscription}
+            disabled={openingPortal}
+            className="w-full rounded-xl border border-stone-200 bg-white py-3 text-[13px] font-semibold text-stone-700 transition-colors hover:bg-stone-50 disabled:opacity-60"
+          >
+            {openingPortal ? "Opening portal..." : "Manage Subscription"}
+          </button>
+        </div>
       </motion.div>
     );
   }
@@ -265,7 +279,7 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
           {TIERS.map((tier) => (
             <label
               key={tier.id}
-              className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-all ${
+              className={`relative flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-all ${
                 selectedTier === tier.id
                   ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500"
                   : "border-stone-200 hover:border-stone-300"
@@ -328,14 +342,13 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
             </svg>
-            Go Live — {TIERS.find((t) => t.id === selectedTier)?.price ?? "$350/mo"}
+            Go Live — {TIERS.find((t) => t.id === selectedTier)?.price ?? "$325/mo"}
           </>
         )}
       </button>
 
       <p className="text-center text-[11px] text-stone-400">
-        Clicking Go Live opens Stripe Checkout for the Sahla subscription.
-        Upon payment, admin invites are sent and your app is submitted for review.
+        Clicking Go Live opens Stripe Checkout for the Sahla subscription. Upon payment, admin invites are sent and your app is submitted for review.
       </p>
     </div>
   );

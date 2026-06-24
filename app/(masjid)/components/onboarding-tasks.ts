@@ -80,6 +80,22 @@ export const ONBOARDING_CATEGORIES: TaskCategory[] = [
         badge: "REC",
         timeEstimate: "5 min",
       },
+      {
+        // id kept as "categories" for onboarding_progress continuity; this step
+        // now configures the Discover Program cover cards (program_categories).
+        id: "categories",
+        label: "Program Cards",
+        description: "Customize the Discover program cover cards",
+        badge: "REC",
+        timeEstimate: "3 min",
+      },
+      {
+        id: "reels",
+        label: "Reels",
+        description: "Upload short videos and choose your reels scope",
+        badge: "REC",
+        timeEstimate: "5 min",
+      },
     ],
   },
   {

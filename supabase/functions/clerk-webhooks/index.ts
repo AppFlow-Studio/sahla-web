@@ -273,19 +273,12 @@ async function handleUserUpdated(user: ClerkUser) {
 
 // ── user.deleted ────────────────────────────────────────────────────────
 // Clerk fires this when a user account is deleted.
-// We delete their profile — CASCADE handles downstream cleanup on tables
-// that FK to profiles.id. For tables without FK (user_id TEXT without FK),
-// we clean up explicitly.
+// Deleting the profile is all we need: every per-user table has an
+// ON DELETE CASCADE foreign key to profiles(id) (migration
+// 20260529210000_user_deletion_cascade), so the whole user footprint is
+// removed in one statement. donations are unlinked (ON DELETE SET NULL) to
+// preserve financial history.
 async function handleUserDeleted(user: { id: string }) {
-  // 1. Deactivate push tokens (don't delete — keep for audit)
-  await supabase
-    .from("push_tokens")
-    .update({ is_active: false })
-    .eq("user_id", user.id);
-
-  // 2. Delete profile (CASCADE handles: user_preferences, user_islamic_interests,
-  //    user_islamic_goals, user_content_interactions, recommendation_log,
-  //    capacity_alert_subscribers, business_ads_submissions, jummah_notifications)
   const { error } = await supabase
     .from("profiles")
     .delete()
@@ -296,36 +289,7 @@ async function handleUserDeleted(user: { id: string }) {
     throw error;
   }
 
-  // 3. Clean up tables that use user_id TEXT without FK to profiles
-  const orphanTables = [
-    "saved_content",
-    "liked_lectures",
-    "user_cart",
-    "content_notifications",
-    "content_notification_settings",
-    "content_notification_schedule",
-    "prayer_notification_settings",
-    "prayer_notification_schedule",
-    "user_continue_read",
-    "user_bookmarked_surahs",
-    "user_bookmarked_ayahs",
-    "user_liked_surahs",
-    "user_liked_ayahs",
-    "user_playlist",
-  ];
-
-  for (const table of orphanTables) {
-    const { error: cleanupError } = await supabase
-      .from(table)
-      .delete()
-      .eq("user_id", user.id);
-
-    if (cleanupError) {
-      console.warn(`Cleanup warning [${table}]:`, cleanupError.message);
-    }
-  }
-
-  console.log(`Profile deleted + cleanup complete: ${user.id}`);
+  console.log(`Profile deleted + cascade cleanup complete: ${user.id}`);
 }
 
 

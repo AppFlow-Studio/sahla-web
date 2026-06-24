@@ -4,8 +4,41 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useClerk, useUser } from "@clerk/nextjs";
+import { OrganizationSwitcher, useClerk, useUser } from "@clerk/nextjs";
 import { LogIn, LogOut, UserCircle } from "lucide-react";
+import { useIsSahlaHQ } from "@/lib/auth/useIsSahlaHQ";
+
+const SWITCHER_APPEARANCE = {
+  variables: {
+    colorBackground: "#0e2b22",
+    colorText: "#fffbf2",
+    colorTextSecondary: "rgba(255,251,242,0.55)",
+    colorPrimary: "#fffbf2",
+    colorTextOnPrimaryBackground: "#0A261E",
+    colorInputBackground: "rgba(255,251,242,0.06)",
+    colorInputText: "#fffbf2",
+  },
+  elements: {
+    rootBox: { width: "100%" },
+    organizationSwitcherTrigger: {
+      width: "100%",
+      padding: "8px 12px",
+      borderRadius: "8px",
+      color: "#fffbf2",
+      backgroundColor: "transparent",
+      "&:hover": { backgroundColor: "rgba(255,255,255,0.06)" },
+      "&:focus": { boxShadow: "none" },
+    },
+    organizationPreviewMainIdentifier: {
+      fontSize: "13px",
+      color: "#fffbf2",
+    },
+    organizationPreviewSecondaryIdentifier: {
+      fontSize: "11px",
+      color: "rgba(255,251,242,0.55)",
+    },
+  },
+};
 
 // Shared context so layout can react to sidebar state
 export const SidebarContext = createContext<{
@@ -88,6 +121,7 @@ export default function AdminSidebar() {
   const { collapsed, setCollapsed } = useSidebar();
   const { signOut, openUserProfile } = useClerk();
   const { isSignedIn, isLoaded } = useUser();
+  const { isHQ } = useIsSahlaHQ();
 
   return (
     <motion.aside
@@ -169,6 +203,16 @@ export default function AdminSidebar() {
       <div className="border-t border-sidebar-border px-2 py-3 space-y-1">
         {isLoaded && isSignedIn ? (
           <>
+            {!collapsed && isHQ && (
+              <div className="px-1 pb-1">
+                <OrganizationSwitcher
+                  hidePersonal
+                  afterSelectOrganizationUrl="/launch"
+                  afterSelectPersonalUrl="/select-org"
+                  appearance={SWITCHER_APPEARANCE}
+                />
+              </div>
+            )}
             <button
               type="button"
               onClick={() => openUserProfile()}

@@ -36,4 +36,4 @@ CREATE POLICY "profile_pics_user_delete" ON storage.objects
   USING (
     bucket_id = 'profile-pics'
     AND (storage.foldername(name))[1] = requesting_user_id()
-  );;
+  );

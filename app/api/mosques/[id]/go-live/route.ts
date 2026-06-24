@@ -20,22 +20,7 @@ export async function POST(
 
   const { id: mosqueId } = await params;
   const body = await request.json().catch(() => ({}));
-  const tier: string = body.tier || "complete";
-
-  if (!TIER_CONFIG[tier]) {
-    return NextResponse.json(
-      { error: `Invalid tier: ${tier}. Must be one of: ${Object.keys(TIER_CONFIG).join(", ")}` },
-      { status: 400 }
-    );
-  }
-
-  const priceId = process.env[TIER_CONFIG[tier].envKey];
-  if (!priceId) {
-    return NextResponse.json(
-      { error: `Stripe Price ID not configured for tier: ${tier}` },
-      { status: 500 }
-    );
-  }
+  const tier: string = body.tier || "core_crm";
 
   const supabase = createAdminSupabaseClient();
 
@@ -50,12 +35,40 @@ export async function POST(
     return NextResponse.json({ error: "Mosque not found" }, { status: 404 });
   }
 
-  // Don't let an already-paid mosque kick off another Stripe Checkout. Once
-  // they're "ready" the Sahla team takes over; "live" means we already shipped.
-  if (mosque.onboarding_status === "ready" || mosque.onboarding_status === "live") {
+  // Already-onboarded mosques (paid + ready, or fully live) shouldn't kick
+  // off a second Stripe Checkout. Route them through the same /launching
+  // success URL the real Stripe flow uses, so re-launch UX matches first-time
+  // UX exactly (no special "Push Updates" branch). Best-effort re-sync prayer
+  // times because the cron sometimes drifts.
+  if (
+    mosque.onboarding_status === "live" ||
+    mosque.onboarding_status === "ready"
+  ) {
+    const origin = new URL(request.url).origin;
+    try {
+      await fetch(`${origin}/api/mosques/${mosqueId}/prayer-sync`, {
+        method: "POST",
+        headers: {
+          cookie: request.headers.get("cookie") || "",
+          authorization: request.headers.get("authorization") || "",
+        },
+      });
+    } catch {
+      // Non-fatal — the rest of the data is already live.
+    }
+    const reLaunchAppUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    return NextResponse.json({
+      checkoutUrl: `${reLaunchAppUrl}/launching?payment=success`,
+    });
+  }
+
+  // From here on we're handling a first-time launch → Stripe Checkout, so
+  // the tier must map to a configured Stripe price.
+  if (!TIER_CONFIG[tier]) {
     return NextResponse.json(
-      { error: "This mosque has already gone live." },
-      { status: 409 }
+      { error: `Invalid tier: ${tier}. Must be one of: ${Object.keys(TIER_CONFIG).join(", ")}` },
+      { status: 400 }
     );
   }
 
@@ -71,9 +84,63 @@ export async function POST(
     );
   }
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  // ── Dev-only Stripe bypass ───────────────────────────────────────────────
+  // When `BYPASS_STRIPE_CHECKOUT=1` is set in a non-production env, skip the
+  // Stripe Checkout round-trip and write the exact post-payment state the
+  // Stripe webhook would have written. Lets staging admins exercise the
+  // /launching → CRM flow before the real STRIPE_PRICE_CORE_CRM is wired.
+  // The NODE_ENV gate is hard-coded so a leaked env var can't take effect
+  // in production builds.
+  console.log(
+    `[go-live] bypass check — NODE_ENV=${process.env.NODE_ENV}, BYPASS_STRIPE_CHECKOUT=${process.env.BYPASS_STRIPE_CHECKOUT ?? "<unset>"}`
+  );
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.BYPASS_STRIPE_CHECKOUT === "1"
+  ) {
+    console.log(`[go-live] taking BYPASS path for mosque ${mosqueId} (tier=${tier})`);
+    const thirtyDays = new Date();
+    thirtyDays.setUTCDate(thirtyDays.getUTCDate() + 30);
+
+    const { error: updateError } = await supabase
+      .from("mosques")
+      .update({
+        subscription_status: "active",
+        subscription_tier: tier,
+        saas_stripe_subscription_id: `dev_bypass_${Date.now()}`,
+        current_period_end: thirtyDays.toISOString(),
+        onboarding_status: "ready",
+      })
+      .eq("id", mosqueId);
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    // Mirror the webhook's go_live progress flip.
+    const updatedProgress = { ...progress, go_live: true };
+    await supabase
+      .from("mosques")
+      .update({ onboarding_progress: updatedProgress })
+      .eq("id", mosqueId);
+
+    return NextResponse.json({
+      checkoutUrl: `${appUrl}/launching?payment=success&dev_bypass=1`,
+    });
+  }
+
+  const priceId = process.env[TIER_CONFIG[tier].envKey];
+  if (!priceId) {
+    return NextResponse.json(
+      { error: `Stripe Price ID not configured for tier: ${tier}` },
+      { status: 500 }
+    );
+  }
+
   try {
     const stripe = createStripeClient();
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     // Create or reuse Stripe Customer on Sahla's platform account
     let customerId = mosque.saas_stripe_customer_id;

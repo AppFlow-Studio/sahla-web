@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import {
   Users,
   HeartHandshake,
-  CalendarCheck,
   Bell,
   ArrowUpRight,
   Heart,
@@ -26,6 +25,7 @@ import { useNotifications } from "../_hooks/useNotifications";
 import { useActivity, type ActivityEvent } from "../_hooks/useActivity";
 import { useMosque } from "../_lib/mock-mosque";
 import { formatUsd, relativeShort } from "../_lib/format";
+import { activityMeta, TONE_BADGE } from "../_lib/activityMeta";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -282,12 +282,7 @@ function ActivityRow({ event, index }: { event: ActivityEvent; index: number }) 
       <div
         className={cn(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-          meta.tone === "donation" && "bg-emerald-50 text-emerald-700",
-          meta.tone === "rsvp" && "bg-[#0A261E]/[0.06] text-[#0A261E]/70",
-          meta.tone === "member" && "bg-[#fffbf2] text-[#B8922A]",
-          meta.tone === "notification" && "bg-amber-50 text-amber-700",
-          meta.tone === "content" && "bg-violet-50 text-violet-700",
-          meta.tone === "settings" && "bg-sky-50 text-sky-700"
+          TONE_BADGE[meta.tone]
         )}
       >
         <meta.Icon size={13} />
@@ -304,100 +299,6 @@ function ActivityRow({ event, index }: { event: ActivityEvent; index: number }) 
   );
 }
 
-function activityMeta(event: ActivityEvent): {
-  Icon: typeof Heart;
-  tone: "donation" | "rsvp" | "member" | "notification" | "content" | "settings";
-  label: React.ReactNode;
-} {
-  switch (event.kind) {
-    case "donation":
-      return {
-        Icon: Heart,
-        tone: "donation",
-        label: (
-          <>
-            <span className="font-semibold text-[#0A261E]">
-              {event.donorHash}
-            </span>{" "}
-            donated{" "}
-            <span className="font-semibold tabular-nums">
-              {formatUsd(event.amountUsd)}
-            </span>{" "}
-            to {event.fundLabel}
-          </>
-        ),
-      };
-    case "rsvp":
-      return {
-        Icon: CalendarCheck,
-        tone: "rsvp",
-        label: (
-          <>
-            <span className="font-semibold text-[#0A261E]">
-              {event.memberName}
-            </span>{" "}
-            RSVP'd to{" "}
-            <span className="font-semibold text-[#0A261E]">
-              {event.contentName}
-            </span>
-          </>
-        ),
-      };
-    case "member":
-      return {
-        Icon: UserPlus,
-        tone: "member",
-        label: (
-          <>
-            <span className="font-semibold text-[#0A261E]">
-              {event.memberName}
-            </span>{" "}
-            joined the mosque app
-          </>
-        ),
-      };
-    case "notification":
-      return {
-        Icon: Bell,
-        tone: "notification",
-        label: (
-          <>
-            Notification &ldquo;<span className="font-semibold text-[#0A261E]">{event.title}</span>&rdquo; sent to{" "}
-            <span className="tabular-nums">{event.recipientCount.toLocaleString()}</span>
-          </>
-        ),
-      };
-    case "content":
-      return {
-        Icon: CalendarCheck,
-        tone: "content",
-        label: (
-          <>
-            {event.actorName ? (
-              <span className="font-semibold text-[#0A261E]">{event.actorName}</span>
-            ) : (
-              <span className="font-semibold text-[#0A261E]">You</span>
-            )}{" "}
-            created {event.contentKind === "event" ? "event" : "program"}{" "}
-            <span className="font-semibold text-[#0A261E]">{event.contentName}</span>
-          </>
-        ),
-      };
-    case "settings":
-      return {
-        Icon: Sparkles,
-        tone: "settings",
-        label: (
-          <>
-            <span className="font-semibold text-[#0A261E]">
-              {event.actorName ?? "You"}
-            </span>{" "}
-            updated <span className="font-semibold text-[#0A261E]">{event.label}</span>
-          </>
-        ),
-      };
-  }
-}
 
 function QuickActionCard({
   href,

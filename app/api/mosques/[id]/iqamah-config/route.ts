@@ -1,7 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
+import { fetchAthanByPrayer } from "@/lib/prayer/athan-server";
+import { fixedIqamahBeforeAthan } from "@/lib/prayer/utils";
 import type { IqamahConfig } from "@/lib/prayer/types";
+
+const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export async function GET(
   _request: Request,
@@ -67,6 +71,20 @@ export async function POST(
   }
 
   const supabase = createAdminSupabaseClient();
+
+  // Reject impossible configs: a fixed iqamah time can't fall before its athan.
+  const athanByPrayer = await fetchAthanByPrayer(supabase, mosqueId);
+  const offending = fixedIqamahBeforeAthan(configs, athanByPrayer);
+  if (offending.length > 0) {
+    return NextResponse.json(
+      {
+        error: `Iqamah can't be before athan for ${offending
+          .map(titleCase)
+          .join(", ")}.`,
+      },
+      { status: 422 }
+    );
+  }
 
   // Update mosque calculation settings and get onboarding progress in one call
   const updateFields: Record<string, unknown> = {

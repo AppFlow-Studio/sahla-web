@@ -6,6 +6,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import { usePreview } from "../../components/OnboardingPreviewContext";
 import { Dropdown } from "@/app/(admin)/components/Dropdown";
+import AddressAutocomplete, { type SelectedPlace } from "../../components/AddressAutocomplete";
 import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY, BTN_PRIMARY_DISABLED, BTN_GHOST } from "@/lib/ui-classes";
 
 const US_TIMEZONES = [
@@ -23,6 +24,8 @@ type MosqueData = {
   address: string | null;
   city: string | null;
   state: string | null;
+  phone: string | null;
+  email: string | null;
   timezone: string | null;
 };
 
@@ -39,8 +42,8 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
     address: mosque.address || "",
     city: mosque.city || "",
     state: mosque.state || "",
-    phone: "",
-    email: "",
+    phone: mosque.phone || "",
+    email: mosque.email || "",
     timezone: mosque.timezone || "America/New_York",
   });
 
@@ -49,6 +52,18 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
     if (field === "name") {
       updatePreview({ appName: value });
     }
+  }
+
+  // When the admin picks a Google suggestion, fill the street line and
+  // auto-populate city/state from the structured components so they don't
+  // retype (and can't typo) them. They stay editable afterward.
+  function handlePlaceSelect(place: SelectedPlace) {
+    setForm((prev) => ({
+      ...prev,
+      address: place.address || prev.address,
+      city: place.city || prev.city,
+      state: place.state || prev.state,
+    }));
   }
 
   const filledCount = FIELDS.filter((f) => form[f].trim() !== "").length;
@@ -109,12 +124,11 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
 
           <div className="col-span-2">
             <label className={LABEL_CLASS}>Street Address</label>
-            <input
-              type="text"
+            <AddressAutocomplete
               value={form.address}
-              onChange={(e) => updateField("address", e.target.value)}
+              onChange={(v) => updateField("address", v)}
+              onSelect={handlePlaceSelect}
               placeholder="e.g., 123 Main Street"
-              className={INPUT_CLASS}
             />
           </div>
 

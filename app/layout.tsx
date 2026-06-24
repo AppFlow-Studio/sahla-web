@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Geist, Fraunces, Newsreader, Mrs_Saint_Delafield, Bodoni_Moda } from "next/font/google";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import Providers from "./providers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -155,6 +156,10 @@ export default function RootLayout({
   return (
     <ClerkProvider
       appearance={{
+        // Force a dark baseline regardless of the visitor's `prefers-color-scheme`.
+        // Without this, Clerk leaves headers + navbar labels in the light-theme
+        // dark-gray, which becomes unreadable on our dark-green colorBackground.
+        baseTheme: dark,
         variables: {
           colorPrimary: "#fffbf2",
           colorBackground: "#0e2b22",
@@ -164,6 +169,24 @@ export default function RootLayout({
           colorInputText: "#fffbf2",
           colorNeutral: "#fffbf2",
           colorTextOnPrimaryBackground: "#0A261E",
+        },
+        elements: {
+          // Belt-and-suspenders: even with baseTheme=dark, some Clerk widgets
+          // (UserProfile header + navbar tabs, section titles) ignore colorText.
+          // Pin them to our cream so the same color shows on every machine.
+          headerTitle: { color: "#fffbf2" },
+          headerSubtitle: { color: "rgba(255,251,242,0.7)" },
+          navbarButton: { color: "#fffbf2" },
+          navbarButtonText: { color: "#fffbf2" },
+          navbarButtonIcon: { color: "#fffbf2" },
+          profileSectionTitleText: { color: "#fffbf2" },
+          profileSectionPrimaryButton: { color: "#fffbf2" },
+          profileSectionContent: { color: "#fffbf2" },
+          accordionTriggerButton: { color: "#fffbf2" },
+          breadcrumbsItem: { color: "rgba(255,251,242,0.7)" },
+          breadcrumbsItemDivider: { color: "rgba(255,251,242,0.4)" },
+          menuButton: { color: "#fffbf2" },
+          formFieldLabel: { color: "#fffbf2" },
         },
       }}
     >

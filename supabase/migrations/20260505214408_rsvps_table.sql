@@ -92,4 +92,4 @@ $$;
 
 CREATE TRIGGER trg_rsvps_promote_waitlist
   AFTER UPDATE OF status ON public.rsvps
-  FOR EACH ROW EXECUTE FUNCTION public.promote_from_waitlist();;
+  FOR EACH ROW EXECUTE FUNCTION public.promote_from_waitlist();

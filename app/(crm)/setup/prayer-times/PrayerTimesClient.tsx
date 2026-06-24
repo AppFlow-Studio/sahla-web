@@ -13,7 +13,7 @@ import {
   Save,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -103,6 +103,28 @@ function computeIqamah(athan: string, config: IqamahConfig): string {
   return addMinutes(athan, 25);
 }
 
+/** 'HH:MM'/'HH:MM:SS' → minutes-of-day, or null when unparseable. */
+function toMin(time: string | null | undefined): number | null {
+  if (!time) return null;
+  const [h, m] = time.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+/** Prayers whose fixed iqamah is set before their athan — an impossible config. */
+function invalidFixedPrayers(
+  state: Record<PrayerId, IqamahConfig>,
+  athanFor: (id: PrayerId) => string
+): PrayerId[] {
+  return (Object.keys(state) as PrayerId[]).filter((id) => {
+    const c = state[id];
+    if (c.mode !== "fixed" || !c.fixedTime) return false;
+    const fixed = toMin(c.fixedTime);
+    const athan = toMin(athanFor(id));
+    return fixed != null && athan != null && fixed < athan;
+  });
+}
+
 /** Translate a DB iqamah row → local UI state shape. */
 function fromDbConfig(rows: DbIqamahConfig[]): Record<PrayerId, IqamahConfig> {
   const map: Record<PrayerId, IqamahConfig> = { ...DEFAULT_CONFIG };
@@ -139,6 +161,36 @@ export default function PrayerTimesClient() {
   const queryClient = useQueryClient();
   const { data: serverConfig, isLoading } = useIqamahConfig();
 
+  // Real athan times for this mosque, so previews and the before-athan guard
+  // reflect what members actually see (falls back to demo athan when unsynced).
+  const { data: athanRows } = useQuery({
+    queryKey: ["crm", "todays-athan", mosque.id],
+    enabled: !mosque.isHQ && !!mosque.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await fetch(`/api/mosques/${mosque.id}/todays-prayers`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return [] as { prayer_name: string; athan_time: string }[];
+      return (await res.json()) as { prayer_name: string; athan_time: string }[];
+    },
+  });
+
+  const athanByPrayer = useMemo(() => {
+    const map: Partial<Record<PrayerId, string>> = {};
+    for (const r of athanRows ?? []) {
+      const key = r.prayer_name?.toLowerCase() as PrayerId | undefined;
+      if (key && !(key in map) && r.athan_time) map[key] = r.athan_time.slice(0, 5);
+    }
+    return map;
+  }, [athanRows]);
+
+  const athanFor = useCallback(
+    (id: PrayerId) =>
+      athanByPrayer[id] ?? PRAYERS.find((p) => p.id === id)!.athan,
+    [athanByPrayer]
+  );
+
   const [calcMethod, setCalcMethod] = useState("ISNA");
   const [school, setSchool] = useState("shafi");
   const [config, setConfig] = useState<Record<PrayerId, IqamahConfig>>(DEFAULT_CONFIG);
@@ -163,6 +215,18 @@ export default function PrayerTimesClient() {
   const pendingRef = useRef<number | null>(null);
   const persist = useCallback(
     (nextMethod: string, nextSchool: string, nextConfig: Record<PrayerId, IqamahConfig>) => {
+      // Don't persist an impossible config — the server rejects it anyway, and
+      // blocking here keeps the bad value from being saved on the next edit.
+      const bad = invalidFixedPrayers(nextConfig, athanFor);
+      if (bad.length > 0) {
+        if (pendingRef.current) window.clearTimeout(pendingRef.current);
+        toast.error(
+          `Iqamah can't be before athan for ${bad
+            .map((id) => PRAYERS.find((p) => p.id === id)!.label)
+            .join(", ")}.`
+        );
+        return;
+      }
       if (pendingRef.current) window.clearTimeout(pendingRef.current);
       pendingRef.current = window.setTimeout(async () => {
         if (mosque.isHQ) {
@@ -194,7 +258,7 @@ export default function PrayerTimesClient() {
         }
       }, 600);
     },
-    [mosque.isHQ, queryClient]
+    [mosque.isHQ, queryClient, athanFor]
   );
 
   // Auto-save flash indicator
@@ -243,14 +307,23 @@ export default function PrayerTimesClient() {
 
   const previewRows = useMemo(
     () =>
-      PRAYERS.map((p) => ({
-        id: p.id,
-        label: p.label,
-        icon: p.icon,
-        athan: p.athan,
-        iqamah: computeIqamah(p.athan, config[p.id]),
-      })),
-    [config]
+      PRAYERS.map((p) => {
+        const athan = athanFor(p.id);
+        return {
+          id: p.id,
+          label: p.label,
+          icon: p.icon,
+          athan,
+          iqamah: computeIqamah(athan, config[p.id]),
+        };
+      }),
+    [config, athanFor]
+  );
+
+  // Prayers currently showing an impossible fixed-before-athan value.
+  const invalidPrayers = useMemo(
+    () => new Set(invalidFixedPrayers(config, athanFor)),
+    [config, athanFor]
   );
 
   return (
@@ -397,8 +470,21 @@ export default function PrayerTimesClient() {
                                 type="time"
                                 value={c.fixedTime ?? ""}
                                 onChange={(e) => updateFixed(p.id, e.target.value)}
-                                onBlur={() => bumpSaved(`${p.label} iqamah saved`)}
+                                onBlur={() =>
+                                  invalidPrayers.has(p.id)
+                                    ? undefined
+                                    : bumpSaved(`${p.label} iqamah saved`)
+                                }
+                                className={cn(
+                                  invalidPrayers.has(p.id) &&
+                                    "border-red-400 focus-visible:ring-red-400"
+                                )}
                               />
+                              {invalidPrayers.has(p.id) ? (
+                                <p className="mt-1 text-[10.5px] font-medium text-red-500">
+                                  Before athan ({formatTime(athanFor(p.id))})
+                                </p>
+                              ) : null}
                             </motion.div>
                           ) : c.mode === "offset" ? (
                             <motion.div

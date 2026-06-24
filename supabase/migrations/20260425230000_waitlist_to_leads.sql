@@ -1,7 +1,4 @@
--- Waitlist forms now write directly to mosques as leads (CRM pipeline).
--- Add a proper country column so the form's country field stops being
--- shoehorned into mosques.state.
-ALTER TABLE public.mosques ADD COLUMN IF NOT EXISTS country text;
-
--- demo_requests is no longer used; lead capture writes to mosques + pipeline_stages.
-DROP TABLE IF EXISTS public.demo_requests;
+-- backfilled placeholder: schema already applied on staging.
+-- Remote schema_migrations row is a repaired/history-only entry — the DDL
+-- was applied separately and then marked as a history entry. This file
+-- exists purely to align local CLI history with remote.
