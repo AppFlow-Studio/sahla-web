@@ -330,10 +330,15 @@ async function handleMembershipCreated(membership: ClerkOrganizationMembership) 
       { onConflict: "id" }
     );
 
-    // Insert into sahla_team so role updates/deactivation have a row to target
+    // Insert into sahla_team so role updates/deactivation have a row to target.
+    // email + name are NOT NULL, so they must be set on insert — omitting them
+    // makes the insert fail the constraint and silently drops the new HQ member
+    // (which is exactly how Temur/Abubeckr never landed in sahla_team).
     const { error: teamError } = await supabase.from("sahla_team").upsert(
       {
         user_id: userId,
+        email: membership.public_user_data.identifier,
+        name: userName,
         clerk_org_role: membership.role,
         is_active: true,
       },
