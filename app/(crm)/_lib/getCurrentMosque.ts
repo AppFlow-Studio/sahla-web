@@ -62,7 +62,11 @@ export type CurrentMosqueResult =
   | { kind: "ok"; mosque: MosqueProfile }
   | { kind: "no-auth" }
   | { kind: "no-mosque" }
-  | { kind: "no-access"; mosque: MosqueProfile };
+  | { kind: "no-access"; mosque: MosqueProfile }
+  // The mosque lookup itself failed (DB error / schema drift) — distinct from
+  // "this org genuinely has no mosque". Must NOT be treated as un-onboarded,
+  // or a transient failure bounces a live mosque back into onboarding.
+  | { kind: "error" };
 
 // HQ admins get a hard-coded placeholder so the CRM shell renders for
 // QA without depending on which org they happen to be browsing.
@@ -219,7 +223,9 @@ export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => 
 
   if (mosqueErr) {
     console.error("getCurrentMosque: mosques lookup failed", mosqueErr.message);
-    return { kind: "no-mosque" };
+    // DB failure ≠ "no mosque". Surface an error so the layout can offer a
+    // retry instead of redirecting an onboarded mosque into setup.
+    return { kind: "error" };
   }
   if (!mosque) return { kind: "no-mosque" };
 
