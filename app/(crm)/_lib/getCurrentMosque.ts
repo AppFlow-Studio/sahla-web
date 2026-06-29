@@ -8,7 +8,7 @@ const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 
 // Columns the profile mapper reads from a mosques row.
 const MOSQUE_COLUMNS =
-  "id, name, city, state, app_name, address, phone, email, timezone, brand_color, accent_color, font_theme, logo_url, subscription_tier, onboarding_status, onboarding_progress";
+  "id, name, city, state, app_name, address, phone, email, timezone, brand_color, accent_color, font_theme, header_style, logo_url, subscription_tier, onboarding_status, onboarding_progress";
 
 /**
  * Mosque profile shipped from the server layout down to the client tree.
@@ -38,6 +38,8 @@ export type MosqueProfile = {
   accentColor: string;
   /** Font theme key — one of FONT_THEMES in lib/font-themes.ts. */
   fontTheme: string;
+  /** Home header style key — one of HEADER_STYLES in lib/header-styles.ts. */
+  headerStyle: string;
   logoUrl: string | null;
   logoInitials: string;
   onboardingStatus: string;
@@ -78,6 +80,7 @@ const HQ_PLACEHOLDER: MosqueProfile = {
   primaryColor: "#0A261E",
   accentColor: "#B8922A",
   fontTheme: "classic",
+  headerStyle: "classic",
   logoUrl: null,
   logoInitials: "SH",
   onboardingStatus: "live",
@@ -108,6 +111,7 @@ type MosqueRow = {
   brand_color: string | null;
   accent_color: string | null;
   font_theme: string | null;
+  header_style: string | null;
   logo_url: string | null;
   subscription_tier: string | null;
   onboarding_status: string | null;
@@ -155,6 +159,7 @@ function toProfile(
     primaryColor: mosque.brand_color ?? "#0A261E",
     accentColor: mosque.accent_color ?? "#B8922A",
     fontTheme: mosque.font_theme ?? "classic",
+    headerStyle: mosque.header_style ?? "classic",
     logoUrl: mosque.logo_url ?? null,
     logoInitials: initialsFrom(mosque.name ?? "Mosque"),
     onboardingStatus: mosque.onboarding_status ?? "in_progress",

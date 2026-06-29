@@ -18,6 +18,8 @@ import PageHeader from "../../_components/PageHeader";
 import { useMosque } from "../../_lib/mock-mosque";
 import FontThemePicker from "@/components/FontThemePicker";
 import { normalizeFontTheme, type FontThemeKey } from "@/lib/font-themes";
+import HeaderStylePicker from "@/components/HeaderStylePicker";
+import { normalizeHeaderStyle, type HeaderStyleKey } from "@/lib/header-styles";
 import { cn } from "@/lib/utils";
 
 const PRESETS = [
@@ -38,17 +40,22 @@ export default function ThemeClient() {
   const [fontTheme, setFontTheme] = useState<FontThemeKey>(
     normalizeFontTheme(mosque.fontTheme),
   );
+  const [headerStyle, setHeaderStyle] = useState<HeaderStyleKey>(
+    normalizeHeaderStyle(mosque.headerStyle),
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const dirty =
     primary !== mosque.primaryColor ||
     accent !== mosque.accentColor ||
-    fontTheme !== normalizeFontTheme(mosque.fontTheme);
+    fontTheme !== normalizeFontTheme(mosque.fontTheme) ||
+    headerStyle !== normalizeHeaderStyle(mosque.headerStyle);
 
   function reset() {
     setPrimary(mosque.primaryColor);
     setAccent(mosque.accentColor);
     setFontTheme(normalizeFontTheme(mosque.fontTheme));
+    setHeaderStyle(normalizeHeaderStyle(mosque.headerStyle));
     toast.success("Reverted to current theme");
   }
 
@@ -72,6 +79,7 @@ export default function ThemeClient() {
           brand_color: primary,
           accent_color: accent,
           font_theme: fontTheme,
+          header_style: headerStyle,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -146,6 +154,17 @@ export default function ThemeClient() {
               </p>
             </header>
             <FontThemePicker value={fontTheme} onChange={setFontTheme} />
+          </section>
+
+          <section className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
+            <header className="mb-3">
+              <h2 className="text-[13.5px] font-semibold text-[#0A261E]">Home header</h2>
+              <p className="text-[12px] text-[#0A261E]/55">
+                The top of your app&apos;s home screen — a classic greeting + clock,
+                or a live countdown to the next prayer.
+              </p>
+            </header>
+            <HeaderStylePicker value={headerStyle} onChange={setHeaderStyle} />
           </section>
 
           <div className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
