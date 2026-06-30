@@ -5,6 +5,7 @@ import { OrganizationSwitcher, useClerk, useUser } from "@clerk/nextjs";
 import { LogOut, UserCircle, ArrowLeft } from "lucide-react";
 import { useIsSahlaHQ } from "@/lib/auth/useIsSahlaHQ";
 import { crmProfileAppearance } from "../_lib/clerkAppearance";
+import MosquePicker from "./MosquePicker";
 
 const SWITCHER_APPEARANCE = {
   variables: {
@@ -52,12 +53,16 @@ export default function SidebarFooter() {
       {isLoaded && isSignedIn ? (
         <div className="space-y-0.5">
           {isHQ && (
-            <OrganizationSwitcher
-              hidePersonal
-              afterSelectOrganizationUrl="/launch"
-              afterSelectPersonalUrl="/select-org"
-              appearance={SWITCHER_APPEARANCE}
-            />
+            <>
+              {/* Pick which masjid's CRM to view (cookie-backed, no org switch). */}
+              <MosquePicker />
+              <OrganizationSwitcher
+                hidePersonal
+                afterSelectOrganizationUrl="/launch"
+                afterSelectPersonalUrl="/select-org"
+                appearance={SWITCHER_APPEARANCE}
+              />
+            </>
           )}
           <button
             type="button"

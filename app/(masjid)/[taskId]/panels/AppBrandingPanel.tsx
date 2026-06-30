@@ -6,6 +6,10 @@ import { Loader2, Upload, X } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import { usePreview } from "../../components/OnboardingPreviewContext";
 import ColorPicker from "../../components/ColorPicker";
+import FontThemePicker from "@/components/FontThemePicker";
+import { normalizeFontTheme, type FontThemeKey } from "@/lib/font-themes";
+import HeaderStylePicker from "@/components/HeaderStylePicker";
+import { normalizeHeaderStyle, type HeaderStyleKey } from "@/lib/header-styles";
 import { cn } from "@/lib/utils";
 import { INPUT_CLASS, BTN_PRIMARY, BTN_PRIMARY_DISABLED, BTN_GHOST } from "@/lib/ui-classes";
 
@@ -33,6 +37,8 @@ type MosqueData = {
   logo_url: string | null;
   brand_color: string | null;
   accent_color: string | null;
+  font_theme: string | null;
+  header_style: string | null;
   name: string | null;
 };
 
@@ -45,6 +51,8 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
   const [appName, setAppName] = useState(mosque.app_name || "");
   const [brandColor, setBrandColor] = useState(mosque.brand_color || "#0A261E");
   const [accentColor, setAccentColor] = useState(mosque.accent_color || "#B8922A");
+  const [fontTheme, setFontTheme] = useState<FontThemeKey>(normalizeFontTheme(mosque.font_theme));
+  const [headerStyle, setHeaderStyle] = useState<HeaderStyleKey>(normalizeHeaderStyle(mosque.header_style));
   const [logoUrl, setLogoUrl] = useState(mosque.logo_url || "");
   const [uploading, setUploading] = useState(false);
 
@@ -92,6 +100,8 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
           app_name: appName,
           brand_color: brandColor,
           accent_color: accentColor,
+          font_theme: fontTheme,
+          header_style: headerStyle,
           logo_url: logoUrl || null,
           ...(markComplete ? { markComplete: "app_branding" } : {}),
         }),
@@ -252,6 +262,34 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Font Theme */}
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+          <p className="text-[14px] font-semibold text-stone-900">Font</p>
+          <p className="mt-0.5 text-[12px] text-stone-500">
+            The typeface used for headings and text throughout the app. Arabic
+            and Qur&apos;an text always use their dedicated font.
+          </p>
+        </div>
+        <div className="px-6 py-5">
+          <FontThemePicker value={fontTheme} onChange={setFontTheme} />
+        </div>
+      </div>
+
+      {/* Home Header */}
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+          <p className="text-[14px] font-semibold text-stone-900">Home Header</p>
+          <p className="mt-0.5 text-[12px] text-stone-500">
+            The top of the app&apos;s home screen — a classic greeting + clock, or
+            a live countdown to the next prayer.
+          </p>
+        </div>
+        <div className="px-6 py-5">
+          <HeaderStylePicker value={headerStyle} onChange={setHeaderStyle} />
         </div>
       </div>
 

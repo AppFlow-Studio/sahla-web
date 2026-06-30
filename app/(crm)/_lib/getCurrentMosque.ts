@@ -2,8 +2,13 @@ import "server-only";
 import { cache } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { getHqSelectedMosqueId } from "@/lib/crm/hqMosqueSelection";
 
 const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
+
+// Columns the profile mapper reads from a mosques row.
+const MOSQUE_COLUMNS =
+  "id, name, city, state, app_name, address, phone, email, timezone, brand_color, accent_color, font_theme, header_style, logo_url, subscription_tier, onboarding_status, onboarding_progress";
 
 /**
  * Mosque profile shipped from the server layout down to the client tree.
@@ -31,6 +36,10 @@ export type MosqueProfile = {
   tier: "core" | "core_crm" | "complete";
   primaryColor: string;
   accentColor: string;
+  /** Font theme key — one of FONT_THEMES in lib/font-themes.ts. */
+  fontTheme: string;
+  /** Home header style key — one of HEADER_STYLES in lib/header-styles.ts. */
+  headerStyle: string;
   logoUrl: string | null;
   logoInitials: string;
   onboardingStatus: string;
@@ -39,15 +48,25 @@ export type MosqueProfile = {
   tourDismissed: boolean;
   /** Pulled from onboarding_progress._donations_config when set during setup. */
   donationsConfig: DonationsConfig | null;
-  /** True when the signed-in user is browsing as Sahla HQ (QA mode). */
+  /**
+   * True only in the Sahla HQ *preview* (no mosque picked) — drives mock/empty
+   * data across the CRM. When an HQ user picks a real mosque this is `false`
+   * (so the UI fetches real data) and `isHQViewing` is `true` instead.
+   */
   isHQ: boolean;
+  /** True when a Sahla HQ user is viewing a specific mosque's real CRM. */
+  isHQViewing: boolean;
 };
 
 export type CurrentMosqueResult =
   | { kind: "ok"; mosque: MosqueProfile }
   | { kind: "no-auth" }
   | { kind: "no-mosque" }
-  | { kind: "no-access"; mosque: MosqueProfile };
+  | { kind: "no-access"; mosque: MosqueProfile }
+  // The mosque lookup itself failed (DB error / schema drift) — distinct from
+  // "this org genuinely has no mosque". Must NOT be treated as un-onboarded,
+  // or a transient failure bounces a live mosque back into onboarding.
+  | { kind: "error" };
 
 // HQ admins get a hard-coded placeholder so the CRM shell renders for
 // QA without depending on which org they happen to be browsing.
@@ -64,6 +83,8 @@ const HQ_PLACEHOLDER: MosqueProfile = {
   tier: "core_crm",
   primaryColor: "#0A261E",
   accentColor: "#B8922A",
+  fontTheme: "classic",
+  headerStyle: "classic",
   logoUrl: null,
   logoInitials: "SH",
   onboardingStatus: "live",
@@ -71,6 +92,7 @@ const HQ_PLACEHOLDER: MosqueProfile = {
   tourDismissed: false,
   donationsConfig: null,
   isHQ: true,
+  isHQViewing: false,
 };
 
 function initialsFrom(name: string): string {
@@ -80,48 +102,34 @@ function initialsFrom(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-/**
- * Resolve the current request's mosque profile + CRM access status.
- *
- * Used by `app/(crm)/layout.tsx` to gate access and seed the client
- * tree's `MosqueProvider`. Wrapped in `cache()` so a single request
- * shares one Supabase round-trip across nested server components.
- */
-export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => {
-  const session = await auth();
-  if (!session.userId) return { kind: "no-auth" };
+type MosqueRow = {
+  id: string;
+  name: string | null;
+  city: string | null;
+  state: string | null;
+  app_name: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  timezone: string | null;
+  brand_color: string | null;
+  accent_color: string | null;
+  font_theme: string | null;
+  header_style: string | null;
+  logo_url: string | null;
+  subscription_tier: string | null;
+  onboarding_status: string | null;
+  onboarding_progress: Record<string, unknown> | null;
+};
 
-  // Sahla HQ → render the placeholder profile for previewing the CRM.
-  if (SAHLA_HQ_ORG_ID && session.orgId === SAHLA_HQ_ORG_ID) {
-    return { kind: "ok", mosque: HQ_PLACEHOLDER };
-  }
+/** Map a mosques row + feature flag into the client-facing MosqueProfile. */
+function toProfile(
+  mosque: MosqueRow,
+  hasCrmAccess: boolean,
+  isHQViewing: boolean
+): MosqueProfile {
+  const progress = mosque.onboarding_progress ?? {};
 
-  if (!session.orgId) return { kind: "no-mosque" };
-
-  const supabase = createAdminSupabaseClient();
-  const { data: mosque, error: mosqueErr } = await supabase
-    .from("mosques")
-    .select(
-      "id, name, city, state, app_name, address, phone, email, timezone, brand_color, accent_color, logo_url, subscription_tier, onboarding_status, onboarding_progress"
-    )
-    .eq("clerk_org_id", session.orgId)
-    .maybeSingle();
-
-  if (mosqueErr) {
-    console.error("getCurrentMosque: mosques lookup failed", mosqueErr.message);
-    return { kind: "no-mosque" };
-  }
-  if (!mosque) return { kind: "no-mosque" };
-
-  const { data: flags } = await supabase
-    .from("mosque_feature_flags")
-    .select("has_crm_access")
-    .eq("mosque_id", mosque.id)
-    .maybeSingle();
-
-  const progress = (mosque.onboarding_progress as Record<string, unknown> | null) ?? {};
-
-  // Donations setup blob stashed by onboarding's DonationsPanel.
   const rawDonations = progress._donations_config as
     | {
         projectName?: string;
@@ -141,7 +149,7 @@ export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => 
       }
     : null;
 
-  const profile: MosqueProfile = {
+  return {
     id: mosque.id,
     name: mosque.name ?? "Your mosque",
     city: mosque.city ?? "",
@@ -154,14 +162,80 @@ export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => 
     tier: (mosque.subscription_tier as MosqueProfile["tier"]) ?? "core",
     primaryColor: mosque.brand_color ?? "#0A261E",
     accentColor: mosque.accent_color ?? "#B8922A",
+    fontTheme: mosque.font_theme ?? "classic",
+    headerStyle: mosque.header_style ?? "classic",
     logoUrl: mosque.logo_url ?? null,
     logoInitials: initialsFrom(mosque.name ?? "Mosque"),
     onboardingStatus: mosque.onboarding_status ?? "in_progress",
-    hasCrmAccess: !!flags?.has_crm_access,
+    hasCrmAccess,
     tourDismissed: progress.crm_tour_dismissed === true,
     donationsConfig,
     isHQ: false,
+    isHQViewing,
   };
+}
+
+/**
+ * Resolve the current request's mosque profile + CRM access status.
+ *
+ * Used by `app/(crm)/layout.tsx` to gate access and seed the client
+ * tree's `MosqueProvider`. Wrapped in `cache()` so a single request
+ * shares one Supabase round-trip across nested server components.
+ */
+export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => {
+  const session = await auth();
+  if (!session.userId) return { kind: "no-auth" };
+
+  const supabase = createAdminSupabaseClient();
+
+  // Sahla HQ → either viewing a picked mosque's real CRM, or the preview
+  // placeholder. HQ may view any mosque regardless of its CRM plan.
+  if (SAHLA_HQ_ORG_ID && session.orgId === SAHLA_HQ_ORG_ID) {
+    const selectedMosqueId = await getHqSelectedMosqueId();
+    if (selectedMosqueId) {
+      const { data: mosque } = await supabase
+        .from("mosques")
+        .select(MOSQUE_COLUMNS)
+        .eq("id", selectedMosqueId)
+        .maybeSingle();
+      if (mosque) {
+        const { data: flags } = await supabase
+          .from("mosque_feature_flags")
+          .select("has_crm_access")
+          .eq("mosque_id", mosque.id)
+          .maybeSingle();
+        return {
+          kind: "ok",
+          mosque: toProfile(mosque as MosqueRow, !!flags?.has_crm_access, true),
+        };
+      }
+    }
+    return { kind: "ok", mosque: HQ_PLACEHOLDER };
+  }
+
+  if (!session.orgId) return { kind: "no-mosque" };
+
+  const { data: mosque, error: mosqueErr } = await supabase
+    .from("mosques")
+    .select(MOSQUE_COLUMNS)
+    .eq("clerk_org_id", session.orgId)
+    .maybeSingle();
+
+  if (mosqueErr) {
+    console.error("getCurrentMosque: mosques lookup failed", mosqueErr.message);
+    // DB failure ≠ "no mosque". Surface an error so the layout can offer a
+    // retry instead of redirecting an onboarded mosque into setup.
+    return { kind: "error" };
+  }
+  if (!mosque) return { kind: "no-mosque" };
+
+  const { data: flags } = await supabase
+    .from("mosque_feature_flags")
+    .select("has_crm_access")
+    .eq("mosque_id", mosque.id)
+    .maybeSingle();
+
+  const profile = toProfile(mosque as MosqueRow, !!flags?.has_crm_access, false);
 
   if (!profile.hasCrmAccess) {
     return { kind: "no-access", mosque: profile };

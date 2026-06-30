@@ -7,6 +7,7 @@ const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 const ALLOWED_FIELDS = [
   "name", "address", "city", "state", "phone", "email", "timezone",
   "app_name", "logo_url", "brand_color", "accent_color", "secondary_color",
+  "font_theme", "header_style",
   "calculation_method", "school",
   "reels_scope",
 ];
@@ -82,7 +83,7 @@ export async function PATCH(
   // D2 from the CRM gap plan: log theme changes to the activity feed.
   // Fire-and-forget when brand_color / accent_color / logo_url move so the
   // mosque admin's Home dashboard shows "<You> updated theme".
-  const themeFields = ["brand_color", "accent_color", "logo_url"] as const;
+  const themeFields = ["brand_color", "accent_color", "logo_url", "font_theme", "header_style"] as const;
   const themeChanged = themeFields.some((f) => f in updateData);
   if (themeChanged) {
     const actorName =
@@ -101,6 +102,8 @@ export async function PATCH(
         changed: themeFields.filter((f) => f in updateData),
         brand_color: updateData.brand_color ?? null,
         accent_color: updateData.accent_color ?? null,
+        font_theme: updateData.font_theme ?? null,
+        header_style: updateData.header_style ?? null,
       },
     });
   }
