@@ -501,6 +501,43 @@ async function handleSaasCheckoutCompleted(session: Stripe.Checkout.Session) {
   console.log(`Mosque ${mosqueId} marked READY (tier=${tier})`);
 }
 
+async function handleSaasBackupCardCompleted(session: Stripe.Checkout.Session) {
+  const mosqueId = session.metadata?.mosque_id;
+  if (!mosqueId) return;
+
+  const setupIntentId =
+    typeof session.setup_intent === "string"
+      ? session.setup_intent
+      : session.setup_intent?.id;
+  if (!setupIntentId) return;
+
+  const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+  const paymentMethodId =
+    typeof setupIntent.payment_method === "string"
+      ? setupIntent.payment_method
+      : setupIntent.payment_method?.id;
+  if (!paymentMethodId) return;
+
+  // Pull brand/last4 so the CRM can render the card without a live round-trip.
+  const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+
+  await supabase
+    .from("mosques")
+    .update({
+      saas_backup_payment_method_id: paymentMethodId,
+      saas_backup_card_brand: pm.card?.brand ?? null,
+      saas_backup_card_last4: pm.card?.last4 ?? null,
+    })
+    .eq("id", mosqueId);
+
+  await logActivity(mosqueId, "saas_backup_card_added", "subscription", paymentMethodId, {
+    brand: pm.card?.brand ?? null,
+    last4: pm.card?.last4 ?? null,
+  });
+
+  console.log(`Backup card saved for mosque ${mosqueId} (${pm.card?.brand} •••• ${pm.card?.last4})`);
+}
+
 async function handleSaasSubscriptionUpdated(subscription: Stripe.Subscription) {
   const mosqueId = getMosqueId(subscription);
   if (!mosqueId) return;
@@ -986,6 +1023,8 @@ Deno.serve(async (req: Request) => {
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.metadata?.type === "saas_subscription") {
           await handleSaasCheckoutCompleted(session);
+        } else if (session.metadata?.type === "saas_backup_card") {
+          await handleSaasBackupCardCompleted(session);
         }
         break;
       }

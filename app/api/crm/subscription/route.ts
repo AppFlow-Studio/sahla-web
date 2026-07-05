@@ -13,6 +13,11 @@ export type CrmInvoice = {
   pdfUrl: string | null;
 };
 
+export type CrmCard = {
+  brand: string | null;
+  last4: string | null;
+};
+
 export type CrmSubscriptionResponse = {
   tier: "core" | "core_crm" | "complete" | null;
   status: string | null;
@@ -20,6 +25,11 @@ export type CrmSubscriptionResponse = {
   cancelAtPeriodEnd: boolean;
   hasStripeCustomer: boolean;
   invoices: CrmInvoice[];
+  primaryCard: CrmCard | null;
+  backupCard: CrmCard | null;
+  // True when the stored backup card is currently the subscription default
+  // (i.e. it has already been promoted), so the UI can hide "Make primary".
+  backupIsPrimary: boolean;
 };
 
 const EMPTY: CrmSubscriptionResponse = {
@@ -29,6 +39,9 @@ const EMPTY: CrmSubscriptionResponse = {
   cancelAtPeriodEnd: false,
   hasStripeCustomer: false,
   invoices: [],
+  primaryCard: null,
+  backupCard: null,
+  backupIsPrimary: false,
 };
 
 export async function GET() {
@@ -51,7 +64,7 @@ export async function GET() {
   const { data: mosque, error } = await supabase
     .from("mosques")
     .select(
-      "subscription_tier, subscription_status, saas_stripe_customer_id, saas_stripe_subscription_id, current_period_end"
+      "subscription_tier, subscription_status, saas_stripe_customer_id, saas_stripe_subscription_id, current_period_end, saas_backup_payment_method_id, saas_backup_card_brand, saas_backup_card_last4"
     )
     .eq("id", access.mosqueId)
     .maybeSingle();
@@ -75,7 +88,9 @@ export async function GET() {
   const [subRes, invoiceRes] = await Promise.all([
     mosque.saas_stripe_subscription_id
       ? stripe.subscriptions
-          .retrieve(mosque.saas_stripe_subscription_id)
+          .retrieve(mosque.saas_stripe_subscription_id, {
+            expand: ["default_payment_method"],
+          })
           .catch(() => null)
       : Promise.resolve(null),
     stripe.invoices
@@ -98,6 +113,26 @@ export async function GET() {
     cancelAtPeriodEnd = !!subRes.cancel_at_period_end;
   }
 
+  // Primary card = the subscription's current default payment method.
+  const defaultPm = subRes?.default_payment_method;
+  const defaultPmId =
+    typeof defaultPm === "string" ? defaultPm : defaultPm?.id ?? null;
+  const primaryCard: CrmCard | null =
+    defaultPm && typeof defaultPm !== "string" && defaultPm.card
+      ? { brand: defaultPm.card.brand ?? null, last4: defaultPm.card.last4 ?? null }
+      : null;
+
+  // Backup card is denormalized on the mosque row (captured by the webhook).
+  const backupCard: CrmCard | null = mosque.saas_backup_payment_method_id
+    ? {
+        brand: mosque.saas_backup_card_brand ?? null,
+        last4: mosque.saas_backup_card_last4 ?? null,
+      }
+    : null;
+  const backupIsPrimary =
+    !!mosque.saas_backup_payment_method_id &&
+    mosque.saas_backup_payment_method_id === defaultPmId;
+
   const invoices: CrmInvoice[] = (invoiceRes?.data ?? []).map((inv) => ({
     id: inv.id ?? "",
     number: inv.number ?? null,
@@ -115,5 +150,8 @@ export async function GET() {
     cancelAtPeriodEnd,
     hasStripeCustomer: true,
     invoices,
+    primaryCard,
+    backupCard,
+    backupIsPrimary,
   } satisfies CrmSubscriptionResponse);
 }
