@@ -1,6 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import type { FontThemeKey } from "@/lib/font-themes";
+import type { HeaderStyleKey } from "@/lib/header-styles";
+
+/** Heading typeface per font theme (body stays Inter/SF Pro). */
+const HEADING_FONT: Record<FontThemeKey, string> = {
+  classic: "'Playfair Display', serif",
+  modern: "'Inter', sans-serif",
+  elegant: "'Cormorant Garamond', serif",
+};
 
 /* ── Helpers ── */
 function hexToRgba(hex: string, alpha: number) {
@@ -26,6 +35,12 @@ type AppPreviewPanelProps = {
   logoUrl?: string;
   memberCount?: number;
   programCount?: number;
+  /** Show only the Home screen and hide the bottom tab bar. */
+  homeOnly?: boolean;
+  /** Heading typeface theme. */
+  fontTheme?: FontThemeKey;
+  /** Home-screen header layout. */
+  headerStyle?: HeaderStyleKey;
 };
 
 type Screen = "home" | "discover" | "watch" | "prayer" | "profile";
@@ -66,6 +81,9 @@ export default function AppPreviewPanel({
   appName = "Your Masjid",
   brandColor = "#0A261E",
   accentColor = "#B8922A",
+  homeOnly = false,
+  fontTheme = "classic",
+  headerStyle = "classic",
 }: AppPreviewPanelProps) {
   const [screen, setScreen] = useState<Screen>("home");
   const bg = "#FFFBF2";
@@ -77,13 +95,14 @@ export default function AppPreviewPanel({
     <PhoneFrame>
       <style>{fontLink}</style>
       <div className="relative w-full h-full" style={{ background: bg }}>
-        {screen === "home" && <HomeScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} />}
+        {screen === "home" && <HomeScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} headingFont={HEADING_FONT[fontTheme]} headerStyle={headerStyle} />}
         {screen === "discover" && <DiscoverScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} />}
         {screen === "watch" && <WatchScreen brandColor={brandColor} accent={accent} bg={bg} />}
         {screen === "prayer" && <PrayerScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} />}
         {screen === "profile" && <ProfileScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} />}
 
         {/* ── Tab bar — Figma: 402×101, padding 16px 24px 24px, gap 8px ── */}
+        {!homeOnly && (
         <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-end z-40" style={{ padding: "16px 24px 24px", gap: 8 }}>
           <div className="flex items-center justify-center w-full">
             <div
@@ -136,6 +155,7 @@ export default function AppPreviewPanel({
             </div>
           </div>
         </div>
+        )}
       </div>
     </PhoneFrame>
   );
@@ -145,8 +165,11 @@ export default function AppPreviewPanel({
 /* ══════════════════════════════════════════════════════════════════
    HOME SCREEN — All values are native Figma 402px
    ══════════════════════════════════════════════════════════════════ */
-function HomeScreen({ brandColor, accent, bg, appName }: { brandColor: string; accent: string; bg: string; appName: string }) {
+function HomeScreen({ brandColor, accent, bg, appName, headingFont = "'Playfair Display', serif", headerStyle = "classic" }: { brandColor: string; accent: string; bg: string; appName: string; headingFont?: string; headerStyle?: HeaderStyleKey }) {
   const sf = "'SF Pro', -apple-system, system-ui, sans-serif";
+  const countdown = headerStyle !== "classic";
+  const alignItems = headerStyle === "countdown-left" ? "flex-start" : "center";
+  const textAlign: "left" | "center" = headerStyle === "countdown-left" ? "left" : "center";
   return (
     <div className="w-full h-full overflow-y-auto" style={{ background: brandColor, scrollbarWidth: "none" }}>
       {/* ── Dark header — Figma: 393×173, +38px for dynamic island clearance ── */}
@@ -156,40 +179,91 @@ function HomeScreen({ brandColor, accent, bg, appName }: { brandColor: string; a
         <div className="absolute" style={{ left: 0, right: 0, top: 0, bottom: 0, background: `linear-gradient(270.04deg, ${hexToRgba(brandColor, 0.5)} -11.25%, rgba(217,177,102,0) 41.68%)`, pointerEvents: "none", zIndex: 0 }} />
 
         <div style={{ position: "relative", zIndex: 1 }}>
-          {/* Greeting — Inter Bold 9px, ls 1.62, rgba(248,245,242,0.5) */}
-          <p className="uppercase" style={{
-            fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: 9, lineHeight: "11px",
-            letterSpacing: 1.62, color: "rgba(248,245,242,0.5)",
-            margin: 0, padding: "16px 20px 0",
-          }}>
-            Assalamu Alaikum D!
-          </p>
+          {countdown ? (
+            /* ── Countdown header — Figma "homepage final v1/v2": top name row +
+                 "TIME UNTIL MAGHRIB" + big countdown + date; centered or left ── */
+            <>
+              {/* Top row: logo + masjid name (left), bell (right) */}
+              <div className="flex items-center justify-between" style={{ padding: "16px 20px 0" }}>
+                <div className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 6, background: accent,
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <span style={{ fontFamily: headingFont, fontWeight: 700, fontSize: 11, lineHeight: "11px", color: brandColor }}>
+                      {(appName || "M").trim().charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <span className="truncate" style={{ fontFamily: sf, fontWeight: 600, fontSize: 15, lineHeight: "18px", color: "#F8F5F2" }}>
+                    {appName}
+                  </span>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+              </div>
 
-          {/* Time — Playfair Display 400 45px, lh 52, ls -2 */}
-          <p style={{
-            fontFamily: "'Playfair Display', serif", fontWeight: 400, fontSize: 45, lineHeight: "52px",
-            letterSpacing: -2, color: "#F8F5F2",
-            margin: 0, padding: "6px 20px 0",
-          }}>
-            4:01 PM
-          </p>
+              {/* Countdown block — centered (v1) or left (v2) */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems, textAlign, padding: "22px 24px 0" }}>
+                <span className="uppercase" style={{
+                  fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: 10, lineHeight: "12px",
+                  letterSpacing: 1.5, color: accent,
+                }}>
+                  Time until Maghrib
+                </span>
+                <span style={{
+                  fontFamily: headingFont, fontWeight: 400, fontSize: 44, lineHeight: "52px",
+                  letterSpacing: -2, color: "#F8F5F2", marginTop: 6,
+                }}>
+                  1:52:45
+                </span>
+                <span style={{
+                  fontFamily: sf, fontWeight: 600, fontSize: 13, lineHeight: "16px",
+                  color: "#FFFBF2", marginTop: 4,
+                }}>
+                  Friday, March 15 · Ramadan 13, 1447
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Greeting — Inter Bold 9px, ls 1.62, rgba(248,245,242,0.5) */}
+              <p className="uppercase" style={{
+                fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: 9, lineHeight: "11px",
+                letterSpacing: 1.62, color: "rgba(248,245,242,0.5)",
+                margin: 0, padding: "16px 20px 0",
+              }}>
+                Assalamu Alaikum D!
+              </p>
 
-          {/* Date — SF Pro 600 13px */}
-          <p style={{
-            fontFamily: sf, fontWeight: 600, fontSize: 13, lineHeight: "16px",
-            color: "#FFFBF2", margin: 0, padding: "4px 20px 0",
-          }}>
-            Ramadan 13, 1447
-          </p>
+              {/* Time — heading font 400 45px, lh 52, ls -2 */}
+              <p style={{
+                fontFamily: headingFont, fontWeight: 400, fontSize: 45, lineHeight: "52px",
+                letterSpacing: -2, color: "#F8F5F2",
+                margin: 0, padding: "6px 20px 0",
+              }}>
+                4:01 PM
+              </p>
 
-          {/* Next prayer — SF Pro 400 13px, gap 6 */}
-          <div className="flex items-center" style={{ gap: 6, padding: "15px 24px 0" }}>
-            <div style={{ width: 6, height: 6, borderRadius: 3, background: "#D9B166" }} />
-            <p style={{ fontFamily: sf, fontWeight: 400, fontSize: 13, lineHeight: "16px", margin: 0 }}>
-              <span style={{ color: "rgba(255,255,255,0.5)" }}>Maghrib</span>
-              <span style={{ color: "rgba(248,245,242,0.8)" }}> iqamah in 1h 53m</span>
-            </p>
-          </div>
+              {/* Date — SF Pro 600 13px */}
+              <p style={{
+                fontFamily: sf, fontWeight: 600, fontSize: 13, lineHeight: "16px",
+                color: "#FFFBF2", margin: 0, padding: "4px 20px 0",
+              }}>
+                Ramadan 13, 1447
+              </p>
+
+              {/* Next prayer — SF Pro 400 13px, gap 6 */}
+              <div className="flex items-center" style={{ gap: 6, padding: "15px 24px 0" }}>
+                <div style={{ width: 6, height: 6, borderRadius: 3, background: "#D9B166" }} />
+                <p style={{ fontFamily: sf, fontWeight: 400, fontSize: 13, lineHeight: "16px", margin: 0 }}>
+                  <span style={{ color: "rgba(255,255,255,0.5)" }}>Maghrib</span>
+                  <span style={{ color: "rgba(248,245,242,0.8)" }}> iqamah in 1h 53m</span>
+                </p>
+              </div>
+            </>
+          )}
 
           {/* Prayer times strip — each card 54×52, Figma y=182 (46px below next prayer) */}
           <div className="flex justify-between" style={{ padding: "46px 16px 14px" }}>
@@ -300,9 +374,9 @@ function HomeScreen({ brandColor, accent, bg, appName }: { brandColor: string; a
           }}>
             Featured
           </span>
-          {/* Title — Playfair Display Bold 15px, lh 18, #F8F5F2 */}
+          {/* Title — heading font Bold 15px, lh 18, #F8F5F2 */}
           <p style={{
-            fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 15, lineHeight: "18px",
+            fontFamily: headingFont, fontWeight: 700, fontSize: 15, lineHeight: "18px",
             color: "#F8F5F2", margin: "6px 0 2px",
           }}>
             Weekend Islamic School

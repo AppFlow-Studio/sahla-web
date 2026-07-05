@@ -36,7 +36,7 @@ export default function HelpButton({
       </TooltipTrigger>
       <TooltipContent
         side="top"
-        className="max-w-[260px] bg-[#0A261E] px-3 py-2 text-[12px] leading-relaxed text-[#fffbf2]"
+        className="max-w-[260px] bg-[var(--mosque-primary,#0A261E)] px-3 py-2 text-[12px] leading-relaxed text-[var(--mosque-primary-fg,#fffbf2)]"
       >
         {text}
       </TooltipContent>

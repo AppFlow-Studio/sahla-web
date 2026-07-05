@@ -145,7 +145,7 @@ export default function HomeClient() {
       {nudges.length > 0 ? (
         <section className="mb-6">
           <header className="mb-3 flex items-center gap-2">
-            <Sparkles size={14} className="text-[#B8922A]" />
+            <Sparkles size={14} className="text-[var(--mosque-accent,#B8922A)]" />
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#0A261E]/55">
               Top focus
             </h2>
@@ -246,7 +246,7 @@ function NudgeCard({ nudge, index }: { nudge: Nudge; index: number }) {
           "flex h-9 w-9 items-center justify-center rounded-xl",
           nudge.tone === "warm"
             ? "bg-amber-100 text-amber-700"
-            : "bg-[#fffbf2] text-[#B8922A]"
+            : "bg-[var(--mosque-surface,#fffbf2)] text-[var(--mosque-accent,#B8922A)]"
         )}
       >
         <Icon size={15} strokeWidth={1.7} />
@@ -277,7 +277,7 @@ function ActivityRow({ event, index }: { event: ActivityEvent; index: number }) 
       initial={{ opacity: 0, x: -4 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.25, delay: index * 0.02, ease: EASE }}
-      className="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-[#fffbf2]/60"
+      className="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-[var(--mosque-surface,#fffbf2)]/60"
     >
       <div
         className={cn(
@@ -316,7 +316,7 @@ function QuickActionCard({
       href={href}
       className="group flex items-center gap-3 rounded-2xl border border-[#0A261E]/8 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#0A261E]/15 hover:shadow-[0_6px_16px_-10px_rgba(10,38,30,0.18)]"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#fffbf2] text-[#B8922A]">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--mosque-surface,#fffbf2)] text-[var(--mosque-accent,#B8922A)]">
         <Icon size={16} strokeWidth={1.6} />
       </div>
       <div className="min-w-0 flex-1">

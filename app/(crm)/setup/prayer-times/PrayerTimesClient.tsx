@@ -422,7 +422,7 @@ export default function PrayerTimesClient() {
                   >
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
                       <div className="flex min-w-[120px] items-center gap-2.5">
-                        <Icon size={16} className="text-[#B8922A]" strokeWidth={1.6} />
+                        <Icon size={16} className="text-[var(--mosque-accent,#B8922A)]" strokeWidth={1.6} />
                         <div>
                           <p className="text-[13.5px] font-semibold text-[#0A261E]">
                             {p.label}
@@ -433,7 +433,7 @@ export default function PrayerTimesClient() {
                         </div>
                       </div>
 
-                      <div className="flex flex-1 items-center gap-1 rounded-lg bg-[#fffbf2] p-0.5">
+                      <div className="flex flex-1 items-center gap-1 rounded-lg bg-[var(--mosque-surface,#fffbf2)] p-0.5">
                         {(["offset", "fixed", "seasonal"] as IqamahMode[]).map(
                           (mode) => {
                             const active = c.mode === mode;
@@ -524,7 +524,7 @@ export default function PrayerTimesClient() {
                               exit={{ opacity: 0, y: -4 }}
                               transition={{ duration: 0.15 }}
                             >
-                              <p className="rounded-md border border-dashed border-[#0A261E]/15 bg-[#fffbf2] px-3 py-1.5 text-[11.5px] text-[#0A261E]/55">
+                              <p className="rounded-md border border-dashed border-[#0A261E]/15 bg-[var(--mosque-surface,#fffbf2)] px-3 py-1.5 text-[11.5px] text-[#0A261E]/55">
                                 Auto by solar declination
                               </p>
                             </motion.div>
@@ -541,13 +541,13 @@ export default function PrayerTimesClient() {
 
         {/* Right: live preview */}
         <aside>
-          <div className="sticky top-24 rounded-2xl border border-[#0A261E]/8 bg-[#0A261E] text-[#fffbf2]">
+          <div className="sticky top-24 rounded-2xl border border-[#0A261E]/8 bg-[var(--mosque-primary,#0A261E)] text-[var(--mosque-primary-fg,#fffbf2)]">
             <header className="flex items-center justify-between border-b border-white/10 px-5 py-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#fffbf2]/55">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mosque-primary-fg,#fffbf2)]/55">
                   Live preview
                 </p>
-                <p className="font-display text-[16px] text-[#E8D5B0]">
+                <p className="font-display text-[16px] text-[var(--mosque-primary-fg,#fffbf2)]">
                   {new Date().toLocaleDateString(undefined, {
                     weekday: "long",
                     month: "long",
@@ -555,7 +555,7 @@ export default function PrayerTimesClient() {
                   })}
                 </p>
               </div>
-              <Eye size={16} className="text-[#B8922A]" />
+              <Eye size={16} className="text-[var(--mosque-accent,#B8922A)]" />
             </header>
             <ul className="divide-y divide-white/[0.06] px-1 py-2">
               {previewRows.map((row) => {
@@ -565,18 +565,18 @@ export default function PrayerTimesClient() {
                     key={row.id}
                     className="flex items-center gap-3 px-4 py-3"
                   >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[#B8922A]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[var(--mosque-accent,#B8922A)]">
                       <Icon size={15} strokeWidth={1.6} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-[#fffbf2]">
+                      <p className="text-[13px] font-semibold text-[var(--mosque-primary-fg,#fffbf2)]">
                         {row.label}
                       </p>
-                      <p className="text-[10.5px] text-[#fffbf2]/55">
+                      <p className="text-[10.5px] text-[var(--mosque-primary-fg,#fffbf2)]/55">
                         Athan {formatTime(row.athan)}
                       </p>
                     </div>
-                    <p className="font-display text-[18px] tabular-nums text-[#E8D5B0]">
+                    <p className="font-display text-[18px] tabular-nums text-[var(--mosque-primary-fg,#fffbf2)]">
                       {formatTime(row.iqamah)}
                     </p>
                   </li>
@@ -584,7 +584,7 @@ export default function PrayerTimesClient() {
               })}
             </ul>
             <footer className="border-t border-white/[0.06] px-5 py-3 text-center">
-              <p className="text-[10.5px] text-[#fffbf2]/45">
+              <p className="text-[10.5px] text-[var(--mosque-primary-fg,#fffbf2)]/45">
                 This is what your members see in the app
               </p>
             </footer>

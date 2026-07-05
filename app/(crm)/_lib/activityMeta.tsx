@@ -20,7 +20,7 @@ export type ActivityTone =
 export const TONE_BADGE: Record<ActivityTone, string> = {
   donation: "bg-emerald-50 text-emerald-700",
   rsvp: "bg-[#0A261E]/[0.06] text-[#0A261E]/70",
-  member: "bg-[#fffbf2] text-[#B8922A]",
+  member: "bg-[var(--mosque-surface,#fffbf2)] text-[var(--mosque-accent,#B8922A)]",
   notification: "bg-amber-50 text-amber-700",
   content: "bg-violet-50 text-violet-700",
   settings: "bg-sky-50 text-sky-700",

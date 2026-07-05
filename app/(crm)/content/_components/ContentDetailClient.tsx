@@ -88,7 +88,7 @@ export default function ContentDetailClient({ id }: { id: string }) {
       {/* Hero */}
       <div className="overflow-hidden rounded-3xl border border-[#0A261E]/8 bg-white">
         <div
-          className="relative aspect-[3/1] w-full bg-[#fffbf2]"
+          className="relative aspect-[3/1] w-full bg-[var(--mosque-surface,#fffbf2)]"
           style={{
             backgroundImage: `url(${item.imageUrl}?auto=format&fit=crop&w=1400&q=85)`,
             backgroundSize: "cover",
@@ -104,7 +104,7 @@ export default function ContentDetailClient({ id }: { id: string }) {
                 </span>
               ) : null}
               {item.isPaid && item.priceUsd ? (
-                <span className="rounded-full bg-[#B8922A] px-2.5 py-0.5 text-[10.5px] font-semibold text-white">
+                <span className="rounded-full bg-[var(--mosque-accent,#B8922A)] px-2.5 py-0.5 text-[10.5px] font-semibold text-white">
                   {formatUsd(item.priceUsd)}
                 </span>
               ) : (
@@ -167,7 +167,7 @@ export default function ContentDetailClient({ id }: { id: string }) {
                 {active ? (
                   <motion.span
                     layoutId="content-detail-tab"
-                    className="absolute -bottom-px left-0 right-0 h-[2px] rounded-full bg-[#0A261E]"
+                    className="absolute -bottom-px left-0 right-0 h-[2px] rounded-full bg-[var(--mosque-primary,#0A261E)]"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 ) : null}
@@ -284,7 +284,7 @@ function OverviewTab({
 }) {
   return (
     <div className="rounded-2xl border border-[#0A261E]/8 bg-white p-6">
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#B8922A]">
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mosque-accent,#B8922A)]">
         Description
       </h2>
       <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#0A261E]/80">
@@ -348,7 +348,7 @@ function RsvpsTab({ itemId }: { itemId: string }) {
               className={cn(
                 "rounded-md px-2.5 py-1 text-[12px] font-medium transition-colors",
                 active
-                  ? "bg-[#0A261E] text-white"
+                  ? "bg-[var(--mosque-primary,#0A261E)] text-[var(--mosque-primary-fg,#fffbf2)]"
                   : "text-[#0A261E]/65 hover:bg-[#0A261E]/[0.05]"
               )}
             >
@@ -372,7 +372,7 @@ function RsvpsTab({ itemId }: { itemId: string }) {
           {filtered.map((r) => (
             <li
               key={r.id}
-              className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[#fffbf2]/60"
+              className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[var(--mosque-surface,#fffbf2)]/60"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0A261E]/8 text-[11.5px] font-semibold text-[#0A261E]/70">
                 {r.memberInitials}
@@ -487,10 +487,10 @@ function NotificationsTab({ itemName }: { itemName: string }) {
           Scheduled before each occurrence.
         </p>
         <ul className="mt-3 space-y-2 text-[12.5px] text-[#0A261E]/75">
-          <li className="flex items-center justify-between rounded-lg bg-[#fffbf2] px-3 py-2">
+          <li className="flex items-center justify-between rounded-lg bg-[var(--mosque-surface,#fffbf2)] px-3 py-2">
             24h before <span className="text-[#0A261E]/45">On</span>
           </li>
-          <li className="flex items-center justify-between rounded-lg bg-[#fffbf2] px-3 py-2">
+          <li className="flex items-center justify-between rounded-lg bg-[var(--mosque-surface,#fffbf2)] px-3 py-2">
             1h before <span className="text-[#0A261E]/45">On</span>
           </li>
         </ul>

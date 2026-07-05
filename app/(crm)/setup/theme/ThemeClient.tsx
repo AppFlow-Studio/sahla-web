@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { HexColorPicker } from "react-colorful";
 import { Check, Lock, RotateCcw, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +15,11 @@ import {
 } from "@/components/ui/popover";
 import PageHeader from "../../_components/PageHeader";
 import { useMosque } from "../../_lib/mock-mosque";
+import FontThemePicker from "@/components/FontThemePicker";
+import { normalizeFontTheme, type FontThemeKey } from "@/lib/font-themes";
+import HeaderStylePicker from "@/components/HeaderStylePicker";
+import { normalizeHeaderStyle, type HeaderStyleKey } from "@/lib/header-styles";
+import AppPreviewPanel from "@/components/ui/skiper-ui/AppPreviewPanel";
 import { cn } from "@/lib/utils";
 
 const PRESETS = [
@@ -33,15 +37,26 @@ export default function ThemeClient() {
   const queryClient = useQueryClient();
   const [primary, setPrimary] = useState(mosque.primaryColor);
   const [accent, setAccent] = useState(mosque.accentColor);
+  const [fontTheme, setFontTheme] = useState<FontThemeKey>(
+    normalizeFontTheme(mosque.fontTheme),
+  );
+  const [headerStyle, setHeaderStyle] = useState<HeaderStyleKey>(
+    normalizeHeaderStyle(mosque.headerStyle),
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const dirty =
-    primary !== mosque.primaryColor || accent !== mosque.accentColor;
+    primary !== mosque.primaryColor ||
+    accent !== mosque.accentColor ||
+    fontTheme !== normalizeFontTheme(mosque.fontTheme) ||
+    headerStyle !== normalizeHeaderStyle(mosque.headerStyle);
 
   function reset() {
     setPrimary(mosque.primaryColor);
     setAccent(mosque.accentColor);
-    toast.success("Reverted to current colors");
+    setFontTheme(normalizeFontTheme(mosque.fontTheme));
+    setHeaderStyle(normalizeHeaderStyle(mosque.headerStyle));
+    toast.success("Reverted to current theme");
   }
 
   async function save() {
@@ -60,7 +75,12 @@ export default function ThemeClient() {
       const res = await fetch(`/api/mosques/${mosque.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand_color: primary, accent_color: accent }),
+        body: JSON.stringify({
+          brand_color: primary,
+          accent_color: accent,
+          font_theme: fontTheme,
+          header_style: headerStyle,
+        }),
       });
       const body = (await res.json().catch(() => ({}))) as {
         success?: boolean;
@@ -90,7 +110,7 @@ export default function ThemeClient() {
       <PageHeader
         eyebrow="Mosque Setup"
         title="Theme"
-        description="Pick the two colors that define your mosque app. Saves auto when you click Apply."
+        description="Pick the colors and font that define your mosque app. Saves when you click Apply."
         action={
           <div className="flex items-center gap-2">
             <Button
@@ -125,10 +145,32 @@ export default function ThemeClient() {
             onChange={setAccent}
           />
 
+          <section className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
+            <header className="mb-3">
+              <h2 className="text-[13.5px] font-semibold text-[#0A261E]">Font</h2>
+              <p className="text-[12px] text-[#0A261E]/55">
+                The typeface for headings and text across your app. Arabic and
+                Qur&apos;an text always use their dedicated font.
+              </p>
+            </header>
+            <FontThemePicker value={fontTheme} onChange={setFontTheme} />
+          </section>
+
+          <section className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
+            <header className="mb-3">
+              <h2 className="text-[13.5px] font-semibold text-[#0A261E]">Home header</h2>
+              <p className="text-[12px] text-[#0A261E]/55">
+                The top of your app&apos;s home screen — a classic greeting + clock,
+                or a live countdown to the next prayer.
+              </p>
+            </header>
+            <HeaderStylePicker value={headerStyle} onChange={setHeaderStyle} />
+          </section>
+
           <div className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
             <header className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles size={14} className="text-[#B8922A]" />
+                <Sparkles size={14} className="text-[var(--mosque-accent,#B8922A)]" />
                 <h3 className="text-[13px] font-semibold text-[#0A261E]">
                   Curated presets
                 </h3>
@@ -177,7 +219,7 @@ export default function ThemeClient() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-dashed border-[#0A261E]/15 bg-[#fffbf2]/50 p-4">
+          <div className="rounded-2xl border border-dashed border-[#0A261E]/15 bg-[var(--mosque-surface,#fffbf2)]/50 p-4">
             <div className="flex items-start gap-3">
               <Lock size={14} className="mt-0.5 text-[#0A261E]/45" />
               <div>
@@ -186,26 +228,31 @@ export default function ThemeClient() {
                 </p>
                 <p className="mt-0.5 text-[11.5px] text-[#0A261E]/55">
                   Upload + automatic EAS rebuild trigger ships next release.
-                  In the meantime, send your logo to support and we'll wire
-                  it in for you.
+                  In the meantime, send your logo to support and we&rsquo;ll
+                  wire it in for you.
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Live preview */}
+        {/* Live preview — the real app-home mockup, themed live */}
         <aside>
           <div className="sticky top-24 space-y-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#0A261E]/55">
               Live preview
             </p>
-            <AppPreview
-              primary={primary}
-              accent={accent}
-              mosqueName={mosque.name}
-              initials={mosque.logoInitials}
-            />
+            <div className="flex justify-center">
+              <AppPreviewPanel
+                appName={mosque.appName || mosque.name}
+                brandColor={primary}
+                accentColor={accent}
+                logoUrl={mosque.logoUrl ?? undefined}
+                fontTheme={fontTheme}
+                headerStyle={headerStyle}
+                homeOnly
+              />
+            </div>
           </div>
         </aside>
       </div>
@@ -270,122 +317,3 @@ function hexToRgb(hex: string): string {
   return `rgb(${parseInt(match[1], 16)}, ${parseInt(match[2], 16)}, ${parseInt(match[3], 16)})`;
 }
 
-/* ─── App preview — a small mockup of the mosque app's home tab ─── */
-
-function AppPreview({
-  primary,
-  accent,
-  mosqueName,
-  initials,
-}: {
-  primary: string;
-  accent: string;
-  mosqueName: string;
-  initials: string;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="overflow-hidden rounded-[36px] border border-[#0A261E]/12 bg-[#0A261E] p-2 shadow-[0_18px_40px_-20px_rgba(10,38,30,0.35)]"
-    >
-      <div
-        className="rounded-[28px] p-5"
-        style={{
-          background: `linear-gradient(180deg, ${primary} 0%, ${darken(primary, 8)} 100%)`,
-        }}
-      >
-        {/* Status bar */}
-        <div className="flex items-center justify-between text-[10px] text-white/55">
-          <span>9:41</span>
-          <span>•••</span>
-        </div>
-
-        {/* Header */}
-        <div className="mt-5 flex items-center gap-3">
-          <div
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-[14px] font-display"
-            style={{ background: accent, color: primary }}
-          >
-            {initials}
-          </div>
-          <div>
-            <p
-              className="font-display text-[18px] leading-tight"
-              style={{ color: tintBg(primary) }}
-            >
-              {mosqueName}
-            </p>
-            <p className="text-[10.5px] text-white/55">Home</p>
-          </div>
-        </div>
-
-        {/* Next prayer card */}
-        <div
-          className="mt-5 rounded-2xl p-4"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: `1px solid rgba(255,255,255,0.08)`,
-          }}
-        >
-          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: accent }}>
-            Up next
-          </p>
-          <p className="mt-1 font-display text-[20px] text-white">Maghrib</p>
-          <p className="text-[12px] text-white/65">In 1h 24m · 7:48 PM</p>
-        </div>
-
-        {/* Quick actions */}
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {["Donate", "Programs", "Members"].map((label, i) => (
-            <button
-              key={label}
-              type="button"
-              className="rounded-xl px-2 py-2.5 text-center text-[11px] font-medium text-white"
-              style={{
-                background: i === 0 ? accent : "rgba(255,255,255,0.06)",
-                color: i === 0 ? primary : "rgba(255,255,255,0.85)",
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Today's program */}
-        <div className="mt-3 rounded-2xl bg-white/[0.04] p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-white/50">
-            Tonight
-          </p>
-          <p className="mt-1 text-[12.5px] font-semibold text-white">
-            Friday Halaqa
-          </p>
-          <p className="text-[11px] text-white/55">Sheikh Omar · 8:00 PM</p>
-          <button
-            type="button"
-            className="mt-3 w-full rounded-lg px-3 py-1.5 text-[11px] font-semibold"
-            style={{ background: accent, color: primary }}
-          >
-            RSVP
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function tintBg(hex: string): string {
-  // Pick a warm cream-ish tint for headers when on dark backgrounds.
-  return "#E8D5B0";
-}
-
-function darken(hex: string, amount: number): string {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!m) return hex;
-  const r = Math.max(0, parseInt(m[1], 16) - amount);
-  const g = Math.max(0, parseInt(m[2], 16) - amount);
-  const b = Math.max(0, parseInt(m[3], 16) - amount);
-  const h = (n: number) => n.toString(16).padStart(2, "0");
-  return `#${h(r)}${h(g)}${h(b)}`;
-}

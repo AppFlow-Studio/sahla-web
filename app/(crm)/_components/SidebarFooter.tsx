@@ -5,6 +5,7 @@ import { OrganizationSwitcher, useClerk, useUser } from "@clerk/nextjs";
 import { LogOut, UserCircle, ArrowLeft } from "lucide-react";
 import { useIsSahlaHQ } from "@/lib/auth/useIsSahlaHQ";
 import { crmProfileAppearance } from "../_lib/clerkAppearance";
+import MosquePicker from "./MosquePicker";
 
 const SWITCHER_APPEARANCE = {
   variables: {
@@ -52,17 +53,21 @@ export default function SidebarFooter() {
       {isLoaded && isSignedIn ? (
         <div className="space-y-0.5">
           {isHQ && (
-            <OrganizationSwitcher
-              hidePersonal
-              afterSelectOrganizationUrl="/launch"
-              afterSelectPersonalUrl="/select-org"
-              appearance={SWITCHER_APPEARANCE}
-            />
+            <>
+              {/* Pick which masjid's CRM to view (cookie-backed, no org switch). */}
+              <MosquePicker />
+              <OrganizationSwitcher
+                hidePersonal
+                afterSelectOrganizationUrl="/launch"
+                afterSelectPersonalUrl="/select-org"
+                appearance={SWITCHER_APPEARANCE}
+              />
+            </>
           )}
           <button
             type="button"
             onClick={() => openUserProfile({ appearance: crmProfileAppearance })}
-            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[#fffbf2]/60 transition-colors hover:bg-white/[0.04] hover:text-[#fffbf2]"
+            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[var(--mosque-primary-fg,#fffbf2)]/60 transition-colors hover:bg-white/[0.04] hover:text-[var(--mosque-primary-fg,#fffbf2)]"
           >
             <UserCircle size={15} strokeWidth={1.5} />
             <span className="line-clamp-1 flex-1 text-left">{displayName}</span>
@@ -70,7 +75,7 @@ export default function SidebarFooter() {
           <button
             type="button"
             onClick={() => signOut({ redirectUrl: "/" })}
-            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[#fffbf2]/60 transition-colors hover:bg-white/[0.04] hover:text-[#fffbf2]"
+            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[var(--mosque-primary-fg,#fffbf2)]/60 transition-colors hover:bg-white/[0.04] hover:text-[var(--mosque-primary-fg,#fffbf2)]"
           >
             <LogOut size={15} strokeWidth={1.5} />
             Sign out
@@ -79,7 +84,7 @@ export default function SidebarFooter() {
       ) : (
         <Link
           href="/"
-          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[#fffbf2]/60 transition-colors hover:bg-white/[0.04] hover:text-[#fffbf2]"
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[var(--mosque-primary-fg,#fffbf2)]/60 transition-colors hover:bg-white/[0.04] hover:text-[var(--mosque-primary-fg,#fffbf2)]"
         >
           <ArrowLeft size={14} />
           Back to Sahla

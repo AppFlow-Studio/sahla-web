@@ -116,7 +116,7 @@ export default function BusinessAdDetail({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Page background fades in/out independently of the morphing image. */}
       <motion.div
-        className="fixed inset-0 bg-[#fffbf2]"
+        className="fixed inset-0 bg-[var(--mosque-surface,#fffbf2)]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -309,7 +309,7 @@ export default function BusinessAdDetail({
                             failed
                               ? "bg-red-100 text-red-700"
                               : p.kind === "first"
-                              ? "bg-[#fffbf2] text-[#B8922A]"
+                              ? "bg-[var(--mosque-surface,#fffbf2)] text-[var(--mosque-accent,#B8922A)]"
                               : "bg-[#0A261E]/[0.06] text-[#0A261E]/65"
                           }`}
                         >

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Loader2, Search, X } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { SearchInput } from "../../_components/SearchInput";
 import { cn } from "@/lib/utils";
 
 type Program = { id: string; name: string };
@@ -127,15 +128,12 @@ export default function AssignProgramsModal({
         </div>
 
         <div className="border-b border-[#0A261E]/6 px-4 py-2.5">
-          <div className="flex items-center gap-2 rounded-lg border border-[#0A261E]/10 px-2.5 py-1.5">
-            <Search size={14} className="text-[#0A261E]/40" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search programs…"
-              className="w-full bg-transparent text-[13px] text-[#0A261E] outline-none placeholder:text-[#0A261E]/35"
-            />
-          </div>
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder="Search programs…"
+            autoFocus
+          />
         </div>
 
         <div className="min-h-[120px] flex-1 overflow-y-auto p-2">
@@ -164,7 +162,7 @@ export default function AssignProgramsModal({
                         className={cn(
                           "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors",
                           checked
-                            ? "border-[#0A261E] bg-[#0A261E] text-white"
+                            ? "border-[#0A261E] bg-[var(--mosque-primary,#0A261E)] text-[var(--mosque-primary-fg,#fffbf2)]"
                             : "border-[#0A261E]/25"
                         )}
                       >

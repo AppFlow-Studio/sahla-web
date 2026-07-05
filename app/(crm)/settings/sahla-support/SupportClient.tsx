@@ -109,7 +109,7 @@ export default function SupportClient() {
         <section className="flex h-[640px] flex-col overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-white">
           <header className="flex items-center justify-between border-b border-[#0A261E]/6 px-5 py-3">
             <div className="flex items-center gap-3">
-              <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[#0A261E] text-[12px] font-semibold text-[#fffbf2]">
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-[var(--mosque-primary,#0A261E)] text-[12px] font-semibold text-[var(--mosque-primary-fg,#fffbf2)]">
                 SR
                 <span
                   aria-label="Online"
@@ -234,7 +234,7 @@ function ChatBubble({ message }: { message: Message }) {
       className={cn("flex items-end gap-2", isYou && "flex-row-reverse")}
     >
       {!isYou ? (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0A261E] text-[10.5px] font-semibold text-[#fffbf2]">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--mosque-primary,#0A261E)] text-[10.5px] font-semibold text-[var(--mosque-primary-fg,#fffbf2)]">
           SR
         </div>
       ) : null}
@@ -242,15 +242,15 @@ function ChatBubble({ message }: { message: Message }) {
         className={cn(
           "max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed",
           isYou
-            ? "bg-[#0A261E] text-[#fffbf2]"
-            : "bg-[#fffbf2] text-[#0A261E] ring-1 ring-[#0A261E]/8"
+            ? "bg-[var(--mosque-primary,#0A261E)] text-[var(--mosque-primary-fg,#fffbf2)]"
+            : "bg-[var(--mosque-surface,#fffbf2)] text-[#0A261E] ring-1 ring-[#0A261E]/8"
         )}
       >
         <p>{message.body}</p>
         <p
           className={cn(
             "mt-1 text-[10px]",
-            isYou ? "text-[#fffbf2]/45" : "text-[#0A261E]/45"
+            isYou ? "text-[var(--mosque-primary-fg,#fffbf2)]/45" : "text-[#0A261E]/45"
           )}
         >
           {message.authorName} · {relativeShort(message.sentAt)}
@@ -276,7 +276,7 @@ function ContactCard({
       href={href}
       className="group flex items-center gap-3 rounded-2xl border border-[#0A261E]/8 bg-white p-4 transition-shadow hover:shadow-[0_6px_16px_-10px_rgba(10,38,30,0.18)]"
     >
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fffbf2] text-[#B8922A]">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--mosque-surface,#fffbf2)] text-[var(--mosque-accent,#B8922A)]">
         <Icon size={15} strokeWidth={1.6} />
       </div>
       <div className="min-w-0">

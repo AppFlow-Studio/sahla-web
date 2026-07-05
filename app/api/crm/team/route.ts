@@ -93,7 +93,9 @@ export async function GET() {
 
   const session = await auth();
   // HQ previews don't have a real org to inspect.
-  if (access.isHQ || !session.orgId) {
+  // HQ preview, or an HQ user viewing a mosque by cookie (whose active Clerk org
+  // is still Sahla HQ, not the mosque) — no real mosque org to manage here.
+  if (access.isHQ || access.isHQViewing || !session.orgId) {
     return NextResponse.json({ members: [] satisfies CrmTeamMember[] });
   }
 
@@ -191,7 +193,9 @@ export async function POST(request: Request) {
   if (!access.ok) return access.response;
 
   const session = await auth();
-  if (access.isHQ || !session.orgId) {
+  // HQ preview, or an HQ user viewing a mosque by cookie (whose active Clerk org
+  // is still Sahla HQ, not the mosque) — no real mosque org to manage here.
+  if (access.isHQ || access.isHQViewing || !session.orgId) {
     return NextResponse.json(
       { error: "HQ preview can't invite teammates — sign in as a mosque admin." },
       { status: 403 }
@@ -230,7 +234,9 @@ export async function DELETE(request: Request) {
   if (!access.ok) return access.response;
 
   const session = await auth();
-  if (access.isHQ || !session.orgId) {
+  // HQ preview, or an HQ user viewing a mosque by cookie (whose active Clerk org
+  // is still Sahla HQ, not the mosque) — no real mosque org to manage here.
+  if (access.isHQ || access.isHQViewing || !session.orgId) {
     return NextResponse.json(
       { error: "HQ preview can't remove teammates." },
       { status: 403 }

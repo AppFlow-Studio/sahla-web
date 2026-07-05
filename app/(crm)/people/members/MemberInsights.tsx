@@ -74,7 +74,7 @@ export default function MemberInsights() {
               className={cn(
                 "rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors",
                 selected
-                  ? "border-[#0A261E] bg-[#0A261E] text-white"
+                  ? "border-[#0A261E] bg-[var(--mosque-primary,#0A261E)] text-[var(--mosque-primary-fg,#fffbf2)]"
                   : "border-[#0A261E]/15 bg-white text-[#0A261E]/75 hover:border-[#0A261E]/30 hover:text-[#0A261E]"
               )}
             >
@@ -256,7 +256,7 @@ export default function MemberInsights() {
             </div>
 
             {data.programMissing > 0 ? (
-              <div className="mt-5 flex flex-col gap-3 rounded-xl border-l-[3px] border-[#B8922A] bg-[#fdf8ec] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-5 flex flex-col gap-3 rounded-xl border-l-[3px] border-[var(--mosque-accent,#B8922A)] bg-[#fdf8ec] p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[13px] font-semibold text-[#8a6d1f]">
                     Members not getting program alerts
@@ -382,7 +382,7 @@ function ChartToggle({
           aria-pressed={mode === m}
           className={cn(
             "rounded-md px-3 py-1 text-[12px] font-medium capitalize transition-colors",
-            mode === m ? "bg-[#0A261E] text-white" : "text-[#0A261E]/60 hover:text-[#0A261E]"
+            mode === m ? "bg-[var(--mosque-primary,#0A261E)] text-[var(--mosque-primary-fg,#fffbf2)]" : "text-[#0A261E]/60 hover:text-[#0A261E]"
           )}
         >
           {m}
@@ -485,7 +485,7 @@ function MiniStat({
           display === "N/A"
             ? "text-[#0A261E]/35"
             : tone === "gold"
-            ? "text-[#B8922A]"
+            ? "text-[var(--mosque-accent,#B8922A)]"
             : "text-[#0A261E]"
         )}
       >
@@ -522,7 +522,7 @@ function LoadingInsights() {
   return (
     <div className="mt-4 rounded-2xl border border-dashed border-[#0A261E]/12 bg-white px-6 py-12 text-center">
       <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#f6f1e4]">
-        <Users size={18} className="text-[#B8922A]" />
+        <Users size={18} className="text-[var(--mosque-accent,#B8922A)]" />
       </div>
       <h3 className="font-display text-[17px] text-[#0A261E]">Loading insights…</h3>
       <p className="mx-auto mt-1 max-w-sm text-[13px] text-[#0A261E]/55">

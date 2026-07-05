@@ -99,7 +99,7 @@ export default function NotificationInbox() {
       >
         <Bell size={16} strokeWidth={1.75} />
         {unreadCount > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#B8922A] px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-[#fffbf2]">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--mosque-accent,#B8922A)] px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-[#fffbf2]">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         ) : null}
@@ -129,7 +129,7 @@ export default function NotificationInbox() {
 
         {events.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f6f1e4] text-[#B8922A]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f6f1e4] text-[var(--mosque-accent,#B8922A)]">
               <Inbox size={17} />
             </div>
             <p className="text-[13px] font-medium text-[#0A261E]">
@@ -151,7 +151,7 @@ export default function NotificationInbox() {
                   key={event.id}
                   className={cn(
                     "flex items-start gap-3 px-4 py-2.5 transition-colors",
-                    isUnread ? "bg-[#fdf8ec]" : "hover:bg-[#fffbf2]/70"
+                    isUnread ? "bg-[#fdf8ec]" : "hover:bg-[var(--mosque-surface,#fffbf2)]/70"
                   )}
                 >
                   <div
@@ -173,7 +173,7 @@ export default function NotificationInbox() {
                   {isUnread ? (
                     <span
                       aria-hidden
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#B8922A]"
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--mosque-accent,#B8922A)]"
                     />
                   ) : null}
                 </li>

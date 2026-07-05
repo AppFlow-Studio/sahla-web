@@ -134,7 +134,7 @@ export default function BusinessAdImageInput({ value, onChange, error }: Props) 
           disabled={uploading}
           className={`flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed text-center transition-colors ${
             dragOver
-              ? "border-[#B8922A] bg-[#fffbf2]"
+              ? "border-[var(--mosque-accent,#B8922A)] bg-[var(--mosque-surface,#fffbf2)]"
               : error
               ? "border-red-300 bg-red-50/40"
               : "border-[#0A261E]/15 bg-[#0A261E]/[0.02] hover:border-[#0A261E]/25 hover:bg-[#0A261E]/[0.04]"

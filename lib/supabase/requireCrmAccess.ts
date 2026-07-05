@@ -2,11 +2,12 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "./admin";
 import { resolveMosqueId } from "./resolveMosqueId";
+import { getHqSelectedMosqueId } from "@/lib/crm/hqMosqueSelection";
 
 const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 
 type CrmAccessResult =
-  | { ok: true; mosqueId: string; isHQ: boolean; userId: string }
+  | { ok: true; mosqueId: string; isHQ: boolean; isHQViewing: boolean; userId: string }
   | { ok: false; response: NextResponse };
 
 /**
@@ -22,8 +23,13 @@ type CrmAccessResult =
  *     // use access.mosqueId
  *   }
  *
- * `mosqueId` for HQ callers will be null — handle the HQ branch in your
- * route if it needs cross-mosque reads. Most CRM routes shouldn't.
+ * `isHQ` (with empty `mosqueId`) marks the HQ *preview* — no mosque chosen, so
+ * routes serve empty/mock data. When an HQ user picks a mosque (the
+ * `hq_active_mosque` cookie), they're returned as that mosque with
+ * `isHQ:false`, `isHQViewing:true`, and the real `mosqueId` — so every
+ * mosque-scoped route serves that mosque's real data. Only routes that act on
+ * the *Clerk org* (e.g. team management) must also treat `isHQViewing` as
+ * preview, since the cookie doesn't change the active Clerk org.
  */
 export async function requireCrmAccess(): Promise<CrmAccessResult> {
   const session = await auth();
@@ -34,10 +40,37 @@ export async function requireCrmAccess(): Promise<CrmAccessResult> {
     };
   }
 
-  // Sahla HQ admins get a free pass — used for QA + cross-mosque tooling.
+  // Sahla HQ: either previewing (no mosque picked) or viewing a chosen mosque's
+  // real CRM. HQ may view any mosque regardless of its CRM plan.
   if (SAHLA_HQ_ORG_ID && session.orgId === SAHLA_HQ_ORG_ID) {
-    return { ok: true, mosqueId: "", isHQ: true, userId: session.userId };
+    const selectedMosqueId = await getHqSelectedMosqueId();
+    if (selectedMosqueId) {
+      const supabase = createAdminSupabaseClient();
+      const { data: mosque } = await supabase
+        .from("mosques")
+        .select("id")
+        .eq("id", selectedMosqueId)
+        .maybeSingle();
+      if (mosque) {
+        return {
+          ok: true,
+          mosqueId: mosque.id,
+          isHQ: false,
+          isHQViewing: true,
+          userId: session.userId,
+        };
+      }
+    }
+    return {
+      ok: true,
+      mosqueId: "",
+      isHQ: true,
+      isHQViewing: false,
+      userId: session.userId,
+    };
   }
+
+  const supabase = createAdminSupabaseClient();
 
   if (!session.orgId) {
     return {
@@ -61,7 +94,6 @@ export async function requireCrmAccess(): Promise<CrmAccessResult> {
   }
 
   // Canonical CRM-access check via the feature-flags view.
-  const supabase = createAdminSupabaseClient();
   const { data: flags, error } = await supabase
     .from("mosque_feature_flags")
     .select("has_crm_access")
@@ -89,5 +121,5 @@ export async function requireCrmAccess(): Promise<CrmAccessResult> {
     };
   }
 
-  return { ok: true, mosqueId, isHQ: false, userId: session.userId };
+  return { ok: true, mosqueId, isHQ: false, isHQViewing: false, userId: session.userId };
 }

@@ -122,7 +122,7 @@ export default function BusinessAdsConfigSummary({
             <button
               onClick={save}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#0A261E] px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-[#0A261E]/90 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--mosque-primary,#0A261E)] px-3 py-1.5 text-[12px] font-medium text-[var(--mosque-primary-fg,#fffbf2)] transition-colors hover:bg-[var(--mosque-primary,#0A261E)]/90 disabled:opacity-50"
             >
               <Check size={12} />
               {saving ? "Saving…" : "Save"}
@@ -223,8 +223,8 @@ export default function BusinessAdsConfigSummary({
           </p>
         </div>
 
-        <div className="bg-[#fffbf2] px-6 py-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#B8922A]">
+        <div className="bg-[var(--mosque-surface,#fffbf2)] px-6 py-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mosque-accent,#B8922A)]">
             5-business projection
           </p>
           <p className="mt-2 font-display text-[24px] leading-none text-[#0A261E]">

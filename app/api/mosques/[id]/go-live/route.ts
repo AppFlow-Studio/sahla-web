@@ -179,7 +179,10 @@ export async function POST(
           type: "saas_subscription",
         },
       },
-      success_url: `${appUrl}/launching?payment=success`,
+      // On success, offer the (optional) backup card before /launching. The
+      // subscription is already active by this point — the backup step is a
+      // skippable interstitial, so a bailed backup never blocks going live.
+      success_url: `${appUrl}/onboarding/backup-card`,
       cancel_url: `${appUrl}/launching?payment=cancelled`,
     });
 

@@ -97,11 +97,11 @@ export default function PlaceholderPage({
               {bullets.map((b, i) => (
                 <li
                   key={i}
-                  className="flex items-start gap-2 rounded-lg border border-[#0A261E]/6 bg-[#fffbf2] px-3 py-2.5"
+                  className="flex items-start gap-2 rounded-lg border border-[#0A261E]/6 bg-[var(--mosque-surface,#fffbf2)] px-3 py-2.5"
                 >
                   <span
                     aria-hidden
-                    className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#B8922A]"
+                    className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--mosque-accent,#B8922A)]"
                   />
                   <span>{b}</span>
                 </li>

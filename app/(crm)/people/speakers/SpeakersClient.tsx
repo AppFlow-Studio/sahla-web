@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, Mic2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Plus, Mic2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "../../_components/SearchInput";
 import {
   Dialog,
   DialogContent,
@@ -115,19 +115,12 @@ export default function SpeakersClient() {
         <>
           {/* Search bar */}
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="relative max-w-md flex-1">
-              <Search
-                size={14}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#0A261E]/40"
-              />
-              <Input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name or credentials…"
-                className="pl-9"
-              />
-            </div>
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder="Search by name or credentials…"
+              className="max-w-md flex-1"
+            />
             <p className="text-[12.5px] text-[#0A261E]/55">
               {filtered.length} {filtered.length === 1 ? "speaker" : "speakers"}
             </p>
@@ -135,7 +128,7 @@ export default function SpeakersClient() {
 
           {/* Desktop table */}
           <div className="hidden overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-white md:block">
-            <div className="grid grid-cols-[1fr_140px_120px_56px] items-center gap-4 border-b border-[#0A261E]/8 bg-[#fffbf2] px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0A261E]/55">
+            <div className="grid grid-cols-[1fr_140px_120px_56px] items-center gap-4 border-b border-[#0A261E]/8 bg-[var(--mosque-surface,#fffbf2)] px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0A261E]/55">
               <div>Speaker</div>
               <div>Programs led</div>
               <div>Last spoke</div>
@@ -169,7 +162,7 @@ export default function SpeakersClient() {
                           />
                         </div>
                       ) : (
-                        <div className="group grid grid-cols-[1fr_140px_120px_56px] items-center gap-4 px-5 py-3 transition-colors hover:bg-[#fffbf2]/60">
+                        <div className="group grid grid-cols-[1fr_140px_120px_56px] items-center gap-4 px-5 py-3 transition-colors hover:bg-[var(--mosque-surface,#fffbf2)]/60">
                           <button
                             type="button"
                             onClick={() => setDialog({ mode: "edit", speaker })}

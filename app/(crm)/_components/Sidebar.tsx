@@ -17,7 +17,7 @@ export default function Sidebar() {
   const mosque = useMosque();
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 flex-col self-start overflow-hidden border-r border-white/[0.06] bg-[#0A261E] text-[#fffbf2] md:flex">
+    <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 flex-col self-start overflow-hidden border-r border-[var(--mosque-primary-fg,#fffbf2)]/[0.06] bg-[var(--mosque-primary,#0A261E)] text-[var(--mosque-primary-fg,#fffbf2)] md:flex">
       {/* Mosque header */}
       <div className="px-5 pt-6 pb-5">
         <div className="flex items-center gap-3">
@@ -26,22 +26,22 @@ export default function Sidebar() {
             <img
               src={mosque.logoUrl}
               alt=""
-              className="h-9 w-9 shrink-0 rounded-xl object-cover ring-1 ring-white/15"
+              className="h-9 w-9 shrink-0 rounded-xl object-cover ring-1 ring-[var(--mosque-primary-fg,#fffbf2)]/15"
             />
           ) : (
             <div
               aria-hidden
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-display text-base text-[#0A261E] shadow-[inset_0_-2px_4px_rgba(0,0,0,0.15)]"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-display text-base text-[var(--mosque-accent-fg,#0A261E)] shadow-[inset_0_-2px_4px_rgba(0,0,0,0.15)]"
               style={{ background: "var(--mosque-accent, #B8922A)" }}
             >
               {mosque.logoInitials}
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-[15px] leading-tight text-[#E8D5B0]">
+            <p className="truncate font-display text-[15px] leading-tight text-[var(--mosque-primary-fg,#fffbf2)]">
               {mosque.name}
             </p>
-            <p className="text-[11px] leading-tight text-[#fffbf2]/40">
+            <p className="text-[11px] leading-tight text-[var(--mosque-primary-fg,#fffbf2)]/40">
               {mosque.city}, {mosque.state}
             </p>
           </div>
@@ -67,8 +67,8 @@ export default function Sidebar() {
                 className={cn(
                   "group mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
                   isSectionActive
-                    ? "bg-white/[0.08] text-white"
-                    : "text-[#fffbf2]/60 hover:bg-white/[0.04] hover:text-[#fffbf2]"
+                    ? "bg-[var(--mosque-primary-fg,#fffbf2)]/[0.08] text-[var(--mosque-primary-fg,#fffbf2)]"
+                    : "text-[var(--mosque-primary-fg,#fffbf2)]/60 hover:bg-[var(--mosque-primary-fg,#fffbf2)]/[0.04] hover:text-[var(--mosque-primary-fg,#fffbf2)]"
                 )}
               >
                 <Icon size={16} strokeWidth={1.75} className="shrink-0" />
@@ -117,8 +117,8 @@ function SectionGroup({
         className={cn(
           "group flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
           defaultOpen
-            ? "text-[#fffbf2]"
-            : "text-[#fffbf2]/55 hover:text-[#fffbf2]"
+            ? "text-[var(--mosque-primary-fg,#fffbf2)]"
+            : "text-[var(--mosque-primary-fg,#fffbf2)]/55 hover:text-[var(--mosque-primary-fg,#fffbf2)]"
         )}
       >
         <Icon size={16} strokeWidth={1.75} className="shrink-0" />
@@ -127,7 +127,7 @@ function SectionGroup({
           aria-hidden
           animate={{ rotate: defaultOpen ? 90 : 0 }}
           transition={{ duration: 0.2, ease: EASE }}
-          className="text-[#fffbf2]/35"
+          className="text-[var(--mosque-primary-fg,#fffbf2)]/35"
         >
           <ChevronRight size={12} strokeWidth={2} />
         </motion.span>
@@ -141,7 +141,7 @@ function SectionGroup({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22, ease: EASE }}
-            className="mt-0.5 ml-3 overflow-hidden border-l border-white/[0.06] pl-3"
+            className="mt-0.5 ml-3 overflow-hidden border-l border-[var(--mosque-primary-fg,#fffbf2)]/[0.06] pl-3"
           >
             {children.map((child) => {
               const ChildIcon = child.icon;
@@ -155,8 +155,8 @@ function SectionGroup({
                     className={cn(
                       "group relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[12.5px] transition-colors",
                       isActive
-                        ? "bg-white/[0.08] text-white"
-                        : "text-[#fffbf2]/55 hover:bg-white/[0.04] hover:text-[#fffbf2]"
+                        ? "bg-[var(--mosque-primary-fg,#fffbf2)]/[0.08] text-[var(--mosque-primary-fg,#fffbf2)]"
+                        : "text-[var(--mosque-primary-fg,#fffbf2)]/55 hover:bg-[var(--mosque-primary-fg,#fffbf2)]/[0.04] hover:text-[var(--mosque-primary-fg,#fffbf2)]"
                     )}
                   >
                     <ChildIcon
@@ -164,7 +164,7 @@ function SectionGroup({
                       strokeWidth={1.75}
                       className={cn(
                         "shrink-0",
-                        isActive ? "" : "text-[#fffbf2]/40"
+                        isActive ? "" : "text-[var(--mosque-primary-fg,#fffbf2)]/40"
                       )}
                       style={
                         isActive
