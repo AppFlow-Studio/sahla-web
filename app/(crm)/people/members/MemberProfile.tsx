@@ -283,7 +283,7 @@ function Shimmer({ w }: { w: string }) {
 
 function ProfileStatus({ status }: { status: "complete" | "in_progress" | "not_started" }) {
   if (status === "complete") return <span className="font-medium text-emerald-700">Complete</span>;
-  if (status === "in_progress") return <span className="font-medium text-[#B8922A]">In progress</span>;
+  if (status === "in_progress") return <span className="font-medium text-[var(--mosque-accent,#B8922A)]">In progress</span>;
   return <Muted>Not started</Muted>;
 }
 

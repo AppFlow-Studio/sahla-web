@@ -20,8 +20,8 @@ export default function ComingSoonBadge({
           ? "px-1.5 py-0.5 text-[9px]"
           : "px-2 py-0.5 text-[10px]",
         variant === "brass"
-          ? "bg-[#B8922A]/15 text-[#B8922A]"
-          : "border border-[#fffbf2]/15 text-[#fffbf2]/55",
+          ? "bg-[var(--mosque-accent,#B8922A)]/15 text-[var(--mosque-accent,#B8922A)]"
+          : "border border-[#fffbf2]/15 text-[var(--mosque-primary-fg,#fffbf2)]/55",
         className
       )}
     >

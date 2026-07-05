@@ -296,7 +296,7 @@ export default function ProgramCardsClient() {
                               className={cn(
                                 "rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition-colors",
                                 row.audienceFilter === f
-                                  ? "border-[#0A261E] bg-[#0A261E] text-white"
+                                  ? "border-[#0A261E] bg-[var(--mosque-primary,#0A261E)] text-[var(--mosque-primary-fg,#fffbf2)]"
                                   : "border-[#0A261E]/15 text-[#0A261E]/60 hover:border-[#0A261E]/30"
                               )}
                             >

@@ -241,7 +241,7 @@ export default function NotificationsClient() {
               </div>
 
               {/* Schedule */}
-              <div className="rounded-xl border border-[#0A261E]/8 bg-[#fffbf2]/60 p-4">
+              <div className="rounded-xl border border-[#0A261E]/8 bg-[var(--mosque-surface,#fffbf2)]/60 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[13px] font-semibold text-[#0A261E]">
@@ -300,7 +300,7 @@ export default function NotificationsClient() {
               </div>
 
               {/* Save as template */}
-              <div className="rounded-xl border border-[#0A261E]/8 bg-[#fffbf2]/60 p-4">
+              <div className="rounded-xl border border-[#0A261E]/8 bg-[var(--mosque-surface,#fffbf2)]/60 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[13px] font-semibold text-[#0A261E]">
@@ -385,8 +385,8 @@ export default function NotificationsClient() {
                     className="px-5 py-3"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fffbf2]">
-                        <Bell size={13} className="text-[#B8922A]" />
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--mosque-surface,#fffbf2)]">
+                        <Bell size={13} className="text-[var(--mosque-accent,#B8922A)]" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[13px] font-semibold text-[#0A261E]">
@@ -428,7 +428,7 @@ export default function NotificationsClient() {
                 Click to load into the form
               </p>
             </div>
-            <Star size={15} className="text-[#B8922A]" />
+            <Star size={15} className="text-[var(--mosque-accent,#B8922A)]" />
           </header>
           <ul className="divide-y divide-[#0A261E]/6">
             <AnimatePresence initial={false}>
@@ -460,7 +460,7 @@ export default function NotificationsClient() {
                     transition={{ duration: 0.18, ease: EASE }}
                     className={cn(
                       "group relative px-5 py-3 transition-colors",
-                      active ? "bg-[#fffbf2]" : "hover:bg-[#fffbf2]/60"
+                      active ? "bg-[var(--mosque-surface,#fffbf2)]" : "hover:bg-[var(--mosque-surface,#fffbf2)]/60"
                     )}
                   >
                     <button
@@ -542,7 +542,7 @@ function Field({
         <Label className="text-[12.5px] font-semibold text-[#0A261E]">
           {label}
           {required ? (
-            <span aria-hidden className="ml-0.5 text-[#B8922A]">
+            <span aria-hidden className="ml-0.5 text-[var(--mosque-accent,#B8922A)]">
               *
             </span>
           ) : null}

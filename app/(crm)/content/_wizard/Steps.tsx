@@ -181,7 +181,7 @@ export function StepSchedule({ kind }: StepProps) {
                     className={cn(
                       "rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors",
                       active
-                        ? "border-[#0A261E] bg-[#0A261E] text-[#fffbf2]"
+                        ? "border-[#0A261E] bg-[var(--mosque-primary,#0A261E)] text-[var(--mosque-primary-fg,#fffbf2)]"
                         : "border-[#0A261E]/15 bg-white text-[#0A261E]/65 hover:border-[#0A261E]/30"
                     )}
                   >
@@ -320,7 +320,7 @@ export function StepImage({ kind }: StepProps) {
         />
       </Field>
 
-      <div className="mt-2 flex aspect-[4/3] max-w-md items-center justify-center overflow-hidden rounded-2xl border border-dashed border-[#0A261E]/15 bg-[#fffbf2]">
+      <div className="mt-2 flex aspect-[4/3] max-w-md items-center justify-center overflow-hidden rounded-2xl border border-dashed border-[#0A261E]/15 bg-[var(--mosque-surface,#fffbf2)]">
         {imageUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
@@ -470,7 +470,7 @@ function Field({
         <Label className="text-[12.5px] font-semibold text-[#0A261E]">
           {label}
           {required ? (
-            <span aria-hidden className="ml-0.5 text-[#B8922A]">
+            <span aria-hidden className="ml-0.5 text-[var(--mosque-accent,#B8922A)]">
               *
             </span>
           ) : null}

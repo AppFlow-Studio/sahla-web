@@ -13,7 +13,6 @@ import {
 } from "@tanstack/react-table";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Search,
   Mail,
   EyeOff,
   ChevronUp,
@@ -27,7 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "../../_components/SearchInput";
 import {
   Select,
   SelectContent,
@@ -281,19 +280,12 @@ export default function MembersClient() {
       {/* Filters */}
       <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-1 flex-col gap-3 md:flex-row md:items-center">
-          <div className="relative max-w-md flex-1">
-            <Search
-              size={14}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#0A261E]/40"
-            />
-            <Input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name or email…"
-              className="pl-9"
-            />
-          </div>
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder="Search by name or email…"
+            className="max-w-md flex-1"
+          />
           <Select value={pushFilter} onValueChange={(v) => setPushFilter(v as PushFilter)}>
             <SelectTrigger className="w-[180px]">
               <SelectValue />
@@ -313,7 +305,7 @@ export default function MembersClient() {
       {/* Desktop table */}
       <div className="hidden overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-white md:block">
         <table className="w-full text-left">
-          <thead className="border-b border-[#0A261E]/8 bg-[#fffbf2]">
+          <thead className="border-b border-[#0A261E]/8 bg-[var(--mosque-surface,#fffbf2)]">
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id}>
                 {hg.headers.map((header) => {
@@ -374,7 +366,7 @@ export default function MembersClient() {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.15 }}
                   onClick={() => openMember(row.original)}
-                  className="cursor-pointer border-b border-[#0A261E]/6 last:border-b-0 transition-colors hover:bg-[#fffbf2]/60"
+                  className="cursor-pointer border-b border-[#0A261E]/6 last:border-b-0 transition-colors hover:bg-[var(--mosque-surface,#fffbf2)]/60"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-5 py-3 align-middle">
@@ -389,7 +381,7 @@ export default function MembersClient() {
 
         {/* Pagination */}
         {table.getPageCount() > 1 ? (
-          <div className="flex items-center justify-between border-t border-[#0A261E]/8 bg-[#fffbf2]/50 px-5 py-2.5 text-[12px]">
+          <div className="flex items-center justify-between border-t border-[#0A261E]/8 bg-[var(--mosque-surface,#fffbf2)]/50 px-5 py-2.5 text-[12px]">
             <p className="text-[#0A261E]/55">
               Page {table.getState().pagination.pageIndex + 1} of{" "}
               {table.getPageCount()}
@@ -434,7 +426,7 @@ export default function MembersClient() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.15, ease: EASE }}
                 onClick={() => openMember(m)}
-                className="cursor-pointer rounded-xl border border-[#0A261E]/8 bg-white p-4 transition-colors active:bg-[#fffbf2]"
+                className="cursor-pointer rounded-xl border border-[#0A261E]/8 bg-white p-4 transition-colors active:bg-[var(--mosque-surface,#fffbf2)]"
               >
                 <div className="flex items-start gap-3">
                   <Avatar
@@ -478,7 +470,7 @@ export default function MembersClient() {
         )}
 
         {table.getPageCount() > 1 ? (
-          <li className="flex items-center justify-between rounded-xl border border-[#0A261E]/8 bg-[#fffbf2] px-3 py-2 text-[12px]">
+          <li className="flex items-center justify-between rounded-xl border border-[#0A261E]/8 bg-[var(--mosque-surface,#fffbf2)] px-3 py-2 text-[12px]">
             <span className="text-[#0A261E]/55">
               Page {table.getState().pagination.pageIndex + 1}/{table.getPageCount()}
             </span>
@@ -567,7 +559,7 @@ function EmailCell({
     >
       <EyeOff size={10} className="opacity-60 group-hover:opacity-100" />
       <span className="font-mono tracking-tight">{maskEmail(email)}</span>
-      <span className="text-[10px] text-[#B8922A] opacity-0 transition-opacity group-hover:opacity-100">
+      <span className="text-[10px] text-[var(--mosque-accent,#B8922A)] opacity-0 transition-opacity group-hover:opacity-100">
         click to reveal
       </span>
     </button>
@@ -579,9 +571,9 @@ function EmptyMembers() {
     <div className="mx-auto max-w-sm">
       <div
         aria-hidden
-        className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#fffbf2]"
+        className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mosque-surface,#fffbf2)]"
       >
-        <UserPlus size={20} className="text-[#B8922A]" />
+        <UserPlus size={20} className="text-[var(--mosque-accent,#B8922A)]" />
       </div>
       <h3 className="font-display text-[18px] text-[#0A261E]">
         No members match this filter

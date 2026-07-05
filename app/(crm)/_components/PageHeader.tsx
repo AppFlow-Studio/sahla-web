@@ -29,7 +29,7 @@ export default function PageHeader({
     >
       <div className="min-w-0 flex-1">
         {eyebrow ? (
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#B8922A]">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mosque-accent,#B8922A)]">
             {eyebrow}
           </p>
         ) : null}

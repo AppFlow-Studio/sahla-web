@@ -47,9 +47,9 @@ export default function EmptyState({
 
         {ghostRowCaption ? (
           <div className="mt-8">
-            <div className="mx-auto flex h-12 max-w-sm items-center justify-between rounded-xl border-2 border-dashed border-[#B8922A]/40 bg-[#B8922A]/[0.04] px-4 text-[13px] font-medium text-[#B8922A]">
+            <div className="mx-auto flex h-12 max-w-sm items-center justify-between rounded-xl border-2 border-dashed border-[var(--mosque-accent,#B8922A)]/40 bg-[var(--mosque-accent,#B8922A)]/[0.04] px-4 text-[13px] font-medium text-[var(--mosque-accent,#B8922A)]">
               <span className="opacity-70">{ghostRowCaption}</span>
-              <span className="rounded-md bg-[#B8922A]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+              <span className="rounded-md bg-[var(--mosque-accent,#B8922A)]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
                 Sample
               </span>
             </div>

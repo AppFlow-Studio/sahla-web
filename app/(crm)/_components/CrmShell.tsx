@@ -11,6 +11,7 @@ import FirstLoginTour from "./FirstLoginTour";
 import { MosqueProvider } from "./MosqueProvider";
 import BinaryBuildBanner from "./BinaryBuildBanner";
 import type { MosqueProfile } from "../_lib/getCurrentMosque";
+import { readableForeground } from "../_lib/color";
 
 export default function CrmShell({
   mosque,
@@ -20,21 +21,30 @@ export default function CrmShell({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const primaryFg = readableForeground(mosque.primaryColor);
 
   return (
     <MosqueProvider mosque={mosque}>
     <TooltipProvider delay={120}>
       <CommandPaletteProvider>
         <div
-          className="relative flex min-h-screen bg-[#fffbf2] text-[#0A261E]"
+          className="relative flex min-h-screen bg-[var(--mosque-surface,#fffbf2)] text-[#0A261E]"
           // Expose the mosque's brand colors as CSS vars so any descendant
-          // (sidebar accents, badges, etc.) can recolor without prop-drilling.
-          // Falls back to the Sahla default palette if the mosque hasn't
-          // overridden them.
+          // (sidebar, background, badges, etc.) can recolor without
+          // prop-drilling. `*-fg` are contrast-safe text colors computed from
+          // the brand color; `surface` is a soft brand tint over the cream base.
+          // We also override shadcn's `--primary` token so every `bg-primary`
+          // button/link brands to the mosque automatically (scoped to the CRM).
+          // Everything falls back to the Sahla default palette.
           style={
             {
               "--mosque-primary": mosque.primaryColor,
+              "--mosque-primary-fg": primaryFg,
               "--mosque-accent": mosque.accentColor,
+              "--mosque-accent-fg": readableForeground(mosque.accentColor),
+              "--mosque-surface": `color-mix(in oklab, ${mosque.primaryColor} 4%, #fffbf2)`,
+              "--primary": mosque.primaryColor,
+              "--primary-foreground": primaryFg,
             } as React.CSSProperties
           }
         >

@@ -67,7 +67,7 @@ export default function SidebarFooter() {
           <button
             type="button"
             onClick={() => openUserProfile({ appearance: crmProfileAppearance })}
-            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[#fffbf2]/60 transition-colors hover:bg-white/[0.04] hover:text-[#fffbf2]"
+            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[var(--mosque-primary-fg,#fffbf2)]/60 transition-colors hover:bg-white/[0.04] hover:text-[var(--mosque-primary-fg,#fffbf2)]"
           >
             <UserCircle size={15} strokeWidth={1.5} />
             <span className="line-clamp-1 flex-1 text-left">{displayName}</span>
@@ -75,7 +75,7 @@ export default function SidebarFooter() {
           <button
             type="button"
             onClick={() => signOut({ redirectUrl: "/" })}
-            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[#fffbf2]/60 transition-colors hover:bg-white/[0.04] hover:text-[#fffbf2]"
+            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[var(--mosque-primary-fg,#fffbf2)]/60 transition-colors hover:bg-white/[0.04] hover:text-[var(--mosque-primary-fg,#fffbf2)]"
           >
             <LogOut size={15} strokeWidth={1.5} />
             Sign out
@@ -84,7 +84,7 @@ export default function SidebarFooter() {
       ) : (
         <Link
           href="/"
-          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[#fffbf2]/60 transition-colors hover:bg-white/[0.04] hover:text-[#fffbf2]"
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-[var(--mosque-primary-fg,#fffbf2)]/60 transition-colors hover:bg-white/[0.04] hover:text-[var(--mosque-primary-fg,#fffbf2)]"
         >
           <ArrowLeft size={14} />
           Back to Sahla

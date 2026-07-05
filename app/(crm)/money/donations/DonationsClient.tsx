@@ -212,7 +212,7 @@ export default function DonationsClient() {
               Total received per day. Refunds excluded.
             </p>
           </div>
-          <div className="flex items-center gap-1 rounded-lg bg-[#fffbf2] p-0.5">
+          <div className="flex items-center gap-1 rounded-lg bg-[var(--mosque-surface,#fffbf2)] p-0.5">
             {(Object.keys(RANGE_LABELS) as Range[]).map((r) => (
               <button
                 key={r}
@@ -284,7 +284,7 @@ export default function DonationsClient() {
                 strokeWidth={2}
                 fill="url(#donations-fill)"
                 dot={false}
-                activeDot={{ r: 4, fill: "#B8922A", stroke: "#fffbf2", strokeWidth: 2 }}
+                activeDot={{ r: 4, fill: "var(--mosque-accent, #B8922A)", stroke: "#fffbf2", strokeWidth: 2 }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -304,7 +304,7 @@ export default function DonationsClient() {
                 Anonymized — no names exported.
               </p>
             </div>
-            <HeartHandshake size={16} className="text-[#B8922A]" />
+            <HeartHandshake size={16} className="text-[var(--mosque-accent,#B8922A)]" />
           </header>
           <ol className="divide-y divide-[#0A261E]/6">
             {topDonors.map((d) => (
@@ -369,8 +369,8 @@ export default function DonationsClient() {
 function RecentDonationRow({ donation }: { donation: Donation }) {
   return (
     <li className="flex items-center gap-3 px-5 py-2.5">
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fffbf2]">
-        <Heart size={13} className="text-[#B8922A]" />
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--mosque-surface,#fffbf2)]">
+        <Heart size={13} className="text-[var(--mosque-accent,#B8922A)]" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-semibold text-[#0A261E]">
@@ -414,25 +414,25 @@ function FundraisingGoalCard({
   return (
     <section
       aria-label="Fundraising goal"
-      className="mb-6 overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-[#0A261E] p-5 text-[#fffbf2] md:p-6"
+      className="mb-6 overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-[var(--mosque-primary,#0A261E)] p-5 text-[var(--mosque-primary-fg,#fffbf2)] md:p-6"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#fffbf2]/55">
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--mosque-primary-fg,#fffbf2)]/55">
             Fundraising goal
           </p>
-          <h2 className="mt-1 font-display text-[22px] leading-tight text-[#E8D5B0]">
+          <h2 className="mt-1 font-display text-[22px] leading-tight text-[var(--mosque-primary-fg,#fffbf2)]">
             {projectName}
           </h2>
         </div>
         <div className="text-right">
-          <p className="font-display text-[24px] leading-none text-[#fffbf2]">
+          <p className="font-display text-[24px] leading-none text-[var(--mosque-primary-fg,#fffbf2)]">
             {formatUsd(ytdRaised)}
-            <span className="ml-1 text-[14px] font-sans font-normal text-[#fffbf2]/55">
+            <span className="ml-1 text-[14px] font-sans font-normal text-[var(--mosque-primary-fg,#fffbf2)]/55">
               / {formatUsd(goalAmount)}
             </span>
           </p>
-          <p className="mt-1 text-[11px] text-[#fffbf2]/55 tabular-nums">
+          <p className="mt-1 text-[11px] text-[var(--mosque-primary-fg,#fffbf2)]/55 tabular-nums">
             {remaining > 0 ? `${formatUsd(remaining)} to go` : "Goal reached"}
           </p>
         </div>
@@ -446,7 +446,7 @@ function FundraisingGoalCard({
           }}
         />
       </div>
-      <div className="mt-2 flex items-center justify-between text-[11px] text-[#fffbf2]/55">
+      <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--mosque-primary-fg,#fffbf2)]/55">
         <span>{pct}% of goal · YTD</span>
         <span>Set during onboarding · edit anytime in Setup</span>
       </div>
