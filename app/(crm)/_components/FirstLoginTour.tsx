@@ -168,7 +168,7 @@ export default function FirstLoginTour() {
 
           {/* Content */}
           <div className="space-y-3 px-6 pt-5 pb-2 md:px-8">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#B8922A]">
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--mosque-accent,#B8922A)]">
               {step.eyebrow}
             </p>
             <AnimatePresence mode="wait">
@@ -197,9 +197,9 @@ export default function FirstLoginTour() {
                   key={s.id}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
                     i === index
-                      ? "w-6 bg-[#0A261E]"
+                      ? "w-6 bg-[var(--mosque-primary,#0A261E)]"
                       : i < index
-                      ? "w-1.5 bg-[#B8922A]"
+                      ? "w-1.5 bg-[var(--mosque-accent,#B8922A)]"
                       : "w-1.5 bg-[#0A261E]/15"
                   }`}
                   aria-hidden
@@ -244,12 +244,12 @@ function WelcomeIllustration() {
   return (
     <div className="flex flex-col items-center text-center">
       <div className="relative">
-        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[#B8922A] shadow-[0_18px_30px_-12px_rgba(184,146,42,0.5)]">
+        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--mosque-accent,#B8922A)] shadow-[0_18px_30px_-12px_rgba(184,146,42,0.5)]">
           <Sparkles size={28} className="text-[#0A261E]" />
         </div>
         <motion.div
           aria-hidden
-          className="absolute -inset-3 rounded-3xl border border-[#B8922A]/30"
+          className="absolute -inset-3 rounded-3xl border border-[var(--mosque-accent,#B8922A)]/30"
           animate={{ scale: [1, 1.08, 1], opacity: [0.6, 0.2, 0.6] }}
           transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -276,8 +276,8 @@ function NavIllustration() {
           transition={{ delay: 0.05 * i, duration: 0.35, ease: EASE }}
           className={`rounded-xl border px-3 py-2 text-[11px] font-medium ${
             item.brass
-              ? "border-[#B8922A] bg-[#B8922A]/15 text-[#B8922A]"
-              : "border-white/10 bg-white/[0.04] text-[#fffbf2]/70"
+              ? "border-[var(--mosque-accent,#B8922A)] bg-[var(--mosque-accent,#B8922A)]/15 text-[var(--mosque-accent,#B8922A)]"
+              : "border-white/10 bg-white/[0.04] text-[var(--mosque-primary-fg,#fffbf2)]/70"
           }`}
         >
           {item.label}
@@ -294,9 +294,9 @@ function FirstActionIllustration() {
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.4 }}
-        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-[#fffbf2]/85"
+        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-[var(--mosque-primary-fg,#fffbf2)]/85"
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#B8922A]/20 text-[10px] font-semibold text-[#B8922A]">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mosque-accent,#B8922A)]/20 text-[10px] font-semibold text-[var(--mosque-accent,#B8922A)]">
           1
         </span>
         Add Sheikh Omar to your speaker registry
@@ -305,9 +305,9 @@ function FirstActionIllustration() {
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.4, delay: 0.15 }}
-        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-[#fffbf2]/85"
+        className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-[var(--mosque-primary-fg,#fffbf2)]/85"
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#B8922A]/20 text-[10px] font-semibold text-[#B8922A]">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mosque-accent,#B8922A)]/20 text-[10px] font-semibold text-[var(--mosque-accent,#B8922A)]">
           2
         </span>
         Create your weekly Friday Halaqa
@@ -316,9 +316,9 @@ function FirstActionIllustration() {
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.4, delay: 0.3 }}
-        className="flex items-center gap-2.5 rounded-xl border border-[#B8922A]/40 bg-[#B8922A]/10 px-3 py-2 text-[12px] text-[#E8D5B0]"
+        className="flex items-center gap-2.5 rounded-xl border border-[var(--mosque-accent,#B8922A)]/40 bg-[var(--mosque-accent,#B8922A)]/10 px-3 py-2 text-[12px] text-[var(--mosque-primary-fg,#fffbf2)]"
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#B8922A] text-[10px] font-semibold text-[#0A261E]">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mosque-accent,#B8922A)] text-[10px] font-semibold text-[#0A261E]">
           3
         </span>
         Members can RSVP from your app within a minute
@@ -336,18 +336,18 @@ function CmdKIllustration() {
       className="rounded-2xl border border-white/15 bg-white/[0.06] px-5 py-4 backdrop-blur"
     >
       <div className="flex items-center gap-3">
-        <Command size={18} className="text-[#B8922A]" />
-        <div className="font-mono text-[20px] font-semibold tracking-wide text-[#E8D5B0]">
+        <Command size={18} className="text-[var(--mosque-accent,#B8922A)]" />
+        <div className="font-mono text-[20px] font-semibold tracking-wide text-[var(--mosque-primary-fg,#fffbf2)]">
           ⌘ K
         </div>
       </div>
-      <div className="mt-3 space-y-1 text-[11.5px] text-[#fffbf2]/65">
+      <div className="mt-3 space-y-1 text-[11.5px] text-[var(--mosque-primary-fg,#fffbf2)]/65">
         <div className="flex items-center gap-2">
           <LayoutDashboard size={11} />
           Jump to Donations
         </div>
         <div className="flex items-center gap-2">
-          <Sparkles size={11} className="text-[#B8922A]" />
+          <Sparkles size={11} className="text-[var(--mosque-accent,#B8922A)]" />
           Send a notification
         </div>
       </div>

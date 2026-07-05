@@ -311,8 +311,8 @@ function Avatar({ name, pending }: { name: string; pending?: boolean }) {
   return (
     <div
       className={cn(
-        "flex h-10 w-10 items-center justify-center rounded-full text-[13px] font-semibold text-[#fffbf2]",
-        pending ? "bg-[#0A261E]/45" : "bg-[#0A261E]"
+        "flex h-10 w-10 items-center justify-center rounded-full text-[13px] font-semibold text-[var(--mosque-primary-fg,#fffbf2)]",
+        pending ? "bg-[#0A261E]/45" : "bg-[var(--mosque-primary,#0A261E)]"
       )}
     >
       {initials}

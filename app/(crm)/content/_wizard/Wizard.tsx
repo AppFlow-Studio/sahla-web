@@ -79,7 +79,7 @@ export default function Wizard({
                 }}
                 className={cn(
                   "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10.5px] font-semibold transition-colors",
-                  completed && "border-[#0A261E] bg-[#0A261E] text-white",
+                  completed && "border-[#0A261E] bg-[var(--mosque-primary,#0A261E)] text-[var(--mosque-primary-fg,#fffbf2)]",
                   active && "border-[#0A261E] bg-white text-[#0A261E]",
                   !completed && !active && "border-[#0A261E]/15 bg-white text-[#0A261E]/40"
                 )}

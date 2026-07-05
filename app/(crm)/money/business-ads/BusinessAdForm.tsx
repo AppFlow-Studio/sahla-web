@@ -216,7 +216,7 @@ function Field({
         <Label className="text-[12.5px] font-semibold text-[#0A261E]">
           {label}
           {required ? (
-            <span aria-hidden className="ml-0.5 text-[#B8922A]">
+            <span aria-hidden className="ml-0.5 text-[var(--mosque-accent,#B8922A)]">
               *
             </span>
           ) : null}

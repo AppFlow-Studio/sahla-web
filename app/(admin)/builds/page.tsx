@@ -1,10 +1,13 @@
 import BuildsClient from "./BuildsClient";
-import { APPS } from "./data";
+import { fetchAppBuilds } from "./data";
 
-export default function BuildsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function BuildsPage() {
+  const apps = await fetchAppBuilds();
   return (
     <div>
-      <BuildsClient apps={APPS} />
+      <BuildsClient apps={apps} />
     </div>
   );
 }

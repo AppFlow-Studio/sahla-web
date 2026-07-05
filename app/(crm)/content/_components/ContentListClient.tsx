@@ -5,14 +5,13 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
-  Search,
   Calendar,
   Users,
   Clock,
   ArrowUpRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "../../_components/SearchInput";
 import PageHeader from "../../_components/PageHeader";
 import EmptyState from "../../_components/EmptyState";
 import StatCard from "../../_components/StatCard";
@@ -108,19 +107,12 @@ export default function ContentListClient({ kind }: Props) {
           {/* Filters */}
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-1 flex-col gap-3 md:flex-row md:items-center">
-              <div className="relative max-w-md flex-1">
-                <Search
-                  size={14}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#0A261E]/40"
-                />
-                <Input
-                  type="search"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search by name or speaker…"
-                  className="pl-9"
-                />
-              </div>
+              <SearchInput
+                value={query}
+                onChange={setQuery}
+                placeholder="Search by name or speaker…"
+                className="max-w-md flex-1"
+              />
             </div>
             <p className="text-[12.5px] text-[#0A261E]/55">
               {filtered.length} of {items.length}
@@ -185,7 +177,7 @@ function ContentCard({ item }: { item: ContentItem }) {
       className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-16px_rgba(10,38,30,0.18)]"
     >
       <div
-        className="relative aspect-[16/9] w-full overflow-hidden bg-[#fffbf2]"
+        className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--mosque-surface,#fffbf2)]"
         style={{
           backgroundImage: `url(${item.imageUrl}?auto=format&fit=crop&w=600&q=80)`,
           backgroundSize: "cover",
@@ -200,7 +192,7 @@ function ContentCard({ item }: { item: ContentItem }) {
             </span>
           ) : null}
           {item.isPaid && item.priceUsd ? (
-            <span className="rounded-full bg-[#B8922A]/95 px-2 py-0.5 text-[10.5px] font-semibold text-white">
+            <span className="rounded-full bg-[var(--mosque-accent,#B8922A)]/95 px-2 py-0.5 text-[10.5px] font-semibold text-white">
               {formatUsd(item.priceUsd)}
             </span>
           ) : null}

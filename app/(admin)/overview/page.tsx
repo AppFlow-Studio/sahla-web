@@ -1,5 +1,5 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { APPS } from "../builds/data";
+import { fetchAppBuilds } from "../builds/data";
 import OverviewClient from "./OverviewClient";
 
 export default async function OverviewPage() {
@@ -351,7 +351,8 @@ export default async function OverviewPage() {
       return b.reasons.length - a.reasons.length;
     });
 
-  /* builds needing action */
+  /* builds — real apps from ready/live mosques */
+  const APPS = await fetchAppBuilds();
   const buildsNeedingAction = APPS.filter(
     (a) => a.status === "building" || a.status === "pending_review" || a.status === "rejected"
   ).map((a) => ({

@@ -154,7 +154,7 @@ function SlotRow({
   onRemove: () => void;
 }) {
   return (
-    <article className="group flex items-center gap-4 rounded-xl border border-[#0A261E]/8 bg-white px-5 py-3.5 transition-colors hover:bg-[#fffbf2]/60">
+    <article className="group flex items-center gap-4 rounded-xl border border-[#0A261E]/8 bg-white px-5 py-3.5 transition-colors hover:bg-[var(--mosque-surface,#fffbf2)]/60">
       <div
         className="flex h-10 w-14 shrink-0 items-center justify-center rounded-lg font-display text-[14px] text-[#0A261E]"
         style={{ background: "var(--mosque-accent, #B8922A)" }}

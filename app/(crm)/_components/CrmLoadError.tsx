@@ -23,7 +23,7 @@ export default function CrmLoadError() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fffbf2] text-[#0A261E]">
+    <div className="min-h-screen bg-[var(--mosque-surface,#fffbf2)] text-[#0A261E]">
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 z-0 opacity-[0.03]"
@@ -37,10 +37,10 @@ export default function CrmLoadError() {
       <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-lg flex-col items-center justify-center px-6 py-16">
         <div className="w-full overflow-hidden rounded-3xl border border-[#0A261E]/8 bg-white shadow-[0_18px_40px_-20px_rgba(10,38,30,0.18)]">
           <div className="px-8 py-10 text-center md:px-10">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#B8922A]/12 text-[#B8922A]">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mosque-accent,#B8922A)]/12 text-[var(--mosque-accent,#B8922A)]">
               <AlertTriangle size={22} strokeWidth={2.2} />
             </div>
-            <p className="mt-5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#B8922A]">
+            <p className="mt-5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--mosque-accent,#B8922A)]">
               Couldn’t load your CRM
             </p>
             <h1 className="mt-2 font-display text-2xl leading-tight text-[#0A261E] md:text-[28px]">
@@ -55,7 +55,7 @@ export default function CrmLoadError() {
               type="button"
               onClick={retry}
               disabled={retrying}
-              className="mt-7 inline-flex items-center justify-center gap-2 rounded-lg bg-[#0A261E] px-5 py-3 text-[13px] font-semibold text-[#fffbf2] transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="mt-7 inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--mosque-primary,#0A261E)] px-5 py-3 text-[13px] font-semibold text-[var(--mosque-primary-fg,#fffbf2)] transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               <RefreshCw
                 size={14}

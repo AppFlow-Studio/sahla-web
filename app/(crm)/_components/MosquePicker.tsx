@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Check, ChevronsUpDown, Eye, Search } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Eye, Search, X } from "lucide-react";
 import { useMosque } from "../_lib/mock-mosque";
 import type { HqMosque } from "@/app/api/crm/hq/mosques/route";
 
@@ -86,50 +86,73 @@ export default function MosquePicker() {
         type="button"
         onClick={toggle}
         disabled={pending}
-        className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[12.5px] text-[#fffbf2]/80 transition-colors hover:bg-white/[0.04] disabled:opacity-60"
+        className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[12.5px] text-[var(--mosque-primary-fg,#fffbf2)]/80 transition-colors hover:bg-white/[0.04] disabled:opacity-60"
       >
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-white/[0.08]">
-          {mosque.isHQViewing ? (
-            <Building2 size={12} strokeWidth={1.75} />
-          ) : (
-            <Eye size={12} strokeWidth={1.75} />
-          )}
-        </span>
+        {mosque.isHQViewing && mosque.logoUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={mosque.logoUrl}
+            alt=""
+            className="h-5 w-5 shrink-0 rounded object-cover"
+          />
+        ) : (
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-white/[0.08]">
+            {mosque.isHQViewing ? (
+              <Building2 size={12} strokeWidth={1.75} />
+            ) : (
+              <Eye size={12} strokeWidth={1.75} />
+            )}
+          </span>
+        )}
         <span className="line-clamp-1 flex-1">{currentLabel}</span>
-        <ChevronsUpDown size={13} className="shrink-0 text-[#fffbf2]/40" />
+        <ChevronsUpDown size={13} className="shrink-0 text-[var(--mosque-primary-fg,#fffbf2)]/40" />
       </button>
 
       {open && (
         <div className="absolute bottom-full left-0 z-50 mb-1 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-white/10 bg-[#0e2b22] shadow-xl">
-          <div className="flex items-center gap-2 border-b border-white/[0.06] px-2.5 py-2">
-            <Search size={13} className="text-[#fffbf2]/40" />
+          <div className="group flex items-center gap-2 border-b border-white/[0.06] px-2.5 py-2">
+            <Search
+              size={13}
+              className="shrink-0 text-[var(--mosque-primary-fg,#fffbf2)]/40 transition-colors group-focus-within:text-[var(--mosque-primary-fg,#fffbf2)]/70"
+            />
             <input
               autoFocus
+              type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search masjids…"
-              className="w-full bg-transparent text-[12.5px] text-[#fffbf2] placeholder:text-[#fffbf2]/35 focus:outline-none"
+              className="w-full bg-transparent text-[12.5px] text-[var(--mosque-primary-fg,#fffbf2)] placeholder:text-[var(--mosque-primary-fg,#fffbf2)]/35 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
             />
+            {query ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="shrink-0 rounded-md p-0.5 text-[var(--mosque-primary-fg,#fffbf2)]/40 transition-colors hover:bg-white/10 hover:text-[var(--mosque-primary-fg,#fffbf2)]/80"
+              >
+                <X size={13} />
+              </button>
+            ) : null}
           </div>
 
           <div className="max-h-72 overflow-y-auto py-1">
             <button
               type="button"
               onClick={() => select(null)}
-              className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-[12.5px] text-[#fffbf2]/80 transition-colors hover:bg-white/[0.05]"
+              className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-[12.5px] text-[var(--mosque-primary-fg,#fffbf2)]/80 transition-colors hover:bg-white/[0.05]"
             >
-              <Eye size={13} className="shrink-0 text-[#fffbf2]/50" />
+              <Eye size={13} className="shrink-0 text-[var(--mosque-primary-fg,#fffbf2)]/50" />
               <span className="flex-1">Sahla HQ Preview</span>
-              {!mosque.isHQViewing && <Check size={13} className="text-[#B8922A]" />}
+              {!mosque.isHQViewing && <Check size={13} className="text-[var(--mosque-accent,#B8922A)]" />}
             </button>
 
             <div className="my-1 h-px bg-white/[0.06]" />
 
             {loading && (
-              <p className="px-2.5 py-2 text-[12px] text-[#fffbf2]/40">Loading masjids…</p>
+              <p className="px-2.5 py-2 text-[12px] text-[var(--mosque-primary-fg,#fffbf2)]/40">Loading masjids…</p>
             )}
             {!loading && filtered.length === 0 && (
-              <p className="px-2.5 py-2 text-[12px] text-[#fffbf2]/40">No masjids found.</p>
+              <p className="px-2.5 py-2 text-[12px] text-[var(--mosque-primary-fg,#fffbf2)]/40">No masjids found.</p>
             )}
             {filtered.map((m) => {
               const active = mosque.isHQViewing && mosque.id === m.id;
@@ -140,16 +163,16 @@ export default function MosquePicker() {
                   onClick={() => select(m.id)}
                   className="flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors hover:bg-white/[0.05]"
                 >
-                  <Building2 size={13} className="shrink-0 text-[#fffbf2]/50" />
+                  <Building2 size={13} className="shrink-0 text-[var(--mosque-primary-fg,#fffbf2)]/50" />
                   <span className="min-w-0 flex-1">
-                    <span className="line-clamp-1 text-[12.5px] text-[#fffbf2]">{m.name}</span>
+                    <span className="line-clamp-1 text-[12.5px] text-[var(--mosque-primary-fg,#fffbf2)]">{m.name}</span>
                     {(m.city || m.state) && (
-                      <span className="line-clamp-1 text-[11px] text-[#fffbf2]/45">
+                      <span className="line-clamp-1 text-[11px] text-[var(--mosque-primary-fg,#fffbf2)]/45">
                         {[m.city, m.state].filter(Boolean).join(", ")}
                       </span>
                     )}
                   </span>
-                  {active && <Check size={13} className="shrink-0 text-[#B8922A]" />}
+                  {active && <Check size={13} className="shrink-0 text-[var(--mosque-accent,#B8922A)]" />}
                 </button>
               );
             })}

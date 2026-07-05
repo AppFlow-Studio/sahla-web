@@ -20,6 +20,7 @@ type Mosque = {
   subscription_status: string | null; onboarding_status: string | null; onboarding_progress: Record<string, boolean> | null;
   launched_at: string | null; created_at: string; updated_at: string; brand_color: string | null;
   calculation_method: number | null; school: number | null;
+  bundle_id: string | null; package_name: string | null;
 };
 
 const TABS = ["Overview", "Tasks", "Notes", "Prayer Times"] as const;
@@ -331,6 +332,17 @@ function OverviewTab({
         </div>
       </motion.div>
 
+      {/* ── APP STORE IDS (ready/live only — drives the Builds tab + sync) ── */}
+      {(mosque.onboarding_status === "ready" || mosque.onboarding_status === "live") && (
+        <motion.div {...fadeIn(0.15)}>
+          <AppStoreIdsCard
+            mosqueId={mosque.id}
+            initialBundleId={mosque.bundle_id}
+            initialPackageName={mosque.package_name}
+          />
+        </motion.div>
+      )}
+
       {/* ── PIPELINE: Stepper + Quick Actions ── */}
       {isPipeline && (
         <motion.div {...fadeIn(0.1)} className="max-w-3xl rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
@@ -369,6 +381,104 @@ function OverviewTab({
           </div>
         </motion.div>
       )}
+    </div>
+  );
+}
+
+/* ════════════════════════ APP STORE IDS ════════════════════════ */
+
+function AppStoreIdsCard({
+  mosqueId,
+  initialBundleId,
+  initialPackageName,
+}: {
+  mosqueId: string;
+  initialBundleId: string | null;
+  initialPackageName: string | null;
+}) {
+  const [bundleId, setBundleId] = useState(initialBundleId ?? "");
+  const [packageName, setPackageName] = useState(initialPackageName ?? "");
+  // Baseline reflecting what's persisted; updated on a successful save so the
+  // button re-disables until the next edit.
+  const [saved, setSaved] = useState({
+    bundleId: initialBundleId ?? "",
+    packageName: initialPackageName ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const dirty =
+    bundleId.trim() !== saved.bundleId || packageName.trim() !== saved.packageName;
+
+  async function save() {
+    setSaving(true);
+    try {
+      const nextBundle = bundleId.trim();
+      const nextPackage = packageName.trim();
+      const res = await fetch(`/api/mosques/${mosqueId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bundle_id: nextBundle || null,
+          package_name: nextPackage || null,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(body.error ?? `Save failed (${res.status}).`);
+      toast.success("App store IDs saved.");
+      setSaved({ bundleId: nextBundle, packageName: nextPackage });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="max-w-3xl overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+      <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+        <p className="text-[14px] font-semibold text-stone-900">App Store IDs</p>
+        <p className="mt-0.5 text-[12px] text-stone-500">
+          Used by the Builds tab to sync this app&apos;s status and versions from the stores.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-4 px-6 py-5 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+            iOS bundle ID
+          </span>
+          <input
+            value={bundleId}
+            onChange={(e) => setBundleId(e.target.value)}
+            placeholder="com.sahla.example"
+            spellCheck={false}
+            autoCapitalize="none"
+            className="mt-1.5 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-[13px] text-stone-900 outline-none transition-colors focus:border-stone-400"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+            Android package name
+          </span>
+          <input
+            value={packageName}
+            onChange={(e) => setPackageName(e.target.value)}
+            placeholder="com.sahla.example"
+            spellCheck={false}
+            autoCapitalize="none"
+            className="mt-1.5 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-[13px] text-stone-900 outline-none transition-colors focus:border-stone-400"
+          />
+        </label>
+      </div>
+      <div className="flex justify-end border-t border-stone-100 px-6 py-3">
+        <button
+          type="button"
+          onClick={save}
+          disabled={!dirty || saving}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {saving ? "Saving…" : "Save IDs"}
+        </button>
+      </div>
     </div>
   );
 }

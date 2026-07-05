@@ -177,7 +177,7 @@ export default function BusinessAdsClient() {
                     setDetailId(ad.id);
                   }
                 }}
-                className="cursor-pointer overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-white transition-shadow duration-300 hover:shadow-[0_8px_24px_-12px_rgba(10,38,30,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8922A]/40"
+                className="cursor-pointer overflow-hidden rounded-2xl border border-[#0A261E]/8 bg-white transition-shadow duration-300 hover:shadow-[0_8px_24px_-12px_rgba(10,38,30,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mosque-accent,#B8922A)]/40"
               >
                 {confirmId === ad.id ? (
                   <div className="p-5" onClick={(e) => e.stopPropagation()}>
@@ -247,7 +247,7 @@ export default function BusinessAdsClient() {
                         </div>
                         <div className="mt-3 flex flex-wrap gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.06em]">
                           {ad.placement ? (
-                            <span className="rounded-full bg-[#fffbf2] px-2 py-0.5 text-[#B8922A]">
+                            <span className="rounded-full bg-[var(--mosque-surface,#fffbf2)] px-2 py-0.5 text-[var(--mosque-accent,#B8922A)]">
                               {PLACEMENT_LABELS[ad.placement] ?? ad.placement}
                             </span>
                           ) : null}
@@ -316,7 +316,7 @@ export default function BusinessAdsClient() {
                     {ad.paymentCount > 0 || ad.hasMissedPayment ? (
                       <div className="flex items-center justify-between gap-3 border-t border-[#0A261E]/8 px-5 py-3">
                         <span className="flex items-center gap-2 text-[13px] text-[#0A261E]">
-                          <Receipt size={13} className="shrink-0 text-[#B8922A]" />
+                          <Receipt size={13} className="shrink-0 text-[var(--mosque-accent,#B8922A)]" />
                           <span className="font-display text-[15px]">
                             {formatMoneyCents(ad.totalPaidCents, ad.currency)}
                           </span>

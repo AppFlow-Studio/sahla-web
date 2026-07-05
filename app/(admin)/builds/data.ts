@@ -1,9 +1,13 @@
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+
 export type AppVersion = {
   version: string;
   buildNumber?: string;
-  date: string;
+  date: string | null;
   notes: string;
 };
+
+export type AppStatus = "live" | "pending_review" | "building" | "rejected" | "unknown";
 
 export type AppBuild = {
   id: string;
@@ -11,70 +15,137 @@ export type AppBuild = {
   mosqueName: string;
   icon: string | null;
   platform: "ios" | "android";
-  currentVersion: string;
-  status: "live" | "pending_review" | "building" | "rejected";
+  currentVersion: string | null;
+  status: AppStatus;
   bundleId?: string;
+  /** True when there's no synced store data yet (identity/status only). */
+  awaitingSync: boolean;
+  /** iOS TestFlight beta — separate channel from the App Store `status`. */
+  onTestflight: boolean;
+  testflightVersion: string | null;
+  testflightBuildNumber: string | null;
   versions: AppVersion[];
 };
 
-export const APPS: AppBuild[] = [
-  {
-    id: "1",
-    name: "MAS SI",
-    mosqueName: "Islamic Center of NJ",
-    icon: null,
-    platform: "ios",
-    currentVersion: "2.4.1",
-    status: "live",
-    bundleId: "com.sahla.massi",
-    versions: [
-      { version: "2.4.1", buildNumber: "87", date: "2026-03-28", notes: "Ramadan prayer time calculation fixes. Improved push notification delivery reliability. Fixed edge case where Taraweeh lineup showed wrong date." },
-      { version: "2.4.0", buildNumber: "84", date: "2026-03-15", notes: "Added Taraweeh nightly lineup with imam rotation. New Ramadan Quran tracker with juz progress. Daily Ramadan schedule view." },
-      { version: "2.3.2", buildNumber: "79", date: "2026-02-20", notes: "Bug fix: donation receipt emails not sending for recurring donors. Fixed Stripe webhook timeout on large batch processing." },
-      { version: "2.3.0", buildNumber: "75", date: "2026-01-10", notes: "Business ads module launch — local businesses can now advertise in-app. Redesigned onboarding flow with 40% faster completion rate." },
-      { version: "2.2.0", buildNumber: "68", date: "2025-11-18", notes: "Quran reader with surah bookmarks, ayah highlighting, and continue reading. Multiple reciter audio support." },
-    ],
-  },
-  {
-    id: "2",
-    name: "Masjid Al-Noor",
-    mosqueName: "Masjid Al-Noor",
-    icon: null,
-    platform: "ios",
-    currentVersion: "1.2.0",
-    status: "live",
-    bundleId: "com.sahla.alnoor",
-    versions: [
-      { version: "1.2.0", buildNumber: "23", date: "2026-03-01", notes: "Events calendar with RSVP and capacity tracking. Lecture series with AI-generated summaries and key notes." },
-      { version: "1.1.0", buildNumber: "15", date: "2026-01-20", notes: "Prayer time notifications with customizable alerts. Jummah reminders with topic preview and speaker info." },
-      { version: "1.0.0", buildNumber: "8", date: "2025-12-05", notes: "Initial release — daily prayer times with iqamah, donation portal with Stripe integration, programs and events listing." },
-    ],
-  },
-  {
-    id: "3",
-    name: "Daar ul-Islam",
-    mosqueName: "Daar ul-Islam",
-    icon: null,
-    platform: "ios",
-    currentVersion: "1.0.1",
-    status: "pending_review",
-    bundleId: "com.sahla.daarulislam",
-    versions: [
-      { version: "1.0.1", buildNumber: "4", date: "2026-04-02", notes: "Fix: crash on iPad when rotating to landscape. Prayer calculation edge case for high-latitude locations resolved." },
-      { version: "1.0.0", buildNumber: "2", date: "2026-03-25", notes: "Initial App Store submission — prayer times with multiple calculation methods, community programs, Stripe donation integration." },
-    ],
-  },
-  {
-    id: "4",
-    name: "ISB App",
-    mosqueName: "Islamic Society of Boston",
-    icon: null,
-    platform: "ios",
-    currentVersion: "1.0.0",
-    status: "building",
-    bundleId: "com.sahla.isb",
-    versions: [
-      { version: "1.0.0", buildNumber: "1", date: "2026-04-04", notes: "First build in progress — prayer times, weekly events, Quran reader, and donation portal. EAS build queued." },
-    ],
-  },
-];
+type BuildVersionRow = {
+  version: string;
+  build_number: string | null;
+  released_at: string | null;
+  notes: string | null;
+};
+
+type BuildRow = {
+  platform: "ios" | "android";
+  status: AppStatus;
+  current_version: string | null;
+  current_build_number: string | null;
+  on_testflight: boolean | null;
+  testflight_version: string | null;
+  testflight_build_number: string | null;
+  app_build_versions: BuildVersionRow[] | null;
+};
+
+type MosqueRow = {
+  id: string;
+  name: string | null;
+  app_name: string | null;
+  logo_url: string | null;
+  bundle_id: string | null;
+  package_name: string | null;
+  onboarding_status: string | null;
+  launched_at: string | null;
+  created_at: string | null;
+  app_builds: BuildRow[] | null;
+};
+
+// Most-advanced-wins when a mosque has both iOS and Android build rows.
+const STATUS_RANK: AppStatus[] = ["rejected", "unknown", "building", "pending_review", "live"];
+
+function pickStatus(builds: BuildRow[], onboardingStatus: string | null): AppStatus {
+  if (builds.length > 0) {
+    return builds.reduce<AppStatus>(
+      (best, b) =>
+        STATUS_RANK.indexOf(b.status) > STATUS_RANK.indexOf(best) ? b.status : best,
+      "unknown"
+    );
+  }
+  // No synced store data — derive from the onboarding lifecycle.
+  // "live" = launched on the store; "ready" = paid, build queued.
+  return onboardingStatus === "live" ? "live" : "building";
+}
+
+/**
+ * Real apps for the HQ Builds tab: every mosque past payment (ready or live),
+ * enriched with any synced store build/version data. When the store sync hasn't
+ * run (no credentials, or app IDs not yet recorded), a mosque still shows with
+ * its identity and an onboarding-derived status, and an empty release history.
+ */
+export async function fetchAppBuilds(): Promise<AppBuild[]> {
+  const supabase = createAdminSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("mosques")
+    .select(
+      `
+      id, name, app_name, logo_url, bundle_id, package_name,
+      onboarding_status, launched_at, created_at,
+      app_builds (
+        platform, status, current_version, current_build_number,
+        on_testflight, testflight_version, testflight_build_number,
+        app_build_versions ( version, build_number, released_at, notes )
+      )
+    `
+    )
+    .in("onboarding_status", ["ready", "live"])
+    .order("launched_at", { ascending: false, nullsFirst: false });
+
+  if (error) {
+    console.error("[builds] fetchAppBuilds failed:", error.message);
+    return [];
+  }
+
+  const rows = (data ?? []) as unknown as MosqueRow[];
+
+  return rows.map((m): AppBuild => {
+    const builds = m.app_builds ?? [];
+
+    // Flatten synced version history across platforms, newest first.
+    const versions: AppVersion[] = builds
+      .flatMap((b) => b.app_build_versions ?? [])
+      .map((v) => ({
+        version: v.version,
+        buildNumber: v.build_number ?? undefined,
+        date: v.released_at,
+        notes: v.notes ?? "",
+      }))
+      .sort((a, b) => {
+        const ta = a.date ? new Date(a.date).getTime() : 0;
+        const tb = b.date ? new Date(b.date).getTime() : 0;
+        return tb - ta;
+      });
+
+    const primaryBuild = builds[0];
+    const iosBuild = builds.find((b) => b.platform === "ios");
+    const platform: "ios" | "android" = m.bundle_id
+      ? "ios"
+      : m.package_name
+      ? "android"
+      : primaryBuild?.platform ?? "ios";
+
+    return {
+      id: m.id,
+      name: m.app_name || m.name || "Untitled app",
+      mosqueName: m.name || "—",
+      icon: m.logo_url,
+      platform,
+      currentVersion: primaryBuild?.current_version ?? versions[0]?.version ?? null,
+      status: pickStatus(builds, m.onboarding_status),
+      bundleId: m.bundle_id || m.package_name || undefined,
+      awaitingSync: builds.length === 0,
+      onTestflight: iosBuild?.on_testflight ?? false,
+      testflightVersion: iosBuild?.testflight_version ?? null,
+      testflightBuildNumber: iosBuild?.testflight_build_number ?? null,
+      versions,
+    };
+  });
+}

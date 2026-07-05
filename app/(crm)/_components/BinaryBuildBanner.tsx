@@ -45,23 +45,23 @@ export default function BinaryBuildBanner() {
           animate={{ height: "auto", opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-30 overflow-hidden bg-[#0A261E] text-[#fffbf2]"
+          className="relative z-30 overflow-hidden bg-[var(--mosque-primary,#0A261E)] text-[var(--mosque-primary-fg,#fffbf2)]"
         >
           <div className="flex items-center gap-3 px-4 py-2.5 md:px-6">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#B8922A]/15 text-[#B8922A]">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--mosque-accent,#B8922A)]/15 text-[var(--mosque-accent,#B8922A)]">
               <Hammer size={13} strokeWidth={1.8} />
             </div>
             <div className="min-w-0 flex-1 text-[12.5px] leading-tight">
-              <p className="font-semibold text-[#E8D5B0]">
+              <p className="font-semibold text-[var(--mosque-primary-fg,#fffbf2)]">
                 Your app is being built by the Sahla team.
               </p>
-              <p className="mt-0.5 text-[#fffbf2]/65">
+              <p className="mt-0.5 text-[var(--mosque-primary-fg,#fffbf2)]/65">
                 Usually ready in 5–7 days. Edits you make now go live the moment your app launches.
               </p>
             </div>
             <Link
               href="/settings/sahla-support"
-              className="hidden items-center gap-1 rounded-md px-2.5 py-1 text-[11.5px] font-medium text-[#fffbf2]/75 transition-colors hover:bg-white/[0.06] hover:text-[#fffbf2] md:inline-flex"
+              className="hidden items-center gap-1 rounded-md px-2.5 py-1 text-[11.5px] font-medium text-[var(--mosque-primary-fg,#fffbf2)]/75 transition-colors hover:bg-white/[0.06] hover:text-[var(--mosque-primary-fg,#fffbf2)] md:inline-flex"
             >
               Track progress
               <ArrowUpRight size={11} />
@@ -70,7 +70,7 @@ export default function BinaryBuildBanner() {
               type="button"
               onClick={dismiss}
               aria-label="Dismiss"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-[#fffbf2]/55 transition-colors hover:bg-white/[0.06] hover:text-[#fffbf2]"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--mosque-primary-fg,#fffbf2)]/55 transition-colors hover:bg-white/[0.06] hover:text-[var(--mosque-primary-fg,#fffbf2)]"
             >
               <X size={13} />
             </button>
