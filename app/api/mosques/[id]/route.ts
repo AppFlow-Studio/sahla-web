@@ -1,5 +1,6 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { syncClerkOrgLogo } from "@/lib/clerk/syncOrgLogo";
 import { NextResponse } from "next/server";
 
 const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
@@ -10,6 +11,9 @@ const ALLOWED_FIELDS = [
   "font_theme", "header_style",
   "calculation_method", "school",
   "reels_scope",
+  // App store identifiers — used by the Builds tab / store sync to map a
+  // mosque to its App Store Connect app and Play package.
+  "bundle_id", "package_name",
 ];
 
 export async function PATCH(
@@ -44,13 +48,24 @@ export async function PATCH(
       .from("mosques")
       .update(updateData)
       .eq("id", mosqueId)
-      .select("onboarding_progress")
+      .select("onboarding_progress, clerk_org_id")
       .single();
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     currentProgress =
       (mosque?.onboarding_progress as Record<string, boolean>) || {};
+
+    // Keep the Clerk org avatar in sync with the app logo so the
+    // OrganizationSwitcher matches the branding. Fire-and-forget — a failed
+    // Clerk upload shouldn't fail the mosque save.
+    if ("logo_url" in updateData && updateData.logo_url && mosque?.clerk_org_id) {
+      void syncClerkOrgLogo(
+        mosque.clerk_org_id as string,
+        String(updateData.logo_url),
+        session.userId
+      ).catch((err) => console.error("Clerk org logo sync failed:", err));
+    }
   } else if (markComplete) {
     // No field update; read current progress so we can merge the flag in.
     const { data: mosque, error } = await supabase

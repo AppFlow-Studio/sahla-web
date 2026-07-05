@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Version = {
   version: string;
-  date: string;
+  date: string | null;
   notes: string;
   buildNumber?: string;
 };
@@ -16,11 +16,33 @@ type App = {
   mosqueName: string;
   icon: string | null;
   platform: "ios" | "android";
-  currentVersion: string;
-  status: "live" | "pending_review" | "building" | "rejected";
+  currentVersion: string | null;
+  status: "live" | "pending_review" | "building" | "rejected" | "unknown";
   bundleId?: string;
+  awaitingSync: boolean;
+  onTestflight: boolean;
+  testflightVersion: string | null;
+  testflightBuildNumber: string | null;
   versions: Version[];
 };
+
+/* TestFlight (iOS beta) pill — separate channel from App Store status. */
+function TestflightBadge({ dark = false }: { dark?: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${
+        dark
+          ? "bg-sky-400/15 text-sky-200 ring-sky-300/20"
+          : "bg-sky-50 text-sky-700 ring-sky-500/20"
+      }`}
+    >
+      <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2 2 20h20L12 2Zm0 4.6 6.1 11H5.9L12 6.6Z" />
+      </svg>
+      TestFlight
+    </span>
+  );
+}
 
 type StatusFilter = "all" | "live" | "pending_review" | "building" | "rejected";
 
@@ -29,6 +51,7 @@ const statusConfig: Record<string, { label: string; dot: string; bg: string; tex
   pending_review: { label: "Pending Review", dot: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-500/20" },
   building: { label: "Building", dot: "bg-purple-500", bg: "bg-purple-50", text: "text-purple-700", ring: "ring-purple-500/20" },
   rejected: { label: "Rejected", dot: "bg-red-500", bg: "bg-red-50", text: "text-red-700", ring: "ring-red-500/20" },
+  unknown: { label: "Unknown", dot: "bg-stone-400", bg: "bg-stone-100", text: "text-stone-600", ring: "ring-stone-400/20" },
 };
 
 const platformIcon = (p: string) =>
@@ -98,14 +121,17 @@ function AppCard({ app, isSelected, onSelect, index }: { app: App; isSelected: b
               <span className={`h-1.5 w-1.5 rounded-full ${isSelected ? "bg-white/60" : s.dot}`} />
               {s.label}
             </span>
+            {app.onTestflight && <TestflightBadge dark={isSelected} />}
           </div>
           <p className={`mt-0.5 truncate text-xs ${isSelected ? "text-white/50" : "text-subtle"}`}>
             {app.mosqueName}
           </p>
           <div className={`mt-2 flex items-center gap-2 text-[11px] ${isSelected ? "text-white/40" : "text-faint"}`}>
-            <span className="font-mono font-medium">v{app.currentVersion}</span>
+            <span className="font-mono font-medium">
+              {app.currentVersion ? `v${app.currentVersion}` : "No release"}
+            </span>
             <span className="opacity-40">·</span>
-            <span>{lastDate ? daysSince(lastDate) : "—"}</span>
+            <span>{lastDate ? daysSince(lastDate) : app.awaitingSync ? "Not synced" : "—"}</span>
             <span className="opacity-40">·</span>
             <span>{app.versions.length} release{app.versions.length !== 1 ? "s" : ""}</span>
           </div>
@@ -155,7 +181,9 @@ function VersionRow({ v, isLatest, index }: { v: Version; isLatest: boolean; ind
           )}
         </div>
         <p className="mt-1 text-xs text-faint">
-          {new Date(v.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+          {v.date
+            ? new Date(v.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+            : "Date unknown"}
         </p>
         <div className="mt-2.5 rounded-xl border border-edge bg-sand/40 px-4 py-3">
           <p className="text-[13px] leading-relaxed text-subtle">{v.notes}</p>
@@ -352,6 +380,7 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
                         <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusConfig[selected.status].bg} ${statusConfig[selected.status].text}`}>
                           {statusConfig[selected.status].label}
                         </span>
+                        {selected.onTestflight && <TestflightBadge dark />}
                       </div>
                       <p className="mt-0.5 text-sm text-white/50">{selected.mosqueName}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-white/35">
@@ -375,7 +404,7 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
                 <div className="grid grid-cols-2 divide-x divide-edge border-b border-edge">
                   <StatCell
                     label="Current Version"
-                    value={`v${selected.currentVersion}`}
+                    value={selected.currentVersion ? `v${selected.currentVersion}` : "—"}
                     mono
                   />
                   <StatCell
@@ -387,13 +416,31 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
                 <div className="grid grid-cols-2 divide-x divide-edge border-b border-edge">
                   <StatCell
                     label="First Released"
-                    value={new Date(selected.versions[selected.versions.length - 1].date).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                    value={(() => {
+                      const first = selected.versions[selected.versions.length - 1];
+                      return first?.date
+                        ? new Date(first.date).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+                        : "—";
+                    })()}
                   />
                   <StatCell
                     label="Last Updated"
-                    value={daysSince(selected.versions[0].date)}
+                    value={selected.versions[0]?.date ? daysSince(selected.versions[0].date!) : "—"}
                   />
                 </div>
+                {selected.onTestflight && (
+                  <div className="grid grid-cols-1 border-b border-edge">
+                    <StatCell
+                      label="TestFlight beta"
+                      mono
+                      value={
+                        selected.testflightVersion
+                          ? `v${selected.testflightVersion}${selected.testflightBuildNumber ? ` (#${selected.testflightBuildNumber})` : ""}`
+                          : "Available"
+                      }
+                    />
+                  </div>
+                )}
 
                 {/* Version history */}
                 <div className="px-6 py-6">
@@ -405,11 +452,23 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
                       {selected.versions.length} version{selected.versions.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  <div>
-                    {selected.versions.map((v, i) => (
-                      <VersionRow key={v.version} v={v} isLatest={i === 0} index={i} />
-                    ))}
-                  </div>
+                  {selected.versions.length > 0 ? (
+                    <div>
+                      {selected.versions.map((v, i) => (
+                        <VersionRow key={v.version} v={v} isLatest={i === 0} index={i} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-edge-bold bg-sand/30 py-10 text-center">
+                      <svg className="h-7 w-7 text-edge-bold" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75" />
+                      </svg>
+                      <p className="text-sm font-medium text-subtle">No release history yet</p>
+                      <p className="max-w-xs text-xs text-faint">
+                        Versions appear here once this app is connected to App Store Connect / Google Play and the build sync runs.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ) : (
