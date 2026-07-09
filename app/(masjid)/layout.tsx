@@ -43,6 +43,10 @@ export default async function MasjidLayout({
     ? await getMosquePreviewContent(mosque.id)
     : { programCategories: [], programs: [] };
 
+  const donationsConfig = (progress as Record<string, unknown>)._donations_config as
+    | { projectName?: string; goalAmount?: string | number }
+    | undefined;
+
   const previewInitial = {
     appName: mosque?.app_name || mosque?.name || "Your Masjid",
     brandColor: mosque?.brand_color || "#0A261E",
@@ -50,6 +54,8 @@ export default async function MasjidLayout({
     logoUrl: mosque?.logo_url || null,
     programCategories: previewContent.programCategories,
     programs: previewContent.programs,
+    donationProject: donationsConfig?.projectName?.trim() || "",
+    donationGoal: Number(donationsConfig?.goalAmount ?? 0) || 0,
   };
 
   return (

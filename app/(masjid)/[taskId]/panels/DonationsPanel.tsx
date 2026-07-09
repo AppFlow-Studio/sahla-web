@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "../../components/ToastProvider";
+import { usePreview } from "../../components/OnboardingPreviewContext";
+
+/** Render raw digits as a comma-grouped string ("50000" → "50,000"). */
+function formatWithCommas(digits: string) {
+  if (!digits) return "";
+  return Number(digits).toLocaleString("en-US");
+}
 
 type DonationConfig = {
   projectName: string;
@@ -26,10 +33,22 @@ export default function DonationsPanel({
 }) {
   const router = useRouter();
   const { showToast } = useToast();
+  const { updatePreview } = usePreview();
   const [saving, setSaving] = useState(false);
 
   const [projectName, setProjectName] = useState(initialConfig?.projectName ?? "");
-  const [goalAmount, setGoalAmount] = useState(initialConfig?.goalAmount ?? "");
+  // Stored as raw digits ("50000"); commas are applied only for display.
+  const [goalAmount, setGoalAmount] = useState(
+    String(initialConfig?.goalAmount ?? "").replace(/[^0-9]/g, "")
+  );
+
+  // Keep the live phone preview's donate banner in sync with this form.
+  useEffect(() => {
+    updatePreview({
+      donationProject: projectName.trim(),
+      donationGoal: goalAmount ? Number(goalAmount) : 0,
+    });
+  }, [projectName, goalAmount, updatePreview]);
   const [suggestedAmounts, setSuggestedAmounts] = useState<number[]>(
     initialConfig?.suggestedAmounts ?? DEFAULT_AMOUNTS
   );
@@ -149,7 +168,7 @@ export default function DonationsPanel({
           <input
             type="text"
             inputMode="numeric"
-            value={goalAmount}
+            value={formatWithCommas(goalAmount)}
             onChange={(e) => {
               const v = e.target.value.replace(/[^0-9]/g, "");
               setGoalAmount(v);

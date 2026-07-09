@@ -4,8 +4,16 @@ import { usePreview } from "./OnboardingPreviewContext";
 import AppPreviewPanel from "@/components/ui/skiper-ui/AppPreviewPanel";
 
 export default function OnboardingPhonePreview() {
-  const { appName, brandColor, accentColor, logoUrl, programCategories, programs } =
-    usePreview();
+  const {
+    appName,
+    brandColor,
+    accentColor,
+    logoUrl,
+    programCategories,
+    programs,
+    donationProject,
+    donationGoal,
+  } = usePreview();
 
   return (
     <aside
@@ -20,6 +28,8 @@ export default function OnboardingPhonePreview() {
           logoUrl={logoUrl ?? undefined}
           programCategories={programCategories}
           programs={programs}
+          donationProject={donationProject}
+          donationGoal={donationGoal}
         />
         <EditsSummary
           appName={appName}

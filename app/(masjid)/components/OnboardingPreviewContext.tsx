@@ -25,6 +25,10 @@ type PreviewState = {
   logoUrl: string | null;
   programCategories: PreviewCategory[];
   programs: PreviewProgram[];
+  /** Donation campaign title shown on the app's donate banner. */
+  donationProject: string;
+  /** Fundraising goal in whole dollars; 0 → no goal / progress bar. */
+  donationGoal: number;
 };
 
 type PreviewContextValue = PreviewState & {
@@ -38,6 +42,8 @@ const PreviewContext = createContext<PreviewContextValue>({
   logoUrl: null,
   programCategories: [],
   programs: [],
+  donationProject: "",
+  donationGoal: 0,
   updatePreview: () => {},
 });
 

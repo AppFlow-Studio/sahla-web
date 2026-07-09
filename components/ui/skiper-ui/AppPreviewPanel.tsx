@@ -50,7 +50,16 @@ type AppPreviewPanelProps = {
   fontTheme?: FontThemeKey;
   /** Home-screen header layout. */
   headerStyle?: HeaderStyleKey;
+  /** Donation campaign title on the donate banner (falls back to "Support {appName}"). */
+  donationProject?: string;
+  /** Fundraising goal in whole dollars; > 0 shows a progress bar on the banner. */
+  donationGoal?: number;
 };
+
+/** Format a whole-dollar amount as "$50,000". */
+function formatMoney(n: number) {
+  return `$${Math.round(n).toLocaleString("en-US")}`;
+}
 
 /** Format a stored 24h "HH:mm" as "6:00 PM"; empty string if unparseable/null. */
 function formatPreviewTime(value: string | null): string {
@@ -108,6 +117,8 @@ export default function AppPreviewPanel({
   homeOnly = false,
   fontTheme = "classic",
   headerStyle = "classic",
+  donationProject = "",
+  donationGoal = 0,
 }: AppPreviewPanelProps) {
   const [screen, setScreen] = useState<Screen>("home");
   const bg = "#FFFBF2";
@@ -119,11 +130,11 @@ export default function AppPreviewPanel({
     <PhoneFrame>
       <style>{fontLink}</style>
       <div className="relative w-full h-full" style={{ background: bg }}>
-        {screen === "home" && <HomeScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} headingFont={HEADING_FONT[fontTheme]} headerStyle={headerStyle} programs={programs} />}
-        {screen === "discover" && <DiscoverScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} programCategories={programCategories} programs={programs} />}
+        {screen === "home" && <HomeScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} headingFont={HEADING_FONT[fontTheme]} headerStyle={headerStyle} programs={programs} donationProject={donationProject} donationGoal={donationGoal} />}
+        {screen === "discover" && <DiscoverScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} programCategories={programCategories} programs={programs} donationProject={donationProject} donationGoal={donationGoal} />}
         {screen === "watch" && <WatchScreen brandColor={brandColor} accent={accent} bg={bg} />}
-        {screen === "prayer" && <PrayerScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} />}
-        {screen === "profile" && <ProfileScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} />}
+        {screen === "prayer" && <PrayerScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} donationProject={donationProject} donationGoal={donationGoal} />}
+        {screen === "profile" && <ProfileScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} donationProject={donationProject} donationGoal={donationGoal} />}
 
         {/* ── Tab bar — Figma: 402×101, padding 16px 24px 24px, gap 8px ── */}
         {!homeOnly && (
@@ -189,7 +200,7 @@ export default function AppPreviewPanel({
 /* ══════════════════════════════════════════════════════════════════
    HOME SCREEN — All values are native Figma 402px
    ══════════════════════════════════════════════════════════════════ */
-function HomeScreen({ brandColor, accent, bg, appName, headingFont = "'Playfair Display', serif", headerStyle = "classic", programs = [] }: { brandColor: string; accent: string; bg: string; appName: string; headingFont?: string; headerStyle?: HeaderStyleKey; programs?: PreviewProgram[] }) {
+function HomeScreen({ brandColor, accent, bg, appName, headingFont = "'Playfair Display', serif", headerStyle = "classic", programs = [], donationProject = "", donationGoal = 0 }: { brandColor: string; accent: string; bg: string; appName: string; headingFont?: string; headerStyle?: HeaderStyleKey; programs?: PreviewProgram[]; donationProject?: string; donationGoal?: number }) {
   const sf = "'SF Pro', -apple-system, system-ui, sans-serif";
   const countdown = headerStyle !== "classic";
   const alignItems = headerStyle === "countdown-left" ? "flex-start" : "center";
@@ -338,7 +349,7 @@ function HomeScreen({ brandColor, accent, bg, appName, headingFont = "'Playfair 
       <div style={{ background: bg, borderRadius: "48px 48px 0 0", marginTop: 0, position: "relative", zIndex: 1, paddingTop: 12, color: brandColor }}>
 
         {/* Donate banner — Figma: h64, padding 14px 18px, bg brand, radius 50, inset shadow */}
-        <DonateBanner brandColor={brandColor} accent={accent} appName={appName} filledButton />
+        <DonateBanner brandColor={brandColor} accent={accent} appName={appName} filledButton projectName={donationProject} goalAmount={donationGoal} />
 
         {/* Today's Events header — SF Pro 590 13px, gap 170 */}
         <SectionHeader title="TODAY'S EVENTS" right="MAR 9, 2026" accent={accent} divider />
@@ -501,7 +512,7 @@ function HomeScreen({ brandColor, accent, bg, appName, headingFont = "'Playfair 
 /* ══════════════════════════════════════════════════════════════════
    DISCOVER SCREEN
    ══════════════════════════════════════════════════════════════════ */
-function DiscoverScreen({ brandColor, accent, bg, appName, programCategories = [], programs = [] }: { brandColor: string; accent: string; bg: string; appName: string; programCategories?: PreviewCategory[]; programs?: PreviewProgram[] }) {
+function DiscoverScreen({ brandColor, accent, bg, appName, programCategories = [], programs = [], donationProject = "", donationGoal = 0 }: { brandColor: string; accent: string; bg: string; appName: string; programCategories?: PreviewCategory[]; programs?: PreviewProgram[]; donationProject?: string; donationGoal?: number }) {
   const sf = "'SF Pro', -apple-system, system-ui, sans-serif";
   /* Figma: container bg #0A261E radius 48, cream rect starts at y=39 */
   return (
@@ -558,7 +569,7 @@ function DiscoverScreen({ brandColor, accent, bg, appName, programCategories = [
 
         {/* Donate banner — Figma: y=1145, left 24, right 20 */}
         <div style={{ padding: "14px 4px 0" }}>
-          <DonateBanner brandColor={brandColor} accent={accent} appName={appName} filledButton />
+          <DonateBanner brandColor={brandColor} accent={accent} appName={appName} filledButton projectName={donationProject} goalAmount={donationGoal} />
         </div>
 
         <div style={{ height: 110 }} />
@@ -570,7 +581,7 @@ function DiscoverScreen({ brandColor, accent, bg, appName, programCategories = [
 /* ══════════════════════════════════════════════════════════════════
    PRAYER SCREEN
    ══════════════════════════════════════════════════════════════════ */
-function PrayerScreen({ brandColor, accent, bg, appName }: { brandColor: string; accent: string; bg: string; appName: string }) {
+function PrayerScreen({ brandColor, accent, bg, appName, donationProject = "", donationGoal = 0 }: { brandColor: string; accent: string; bg: string; appName: string; donationProject?: string; donationGoal?: number }) {
   const sf = "'SF Pro', -apple-system, system-ui, sans-serif";
   const prayers = [
     { name: "Fajr", athan: "5:50 AM", iqamah: "6:10 AM", passed: true, icon: "sunrise" as const },
@@ -771,23 +782,8 @@ function PrayerScreen({ brandColor, accent, bg, appName }: { brandColor: string;
       </div>
 
       {/* Donate banner — Figma: y=1485, bg #071F18, transparent button */}
-      <div className="flex items-center justify-between relative" style={{
-        background: darkenHex(brandColor, 0.3), borderRadius: 50, margin: "20px 24px 0",
-        padding: "14px 18px", height: 64,
-      }}>
-        <div className="flex items-center" style={{ gap: 12 }}>
-          <div className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 28, background: hexToRgba(accent, 0.2) }}>
-            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, lineHeight: "24px", color: accent, textAlign: "center", width: 36 }}>♥</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-            <p style={{ fontFamily: sf, fontWeight: 700, fontSize: 14, lineHeight: "17px", color: "#F0EDE6", margin: 0 }}>Support {appName}</p>
-            <p style={{ fontFamily: sf, fontWeight: 500, fontSize: 10, lineHeight: "12px", color: "rgba(240,237,230,0.55)", margin: 0 }}>Donate</p>
-          </div>
-        </div>
-        {/* Figma: bg transparent (rgba(0,0,0,0.004)), text #B8922A */}
-        <div className="rounded-full shrink-0 flex items-center" style={{ background: "rgba(0,0,0,0.004)", padding: "7px 14px", borderRadius: 100 }}>
-          <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: 11, lineHeight: "13px", color: accent }}>DONATE →</span>
-        </div>
+      <div style={{ margin: "6px 4px 0" }}>
+        <DonateBanner brandColor={darkenHex(brandColor, 0.3)} accent={accent} appName={appName} projectName={donationProject} goalAmount={donationGoal} />
       </div>
 
       {/* Community Partners — Figma: y=1586, bg #071F18 cards */}
@@ -917,7 +913,7 @@ function WatchScreen({ brandColor, accent, bg }: { brandColor: string; accent: s
 /* ══════════════════════════════════════════════════════════════════
    PROFILE SCREEN
    ══════════════════════════════════════════════════════════════════ */
-function ProfileScreen({ brandColor, accent, bg, appName }: { brandColor: string; accent: string; bg: string; appName: string }) {
+function ProfileScreen({ brandColor, accent, bg, appName, donationProject = "", donationGoal = 0 }: { brandColor: string; accent: string; bg: string; appName: string; donationProject?: string; donationGoal?: number }) {
   const sf = "'SF Pro', -apple-system, system-ui, sans-serif";
   return (
     <div className="w-full h-full overflow-y-auto" style={{ background: brandColor, scrollbarWidth: "none" }}>
@@ -972,7 +968,7 @@ function ProfileScreen({ brandColor, accent, bg, appName }: { brandColor: string
           <ProfileRow icon={<InvoiceIcon size={14} color={brandColor} />} label="Payment History" />
           <ProfileRow icon={<CreditCardIcon size={14} color={brandColor} />} label="Payment Methods" last />
         </ProfileSection>
-        <DonateBanner brandColor={brandColor} accent={accent} appName={appName} filledButton />
+        <DonateBanner brandColor={brandColor} accent={accent} appName={appName} filledButton projectName={donationProject} goalAmount={donationGoal} />
         <ProfileSection title="NOTIFICATIONS">
           <div className="flex items-center justify-between" style={{
             background: hexToRgba(accent, 0.2), borderRadius: 14,
@@ -1032,7 +1028,51 @@ function ProfileRow({ icon, label, last, dashed }: { icon: React.ReactNode; labe
   );
 }
 
-function DonateBanner({ brandColor, accent, appName, filledButton }: { brandColor: string; accent: string; appName: string; filledButton?: boolean }) {
+function DonateBanner({ brandColor, accent, appName, filledButton, projectName = "", goalAmount = 0 }: { brandColor: string; accent: string; appName: string; filledButton?: boolean; projectName?: string; goalAmount?: number }) {
+  const hasGoal = goalAmount > 0;
+  const title = hasGoal && projectName.trim() ? projectName.trim() : `Support ${appName}`;
+  // No live donation totals in the onboarding preview — show the goal at 0% raised.
+  const raised = 0;
+  const pct = hasGoal ? Math.min(100, Math.round((raised / goalAmount) * 100)) : 0;
+
+  // Goal set → taller card with a progress bar. Otherwise the compact pill.
+  if (hasGoal) {
+    return (
+      <div className="relative" style={{
+        background: brandColor, borderRadius: 28, margin: "14px 20px 0",
+        padding: "14px 18px",
+        boxShadow: "inset 0px 4px 4px rgba(0,0,0,0.25)",
+      }}>
+        <div className="flex items-center justify-between" style={{ gap: 12 }}>
+          <div className="flex items-center min-w-0" style={{ gap: 12 }}>
+            <div className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 28, background: hexToRgba(accent, 0.2) }}>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, color: accent, lineHeight: "24px", textAlign: "center", width: 36 }}>♥</span>
+            </div>
+            <div className="min-w-0" style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <p className="truncate" style={{ fontFamily: SF, fontWeight: 700, fontSize: 14, lineHeight: "17px", color: "#F0EDE6", margin: 0 }}>{title}</p>
+              <p style={{ fontFamily: SF, fontWeight: 500, fontSize: 10, lineHeight: "12px", color: "rgba(240,237,230,0.55)", margin: 0 }}>Help us reach our goal</p>
+            </div>
+          </div>
+          <div className="rounded-full shrink-0 flex items-center" style={{
+            padding: "7px 14px",
+            background: filledButton ? accent : "transparent",
+            borderRadius: 100,
+          }}>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: 11, lineHeight: "13px", color: filledButton ? brandColor : accent }}>DONATE →</span>
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div style={{ marginTop: 12, height: 6, borderRadius: 3, background: "rgba(240,237,230,0.15)", overflow: "hidden" }}>
+          <div style={{ width: `${pct}%`, minWidth: pct === 0 ? 0 : 4, height: "100%", borderRadius: 3, background: accent }} />
+        </div>
+        <div className="flex items-center justify-between" style={{ marginTop: 6 }}>
+          <span style={{ fontFamily: SF, fontWeight: 600, fontSize: 10, lineHeight: "12px", color: "#F0EDE6" }}>{formatMoney(raised)} raised</span>
+          <span style={{ fontFamily: SF, fontWeight: 500, fontSize: 10, lineHeight: "12px", color: "rgba(240,237,230,0.55)" }}>Goal {formatMoney(goalAmount)}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center justify-between relative" style={{
       background: brandColor, borderRadius: 50, margin: "14px 20px 0",
@@ -1044,7 +1084,7 @@ function DonateBanner({ brandColor, accent, appName, filledButton }: { brandColo
           <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, color: accent, lineHeight: "24px", textAlign: "center", width: 36 }}>♥</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          <p style={{ fontFamily: SF, fontWeight: 700, fontSize: 14, lineHeight: "17px", color: "#F0EDE6", margin: 0 }}>Support {appName}</p>
+          <p style={{ fontFamily: SF, fontWeight: 700, fontSize: 14, lineHeight: "17px", color: "#F0EDE6", margin: 0 }}>{title}</p>
           <p style={{ fontFamily: SF, fontWeight: 500, fontSize: 10, lineHeight: "12px", color: "rgba(240,237,230,0.55)", margin: 0 }}>Donate</p>
         </div>
       </div>
