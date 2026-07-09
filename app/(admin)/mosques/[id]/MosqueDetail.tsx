@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock, MoreHorizontal, Users, Activity, BookOpen, Calendar, Mail, Phone, ArrowRight, Rocket } from "lucide-react";
+import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock, MoreHorizontal, Users, Activity, BookOpen, Calendar, Mail, Phone, ArrowRight, Rocket, Clapperboard } from "lucide-react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { StatusBadge, STAGE_COLORS } from "../../components/StatusBadge";
 import PrayerTimesPanel from "./PrayerTimesPanel";
@@ -21,6 +21,7 @@ type Mosque = {
   launched_at: string | null; created_at: string; updated_at: string; brand_color: string | null;
   calculation_method: number | null; school: number | null;
   bundle_id: string | null; package_name: string | null;
+  reels_setup_mode?: string | null;
 };
 
 const TABS = ["Overview", "Tasks", "Notes", "Prayer Times"] as const;
@@ -235,6 +236,21 @@ function OverviewTab({
 
   return (
     <div className="space-y-6">
+      {/* ── Sahla-managed reels request ── */}
+      {mosque.reels_setup_mode === "sahla" && (
+        <motion.div
+          {...fadeIn(0)}
+          className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50/60 px-4 py-3"
+        >
+          <Clapperboard size={16} className="mt-0.5 shrink-0 text-rose-600" />
+          <p className="text-[12.5px] text-rose-800">
+            <span className="font-semibold">Sahla-managed reels.</span> This
+            mosque opted out of uploading their own reels — the team curates and
+            posts reels for them.
+          </p>
+        </motion.div>
+      )}
+
       {/* ── LIVE: Metric Cards ── */}
       {isLive && (
         <motion.div {...fadeIn(0)} className="grid max-w-3xl grid-cols-2 gap-4 lg:grid-cols-4">

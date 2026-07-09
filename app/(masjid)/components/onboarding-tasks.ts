@@ -67,6 +67,18 @@ export const ONBOARDING_CATEGORIES: TaskCategory[] = [
         timeEstimate: "5 min",
       },
       {
+        // id kept as "categories" for onboarding_progress continuity; this step
+        // configures the Discover Program cover cards (program_categories),
+        // which double as the categories you sort programs into. It comes
+        // before "Programs" so those categories exist as pick options when you
+        // add each program.
+        id: "categories",
+        label: "Program Categories",
+        description: "Set up the categories your programs are grouped into",
+        badge: "REC",
+        timeEstimate: "3 min",
+      },
+      {
         id: "programs",
         label: "Programs",
         description: "Recurring classes, halaqas, and study circles",
@@ -79,15 +91,6 @@ export const ONBOARDING_CATEGORIES: TaskCategory[] = [
         description: "One-time events and community gatherings",
         badge: "REC",
         timeEstimate: "5 min",
-      },
-      {
-        // id kept as "categories" for onboarding_progress continuity; this step
-        // now configures the Discover Program cover cards (program_categories).
-        id: "categories",
-        label: "Program Cards",
-        description: "Customize the Discover program cover cards",
-        badge: "REC",
-        timeEstimate: "3 min",
       },
       {
         id: "reels",

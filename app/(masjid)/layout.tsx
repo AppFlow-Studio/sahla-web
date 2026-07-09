@@ -6,7 +6,7 @@ import LeaveOnboardingBeacon from "./components/LeaveOnboardingBeacon";
 import PageTransition from "@/app/components/PageTransition";
 import OnboardingPreviewProvider from "./components/OnboardingPreviewContext";
 import OnboardingPhonePreview from "./components/OnboardingPhonePreview";
-import { getMosqueOnboardingData } from "./data";
+import { getMosqueOnboardingData, getMosquePreviewContent } from "./data";
 
 const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 
@@ -39,11 +39,17 @@ export default async function MasjidLayout({
   const mosqueName = mosque?.name || "Your Mosque";
   const progress = (mosque?.onboarding_progress as Record<string, boolean>) || {};
 
+  const previewContent = mosque?.id
+    ? await getMosquePreviewContent(mosque.id)
+    : { programCategories: [], programs: [] };
+
   const previewInitial = {
     appName: mosque?.app_name || mosque?.name || "Your Masjid",
     brandColor: mosque?.brand_color || "#0A261E",
     accentColor: mosque?.accent_color || "#B8922A",
     logoUrl: mosque?.logo_url || null,
+    programCategories: previewContent.programCategories,
+    programs: previewContent.programs,
   };
 
   return (

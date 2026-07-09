@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
+import { usePreview } from "../../components/OnboardingPreviewContext";
 import { cn } from "@/lib/utils";
 import { INPUT_CLASS, BTN_PRIMARY } from "@/lib/ui-classes";
 
@@ -89,6 +90,20 @@ export default function ProgramCardsOnboardingPanel({
     buildInitialDrafts(initialCards)
   );
   const [saving, setSaving] = useState(false);
+
+  // Keep the live phone preview's Discover cards in sync as cards are edited.
+  const { updatePreview } = usePreview();
+  useEffect(() => {
+    updatePreview({
+      programCategories: drafts
+        .filter((d) => d.title.trim().length > 0)
+        .map((d) => ({
+          title: d.title.trim(),
+          bgColor: d.bgColor,
+          imageUrl: d.imageUrl,
+        })),
+    });
+  }, [drafts, updatePreview]);
 
   function updateRow(index: number, updates: Partial<Draft>) {
     setDrafts((prev) =>

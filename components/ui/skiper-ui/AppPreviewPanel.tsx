@@ -27,6 +27,11 @@ function darkenHex(hex: string, amount = 0.3) {
   return `rgb(${r},${g},${b})`;
 }
 
+/** A Discover "Program" category card. */
+type PreviewCategory = { title: string; bgColor: string | null; imageUrl: string | null };
+/** A program row in the Programs list. */
+type PreviewProgram = { name: string; time: string | null; categoryTitles: string[] };
+
 type AppPreviewPanelProps = {
   appName?: string;
   brandColor?: string;
@@ -35,6 +40,10 @@ type AppPreviewPanelProps = {
   logoUrl?: string;
   memberCount?: number;
   programCount?: number;
+  /** Mosque's real Discover program category cards (empty → sample defaults). */
+  programCategories?: PreviewCategory[];
+  /** Mosque's real programs (empty → sample defaults). */
+  programs?: PreviewProgram[];
   /** Show only the Home screen and hide the bottom tab bar. */
   homeOnly?: boolean;
   /** Heading typeface theme. */
@@ -42,6 +51,19 @@ type AppPreviewPanelProps = {
   /** Home-screen header layout. */
   headerStyle?: HeaderStyleKey;
 };
+
+/** Format a stored 24h "HH:mm" as "6:00 PM"; empty string if unparseable/null. */
+function formatPreviewTime(value: string | null): string {
+  if (!value) return "";
+  const m = /^(\d{1,2}):(\d{2})/.exec(value.trim());
+  if (!m) return "";
+  const h24 = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  if (h24 < 0 || h24 > 23 || min < 0 || min > 59) return "";
+  const period = h24 >= 12 ? "PM" : "AM";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${String(min).padStart(2, "0")} ${period}`;
+}
 
 type Screen = "home" | "discover" | "watch" | "prayer" | "profile";
 
@@ -81,6 +103,8 @@ export default function AppPreviewPanel({
   appName = "Your Masjid",
   brandColor = "#0A261E",
   accentColor = "#B8922A",
+  programCategories = [],
+  programs = [],
   homeOnly = false,
   fontTheme = "classic",
   headerStyle = "classic",
@@ -95,8 +119,8 @@ export default function AppPreviewPanel({
     <PhoneFrame>
       <style>{fontLink}</style>
       <div className="relative w-full h-full" style={{ background: bg }}>
-        {screen === "home" && <HomeScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} headingFont={HEADING_FONT[fontTheme]} headerStyle={headerStyle} />}
-        {screen === "discover" && <DiscoverScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} />}
+        {screen === "home" && <HomeScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} headingFont={HEADING_FONT[fontTheme]} headerStyle={headerStyle} programs={programs} />}
+        {screen === "discover" && <DiscoverScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} programCategories={programCategories} programs={programs} />}
         {screen === "watch" && <WatchScreen brandColor={brandColor} accent={accent} bg={bg} />}
         {screen === "prayer" && <PrayerScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} />}
         {screen === "profile" && <ProfileScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} />}
@@ -165,7 +189,7 @@ export default function AppPreviewPanel({
 /* ══════════════════════════════════════════════════════════════════
    HOME SCREEN — All values are native Figma 402px
    ══════════════════════════════════════════════════════════════════ */
-function HomeScreen({ brandColor, accent, bg, appName, headingFont = "'Playfair Display', serif", headerStyle = "classic" }: { brandColor: string; accent: string; bg: string; appName: string; headingFont?: string; headerStyle?: HeaderStyleKey }) {
+function HomeScreen({ brandColor, accent, bg, appName, headingFont = "'Playfair Display', serif", headerStyle = "classic", programs = [] }: { brandColor: string; accent: string; bg: string; appName: string; headingFont?: string; headerStyle?: HeaderStyleKey; programs?: PreviewProgram[] }) {
   const sf = "'SF Pro', -apple-system, system-ui, sans-serif";
   const countdown = headerStyle !== "classic";
   const alignItems = headerStyle === "countdown-left" ? "flex-start" : "center";
@@ -421,7 +445,7 @@ function HomeScreen({ brandColor, accent, bg, appName, headingFont = "'Playfair 
 
         {/* Programs — thumbnails 50×50 radius 10, text SF Pro 590 10px */}
         <SectionHeader title="PROGRAMS" right="See all →" divider />
-        <ProgramsList brandColor={brandColor} accent={accent} />
+        <ProgramsList brandColor={brandColor} accent={accent} programs={programs} />
 
         {/* Recommended — cards 220×196 radius 14, text 13px 590 */}
         <SectionHeader title="RECOMMENDED FOR YOU" right="See all →" divider />
@@ -477,7 +501,7 @@ function HomeScreen({ brandColor, accent, bg, appName, headingFont = "'Playfair 
 /* ══════════════════════════════════════════════════════════════════
    DISCOVER SCREEN
    ══════════════════════════════════════════════════════════════════ */
-function DiscoverScreen({ brandColor, accent, bg, appName }: { brandColor: string; accent: string; bg: string; appName: string }) {
+function DiscoverScreen({ brandColor, accent, bg, appName, programCategories = [], programs = [] }: { brandColor: string; accent: string; bg: string; appName: string; programCategories?: PreviewCategory[]; programs?: PreviewProgram[] }) {
   const sf = "'SF Pro', -apple-system, system-ui, sans-serif";
   /* Figma: container bg #0A261E radius 48, cream rect starts at y=39 */
   return (
@@ -525,31 +549,12 @@ function DiscoverScreen({ brandColor, accent, bg, appName }: { brandColor: strin
         {/* "Upcoming events" — Figma: section starts ~y=474 */}
         <SectionHeader title="UPCOMING EVENTS" right="VIEW CALENDAR" divider calendarIcon />
         {/* Rows with 50×50 thumbnails, SF Pro 590 10px */}
-        <ProgramsList brandColor={brandColor} accent={accent} />
+        <ProgramsList brandColor={brandColor} accent={accent} programs={programs} />
 
-        {/* "Programs" category cards — Figma: section starts ~y=783 */}
+        {/* "Programs" category cards — Figma: section starts ~y=783.
+             Renders the mosque's real categories when set, else sample defaults. */}
         <SectionHeader title="PROGRAMS" right="SEE ALL →" divider />
-        {/* Cards: 149-153×217, radius 14-16, labels 13px 510 */}
-        <div className="flex gap-[13px]" style={{ padding: "8px 16px", overflow: "hidden" }}>
-          {[
-            { label: "Kids", bg: "linear-gradient(145deg, #FAF5EC 0%, #F0E8D8 100%)", art: <CrescentArt />, border: true },
-            { label: "Youth", bg: "linear-gradient(145deg, #2C4A3A 0%, #1A3528 100%)", art: <BookArt /> },
-            { label: "Adults", bg: "linear-gradient(145deg, #4A6040 0%, #3A5030 100%)", art: <WheatArt /> },
-          ].map((cat) => (
-            <div key={cat.label} className="flex-1 min-w-0">
-              <div
-                className="rounded-[16px] relative overflow-hidden flex items-center justify-center"
-                style={{
-                  width: "100%", height: 217, background: cat.bg,
-                  border: cat.border ? "0.5px solid rgba(10,38,30,0.1)" : "none",
-                }}
-              >
-                {cat.art}
-              </div>
-              <p style={{ fontFamily: sf, fontSize: 13, fontWeight: 510, lineHeight: "16px", color: brandColor, margin: "6px 0 0" }}>{cat.label}</p>
-            </div>
-          ))}
-        </div>
+        <ProgramCategoryCards brandColor={brandColor} categories={programCategories} />
 
         {/* Donate banner — Figma: y=1145, left 24, right 20 */}
         <div style={{ padding: "14px 4px 0" }}>
@@ -1073,18 +1078,29 @@ function SectionHeader({ title, right, accent, divider, calendarIcon }: {
   );
 }
 
-function ProgramsList({ brandColor, accent }: { brandColor: string; accent: string }) {
-  const programs = [
+function ProgramsList({ brandColor, accent, programs = [] }: { brandColor: string; accent: string; programs?: PreviewProgram[] }) {
+  const DEFAULTS = [
     { name: "MAS SI Soccer Program", date: "April 10 · 6pm", tag: "Sports & Youth", hue: 35 },
     { name: "Quranic Wisdoms", date: "April 11 · 6pm", tag: "Quran Study", hue: 140 },
     { name: "Soulful Saturdays", date: "April 30 · 6pm", tag: "Kids", hue: 25 },
   ];
+  // Real programs when the mosque has added any (shown first 4), else samples.
+  const HUES = [35, 140, 25, 200];
+  const rows =
+    programs.length > 0
+      ? programs.slice(0, 4).map((p, i) => ({
+          name: p.name,
+          date: formatPreviewTime(p.time),
+          tag: p.categoryTitles[0] ?? "",
+          hue: HUES[i % HUES.length],
+        }))
+      : DEFAULTS;
   return (
     <div style={{ padding: "0 22px" }}>
-      {programs.map((prog, i) => (
+      {rows.map((prog, i) => (
         <div key={i} className="flex items-center" style={{
           height: 80, gap: 12,
-          borderBottom: i < 2 ? "0.5px solid rgba(10,38,30,0.1)" : "none",
+          borderBottom: i < rows.length - 1 ? "0.5px solid rgba(10,38,30,0.1)" : "none",
         }}>
           <div className="rounded-[10px] shrink-0 overflow-hidden" style={{
             width: 50, height: 50,
@@ -1096,6 +1112,62 @@ function ProgramsList({ brandColor, accent }: { brandColor: string; accent: stri
             <p style={{ fontFamily: SF, fontWeight: 400, fontSize: 10, lineHeight: "18px", color: accent, margin: "1px 0 0" }}>{prog.tag}</p>
           </div>
           <ChevronRight color="rgba(10,38,30,0.6)" size={8} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* Discover "Programs" category cards. Renders the mosque's real categories
+   (cover image, or a solid chosen color, else a sample gradient + art) when
+   present; falls back to the sample Kids/Youth/Adults set otherwise. */
+function ProgramCategoryCards({ brandColor, categories }: { brandColor: string; categories: PreviewCategory[] }) {
+  if (!categories || categories.length === 0) {
+    const defaults = [
+      { label: "Kids", bg: "linear-gradient(145deg, #FAF5EC 0%, #F0E8D8 100%)", art: <CrescentArt />, border: true },
+      { label: "Youth", bg: "linear-gradient(145deg, #2C4A3A 0%, #1A3528 100%)", art: <BookArt /> },
+      { label: "Adults", bg: "linear-gradient(145deg, #4A6040 0%, #3A5030 100%)", art: <WheatArt /> },
+    ];
+    return (
+      <div className="flex gap-[13px]" style={{ padding: "8px 16px", overflow: "hidden" }}>
+        {defaults.map((cat) => (
+          <div key={cat.label} className="flex-1 min-w-0">
+            <div className="rounded-[16px] relative overflow-hidden flex items-center justify-center"
+              style={{ width: "100%", height: 217, background: cat.bg, border: cat.border ? "0.5px solid rgba(10,38,30,0.1)" : "none" }}>
+              {cat.art}
+            </div>
+            <p style={{ fontFamily: SF, fontSize: 13, fontWeight: 510, lineHeight: "16px", color: brandColor, margin: "6px 0 0" }}>{cat.label}</p>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const gradients = [
+    "linear-gradient(145deg, #2C4A3A 0%, #1A3528 100%)",
+    "linear-gradient(145deg, #4A6040 0%, #3A5030 100%)",
+    "linear-gradient(145deg, #FAF5EC 0%, #F0E8D8 100%)",
+  ];
+  const arts = [<BookArt key="b" />, <WheatArt key="w" />, <CrescentArt key="c" />];
+
+  return (
+    <div className="flex gap-[13px]" style={{ padding: "8px 16px", overflowX: "auto", scrollbarWidth: "none" }}>
+      {categories.map((cat, i) => (
+        <div key={i} style={{ width: 132, flexShrink: 0 }}>
+          <div className="rounded-[16px] relative overflow-hidden flex items-center justify-center"
+            style={{
+              width: "100%", height: 217,
+              background: cat.imageUrl ? undefined : (cat.bgColor ?? gradients[i % gradients.length]),
+              border: "0.5px solid rgba(10,38,30,0.1)",
+            }}>
+            {cat.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={cat.imageUrl} alt={cat.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : cat.bgColor ? null : (
+              arts[i % arts.length]
+            )}
+          </div>
+          <p style={{ fontFamily: SF, fontSize: 13, fontWeight: 510, lineHeight: "16px", color: brandColor, margin: "6px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{cat.title}</p>
         </div>
       ))}
     </div>

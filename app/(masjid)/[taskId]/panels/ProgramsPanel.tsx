@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, Plus, Upload, Trash2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { BookOpen, Plus, Upload, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import CSVImport from "../../components/CSVImport";
+import TimePicker, { formatTimeLabel } from "../../components/TimePicker";
+import { usePreview } from "../../components/OnboardingPreviewContext";
 import { Dropdown } from "@/app/(admin)/components/Dropdown";
 import { cn } from "@/lib/utils";
 import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY_SM, BTN_GHOST_SM } from "@/lib/ui-classes";
@@ -45,17 +47,30 @@ const GENDER_OPTIONS = [
   { value: "Sisters", label: "Sisters" },
 ];
 
+const NAME_MAX = 40;
+const DESCRIPTION_MAX = 300;
+
+type Category = { id: string; title: string };
+
 export default function ProgramsPanel({
   mosqueId,
   initialPrograms,
   speakers,
+  categories = [],
+  initialAssignments = {},
 }: {
   mosqueId: string;
   initialPrograms: ContentItem[];
   speakers: Speaker[];
+  /** The mosque's program categories, set up in the "Program Categories" step. */
+  categories?: Category[];
+  /** contentId → categoryIds the program is currently sorted into. */
+  initialAssignments?: Record<string, string[]>;
 }) {
   const { showToast } = useToast();
   const [programs, setPrograms] = useState(initialPrograms);
+  const [assignments, setAssignments] =
+    useState<Record<string, string[]>>(initialAssignments);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showCSV, setShowCSV] = useState(false);
@@ -64,11 +79,31 @@ export default function ProgramsPanel({
   const [description, setDescription] = useState("");
   const [selectedSpeaker, setSelectedSpeaker] = useState("");
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [startTime, setStartTime] = useState("");
   const [gender, setGender] = useState("All");
   const [isKids, setIsKids] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [price, setPrice] = useState("");
+
+  const categoryTitleById = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.title])),
+    [categories]
+  );
+
+  // Keep the live phone preview in sync with the programs + their categories.
+  const { updatePreview } = usePreview();
+  useEffect(() => {
+    updatePreview({
+      programs: programs.map((p) => ({
+        name: p.name,
+        time: p.start_time,
+        categoryTitles: (assignments[p.content_id] ?? [])
+          .map((id) => categoryTitleById.get(id))
+          .filter((t): t is string => Boolean(t)),
+      })),
+    });
+  }, [programs, assignments, categoryTitleById, updatePreview]);
 
   const speakerOptions = useMemo(
     () => [
@@ -80,6 +115,7 @@ export default function ProgramsPanel({
 
   function resetForm() {
     setName(""); setDescription(""); setSelectedSpeaker(""); setSelectedDays([]);
+    setSelectedCategories([]);
     setStartTime(""); setGender("All"); setIsKids(false); setIsPaid(false); setPrice("");
     setShowForm(false);
   }
@@ -87,6 +123,12 @@ export default function ProgramsPanel({
   function toggleDay(day: string) {
     setSelectedDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  }
+
+  function toggleCategory(id: string) {
+    setSelectedCategories((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
   }
 
@@ -108,11 +150,35 @@ export default function ProgramsPanel({
           is_kids: isKids,
           is_paid: isPaid,
           price: isPaid ? parseFloat(price) || 0 : 0,
-          markComplete: programs.length >= 2,
+          markComplete: true,
         }),
       });
       if (!res.ok) throw new Error("Failed to add");
       const newItem = await res.json();
+
+      // Sort the new program into the chosen categories.
+      if (selectedCategories.length > 0) {
+        const assignRes = await fetch(
+          `/api/mosques/${mosqueId}/program-categories/assignments`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contentId: newItem.content_id,
+              categoryIds: selectedCategories,
+            }),
+          }
+        );
+        if (assignRes.ok) {
+          const { categoryIds } = (await assignRes.json()) as {
+            categoryIds: string[];
+          };
+          setAssignments((prev) => ({ ...prev, [newItem.content_id]: categoryIds }));
+        } else {
+          showToast("Program added, but categories didn't save", "error");
+        }
+      }
+
       setPrograms((prev) => [newItem, ...prev]);
       resetForm();
       showToast("Program added", "success");
@@ -125,38 +191,17 @@ export default function ProgramsPanel({
       const res = await fetch(`/api/mosques/${mosqueId}/content?contentId=${contentId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
       setPrograms((prev) => prev.filter((p) => p.content_id !== contentId));
+      setAssignments((prev) => {
+        const next = { ...prev };
+        delete next[contentId];
+        return next;
+      });
       showToast("Program removed", "success");
     } catch { showToast("Failed to remove", "error"); }
   }
 
-  const thresholdMet = programs.length >= 3;
-
   return (
     <div className="space-y-5">
-      {/* Threshold Callout */}
-      <div
-        className={cn(
-          "flex items-start gap-2.5 rounded-lg border px-4 py-3",
-          thresholdMet
-            ? "border-emerald-200 bg-emerald-50"
-            : "border-amber-200 bg-amber-50"
-        )}
-      >
-        {thresholdMet ? (
-          <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" />
-        ) : (
-          <AlertCircle size={16} className="mt-0.5 shrink-0 text-amber-600" />
-        )}
-        <p className={cn(
-          "text-[12px]",
-          thresholdMet ? "text-emerald-800" : "text-amber-800"
-        )}>
-          {thresholdMet
-            ? `${programs.length} programs added — your Discover tab will look great!`
-            : `Add at least 3 programs (${programs.length}/3) — users need content to explore`}
-        </p>
-      </div>
-
       {/* Program List */}
       {programs.length > 0 && (
         <div className="space-y-2">
@@ -176,13 +221,27 @@ export default function ProgramsPanel({
                     <p className="mt-0.5 line-clamp-1 text-[11px] text-stone-500">{prog.description}</p>
                   )}
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {(assignments[prog.content_id] ?? []).map((catId) => {
+                      const title = categoryTitleById.get(catId);
+                      if (!title) return null;
+                      return (
+                        <span
+                          key={catId}
+                          className="rounded-md border border-stone-300 bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold text-stone-700"
+                        >
+                          {title}
+                        </span>
+                      );
+                    })}
                     {prog.days?.map((d) => (
                       <span key={d} className="rounded-md border border-stone-200 bg-stone-50 px-1.5 py-0.5 text-[10px] font-medium text-stone-600">
                         {d}
                       </span>
                     ))}
                     {prog.start_time && (
-                      <span className="text-[10px] text-stone-400">{prog.start_time}</span>
+                      <span className="text-[10px] text-stone-400">
+                        {formatTimeLabel(prog.start_time) ?? prog.start_time}
+                      </span>
                     )}
                     {prog.gender !== "All" && (
                       <span className="rounded-md border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">
@@ -236,24 +295,89 @@ export default function ProgramsPanel({
             </div>
             <div className="space-y-4 px-6 py-5">
               <div>
-                <label className={LABEL_CLASS}>Program Name</label>
+                <div className="flex items-center justify-between">
+                  <label className={LABEL_CLASS}>Program Name</label>
+                  <span
+                    className={cn(
+                      "mb-1.5 text-[10.5px] tabular-nums",
+                      name.length >= NAME_MAX ? "text-red-500" : "text-stone-400"
+                    )}
+                  >
+                    {name.length}/{NAME_MAX}
+                  </span>
+                </div>
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
+                  maxLength={NAME_MAX}
                   placeholder="e.g., Weekly Tafsir Class"
                   className={INPUT_CLASS}
                 />
               </div>
               <div>
-                <label className={LABEL_CLASS}>Description</label>
+                <div className="flex items-center justify-between">
+                  <label className={LABEL_CLASS}>Description</label>
+                  <span
+                    className={cn(
+                      "mb-1.5 text-[10.5px] tabular-nums",
+                      description.length >= DESCRIPTION_MAX
+                        ? "text-red-500"
+                        : "text-stone-400"
+                    )}
+                  >
+                    {description.length}/{DESCRIPTION_MAX}
+                  </span>
+                </div>
                 <textarea
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) =>
+                    setDescription(e.target.value.slice(0, DESCRIPTION_MAX))
+                  }
+                  maxLength={DESCRIPTION_MAX}
                   placeholder="Brief description (optional)"
                   rows={2}
                   className="w-full resize-none rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none transition-colors placeholder:text-stone-400 hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
                 />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>Categories</label>
+                {categories.length === 0 ? (
+                  <p className="text-[11.5px] text-stone-400">
+                    No categories yet — set them up in the{" "}
+                    <span className="font-medium text-stone-500">
+                      Program Categories
+                    </span>{" "}
+                    step first, then a program can be sorted into them.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-1.5">
+                      {categories.map((c) => {
+                        const isSelected = selectedCategories.includes(c.id);
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => toggleCategory(c.id)}
+                            className={cn(
+                              "h-8 rounded-md border px-3 text-[11px] font-medium transition-all",
+                              isSelected
+                                ? "border-stone-900 bg-stone-900 text-white"
+                                : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:bg-stone-50"
+                            )}
+                          >
+                            {c.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-stone-400">
+                      Pick one or more — a program can appear under multiple
+                      categories.
+                    </p>
+                  </>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -268,12 +392,7 @@ export default function ProgramsPanel({
                 </div>
                 <div>
                   <label className={LABEL_CLASS}>Start Time</label>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className={cn(INPUT_CLASS, "tabular-nums")}
-                  />
+                  <TimePicker value={startTime} onChange={setStartTime} />
                 </div>
               </div>
               <div>
