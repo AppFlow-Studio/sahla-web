@@ -191,7 +191,6 @@ const PRICE_TO_TIER: Record<string, string> = {};
 for (const [tier, envKey] of Object.entries({
   core: "STRIPE_PRICE_CORE",
   core_crm: "STRIPE_PRICE_CORE_CRM",
-  complete: "STRIPE_PRICE_COMPLETE",
 })) {
   const priceId = Deno.env.get(envKey);
   if (priceId) PRICE_TO_TIER[priceId] = tier;

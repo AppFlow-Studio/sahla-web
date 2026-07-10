@@ -19,7 +19,7 @@ export type CrmCard = {
 };
 
 export type CrmSubscriptionResponse = {
-  tier: "core" | "core_crm" | "complete" | null;
+  tier: "core" | "core_crm" | null;
   status: string | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
