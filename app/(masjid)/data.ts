@@ -88,3 +88,62 @@ export const getMosqueOnboardingData = cache(async (orgId: string) => {
 
   return { ...mosque, onboarding_progress: merged };
 });
+
+/**
+ * Program categories + programs (with their category titles) for the live app
+ * preview. Seeds the phone mock so a mosque's real Discover cards and program
+ * names show up regardless of which onboarding step they're on.
+ */
+export const getMosquePreviewContent = cache(async (mosqueId: string) => {
+  const supabase = createAdminSupabaseClient();
+  const [catsRes, progsRes, assignRes] = await Promise.all([
+    supabase
+      .from("program_categories")
+      .select("id, title, bg_color, image_url, sort_order, created_at")
+      .eq("mosque_id", mosqueId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("content_items")
+      .select("content_id, name, start_time, created_at")
+      .eq("mosque_id", mosqueId)
+      .eq("type", "program")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("program_category_content")
+      .select("category_id, content_id")
+      .eq("mosque_id", mosqueId),
+  ]);
+
+  const cats =
+    (catsRes.data as
+      | { id: string; title: string; bg_color: string | null; image_url: string | null }[]
+      | null) ?? [];
+  const titleById = new Map(cats.map((c) => [c.id, c.title]));
+
+  const titlesByContent = new Map<string, string[]>();
+  for (const a of (assignRes.data as
+    | { category_id: string; content_id: string }[]
+    | null) ?? []) {
+    const title = titleById.get(a.category_id);
+    if (!title) continue;
+    const list = titlesByContent.get(a.content_id) ?? [];
+    list.push(title);
+    titlesByContent.set(a.content_id, list);
+  }
+
+  return {
+    programCategories: cats.map((c) => ({
+      title: c.title,
+      bgColor: c.bg_color,
+      imageUrl: c.image_url,
+    })),
+    programs: ((progsRes.data as
+      | { content_id: string; name: string; start_time: string | null }[]
+      | null) ?? []).map((p) => ({
+      name: p.name,
+      time: p.start_time,
+      categoryTitles: titlesByContent.get(p.content_id) ?? [],
+    })),
+  };
+});

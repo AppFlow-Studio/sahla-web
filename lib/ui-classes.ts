@@ -19,9 +19,9 @@ export const BTN_PRIMARY_DISABLED =
   "rounded-lg bg-stone-100 px-5 py-2.5 text-sm font-medium text-stone-400 cursor-not-allowed";
 
 export const BTN_GHOST =
-  "rounded-lg px-4 py-2 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-50 hover:text-stone-700";
+  "inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-stone-500 transition-colors hover:bg-stone-50 hover:text-stone-700";
 
 export const BTN_GHOST_SM =
-  "rounded-lg px-4 py-2 text-[13px] font-medium text-stone-500 transition-colors hover:bg-stone-50 hover:text-stone-700";
+  "inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[13px] font-medium text-stone-500 transition-colors hover:bg-stone-50 hover:text-stone-700";
 
 export const CARD = "rounded-xl border border-stone-200 bg-white shadow-sm";

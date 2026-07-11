@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { uploadToBunny } from "@/lib/bunny";
 import { NextResponse } from "next/server";
 
 export async function POST(
@@ -19,20 +19,15 @@ export async function POST(
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  const ext = file.name.split(".").pop() || "png";
-  const path = `${mosqueId}/logo.${ext}`;
+  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+  const path = `logos/${mosqueId}/logo.${ext}`;
 
-  const supabase = createAdminSupabaseClient();
-
-  const { error: uploadError } = await supabase.storage
-    .from("logos")
-    .upload(path, file, { upsert: true, contentType: file.type });
-
-  if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  try {
+    // Bunny PUT overwrites in place; cache-bust so a re-upload shows immediately.
+    const url = await uploadToBunny(path, file);
+    return NextResponse.json({ url: `${url}?t=${Date.now()}` });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Upload failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const { data: urlData } = supabase.storage.from("logos").getPublicUrl(path);
-
-  return NextResponse.json({ url: urlData.publicUrl });
 }

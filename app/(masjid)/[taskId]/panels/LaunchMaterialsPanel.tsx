@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 
 type MosqueInfo = {
@@ -81,8 +82,28 @@ Barakallahu feekum.`;
 export default function LaunchMaterialsPanel({ mosque }: { mosque: MosqueInfo }) {
   const router = useRouter();
   const { showToast } = useToast();
-  const [saving, setSaving] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const markedRef = useRef(false);
+
+  // Review-only screen — visiting = reviewing, so silently mark complete on
+  // mount. Idempotent on the backend; guarded by ref so we only fire once.
+  useEffect(() => {
+    if (markedRef.current) return;
+    markedRef.current = true;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/mosques/${mosque.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ markComplete: "launch_materials" }),
+          keepalive: true,
+        });
+        if (res.ok) router.refresh();
+      } catch {
+        // Silent — the Next button still works either way.
+      }
+    })();
+  }, [mosque.id, router]);
 
   async function copyToClipboard(text: string, id: string) {
     try {
@@ -92,24 +113,6 @@ export default function LaunchMaterialsPanel({ mosque }: { mosque: MosqueInfo })
       setTimeout(() => setCopiedId(null), 2000);
     } catch {
       showToast("Failed to copy", "error");
-    }
-  }
-
-  async function handleMarkComplete() {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/mosques/${mosque.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markComplete: "launch_materials" }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      showToast("Launch materials reviewed", "success");
-      router.refresh();
-    } catch {
-      showToast("Failed to mark complete", "error");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -240,15 +243,11 @@ export default function LaunchMaterialsPanel({ mosque }: { mosque: MosqueInfo })
         ))}
       </div>
 
-      {/* Mark Complete */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleMarkComplete}
-          disabled={saving}
-          className="rounded-lg bg-emerald-600 px-5 py-2.5 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
-        >
-          {saving ? "Saving..." : "Mark Complete"}
-        </button>
+      <div className="flex items-center justify-end text-[11.5px] text-emerald-700">
+        <span className="inline-flex items-center gap-1.5">
+          <Check size={12} strokeWidth={2.5} />
+          Marked as reviewed
+        </span>
       </div>
     </div>
   );

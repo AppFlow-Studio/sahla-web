@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Upload, X } from "lucide-react";
+import { AlertCircle, Check, Loader2, Upload, X } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import { usePreview } from "../../components/OnboardingPreviewContext";
 import ColorPicker from "../../components/ColorPicker";
@@ -11,7 +11,9 @@ import { normalizeFontTheme, type FontThemeKey } from "@/lib/font-themes";
 import HeaderStylePicker from "@/components/HeaderStylePicker";
 import { normalizeHeaderStyle, type HeaderStyleKey } from "@/lib/header-styles";
 import { cn } from "@/lib/utils";
-import { INPUT_CLASS, BTN_PRIMARY, BTN_PRIMARY_DISABLED, BTN_GHOST } from "@/lib/ui-classes";
+import { INPUT_CLASS } from "@/lib/ui-classes";
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 const PRESET_BRAND_COLORS = [
   "#0A261E", "#0D3B3B", "#1B3A4B", "#1F3C5C", "#2D4A22",
@@ -46,7 +48,6 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
   const router = useRouter();
   const { showToast } = useToast();
   const { updatePreview } = usePreview();
-  const [saving, setSaving] = useState(false);
 
   const [appName, setAppName] = useState(mosque.app_name || "");
   const [brandColor, setBrandColor] = useState(mosque.brand_color || "#0A261E");
@@ -55,13 +56,39 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
   const [headerStyle, setHeaderStyle] = useState<HeaderStyleKey>(normalizeHeaderStyle(mosque.header_style));
   const [logoUrl, setLogoUrl] = useState(mosque.logo_url || "");
   const [uploading, setUploading] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const lastSavedRef = useRef<string>(
+    JSON.stringify({
+      appName: mosque.app_name || "",
+      brandColor: mosque.brand_color || "#0A261E",
+      accentColor: mosque.accent_color || "#B8922A",
+      fontTheme: normalizeFontTheme(mosque.font_theme),
+      headerStyle: normalizeHeaderStyle(mosque.header_style),
+      logoUrl: mosque.logo_url || "",
+    })
+  );
+  const debounceRef = useRef<number | null>(null);
+  const isFirstRender = useRef(true);
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    // Reset the file input so re-choosing the same file after an error works.
+    e.target.value = "";
     if (!file) return;
 
+    setLogoError(null);
+
+    if (!file.type.startsWith("image/")) {
+      setLogoError("That doesn't look like an image. PNG or JPG only.");
+      return;
+    }
     if (file.size > 2 * 1024 * 1024) {
-      showToast("Logo must be under 2MB", "error");
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      setLogoError(
+        `Your logo is ${mb} MB — needs to be under 2 MB. Try compressing it (tinypng.com works well) and upload again.`
+      );
       return;
     }
 
@@ -80,44 +107,77 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
       updatePreview({ logoUrl: url });
       showToast("Logo uploaded", "success");
     } catch {
-      showToast("Failed to upload logo", "error");
+      setLogoError("Couldn't upload — check your connection and try again.");
     } finally {
       setUploading(false);
     }
   }
 
-  async function handleSave(markComplete = false) {
-    if (!appName.trim()) {
-      showToast("App name is required", "error");
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/mosques/${mosque.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          app_name: appName,
-          brand_color: brandColor,
-          accent_color: accentColor,
-          font_theme: fontTheme,
-          header_style: headerStyle,
-          logo_url: logoUrl || null,
-          ...(markComplete ? { markComplete: "app_branding" } : {}),
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      showToast(markComplete ? "Branding completed" : "Branding saved", "success");
-      router.refresh();
-    } catch {
-      showToast("Failed to save branding", "error");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   const displayLetter = mosque.name?.charAt(0).toUpperCase() || "M";
   const canComplete = appName.trim().length > 0;
+
+  // Auto-save on any change, debounced. Sends the current `canComplete`
+  // state so the sidebar checkmark tracks live — clearing the app name
+  // un-checks App Branding again. `keepalive: true` keeps the save alive
+  // across a Next-button navigation.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const snapshot = JSON.stringify({
+      appName,
+      brandColor,
+      accentColor,
+      fontTheme,
+      headerStyle,
+      logoUrl,
+    });
+    if (snapshot === lastSavedRef.current) return;
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(async () => {
+      setStatus("saving");
+      try {
+        const res = await fetch(`/api/mosques/${mosque.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            app_name: appName,
+            brand_color: brandColor,
+            accent_color: accentColor,
+            font_theme: fontTheme,
+            header_style: headerStyle,
+            logo_url: logoUrl || null,
+            [canComplete ? "markComplete" : "unmarkComplete"]: "app_branding",
+          }),
+          keepalive: true,
+        });
+        if (!res.ok) throw new Error("Failed to save");
+        lastSavedRef.current = snapshot;
+        router.refresh();
+        setStatus("saved");
+      } catch {
+        setStatus("error");
+        showToast("Couldn't save branding", "error");
+      }
+    }, 700);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [
+    appName,
+    brandColor,
+    accentColor,
+    fontTheme,
+    headerStyle,
+    logoUrl,
+    canComplete,
+    mosque.id,
+    router,
+    showToast,
+  ]);
 
   return (
     <div className="space-y-5">
@@ -150,34 +210,89 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
         <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
           <p className="text-[14px] font-semibold text-stone-900">App Logo</p>
           <p className="mt-0.5 text-[12px] text-stone-500">
-            Square image, at least 512x512px. PNG or JPG.
+            Square image, at least 512×512 px. PNG or JPG · max 2 MB.
           </p>
         </div>
-        <div className="flex items-center gap-5 px-6 py-5">
-          <div
-            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold shadow-sm ring-2 ring-white"
-            style={{
-              background: logoUrl ? `url(${logoUrl}) center/cover` : `${brandColor}1f`,
-              color: brandColor,
-            }}
-          >
-            {!logoUrl && displayLetter}
+
+        {/* Persistent inline error — much harder to miss than a 3-second toast. */}
+        {logoError && (
+          <div className="flex items-start gap-2 border-b border-red-100 bg-red-50 px-6 py-3">
+            <AlertCircle size={15} className="mt-0.5 shrink-0 text-red-600" />
+            <div className="flex-1 text-[12.5px] text-red-700">
+              {logoError}
+            </div>
+            <button
+              type="button"
+              onClick={() => setLogoError(null)}
+              className="shrink-0 rounded-md p-0.5 text-red-500 transition-colors hover:bg-red-100"
+              aria-label="Dismiss error"
+            >
+              <X size={13} />
+            </button>
           </div>
+        )}
+
+        <div className="flex items-center gap-5 px-6 py-5">
+          <div className="relative">
+            <div
+              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl text-xl font-semibold shadow-sm ring-2 ring-white"
+              style={{
+                background: logoUrl && !uploading ? `url(${logoUrl}) center/cover` : `${brandColor}1f`,
+                color: brandColor,
+              }}
+            >
+              {!logoUrl && !uploading && displayLetter}
+            </div>
+
+            {/* Skeleton shimmer overlay while the file is uploading — mirrors
+                Claude's file-processing UX so admins see something is
+                happening for the ~1-3 s the upload takes. */}
+            {uploading && (
+              <div className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-2xl bg-stone-200/70">
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                <div className="relative z-10 flex flex-col items-center gap-1">
+                  <Loader2 size={18} className="animate-spin text-stone-700" />
+                  <span className="text-[10px] font-medium text-stone-700">
+                    Processing…
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-[13px] font-medium text-stone-700 shadow-sm transition-colors hover:bg-stone-50">
-              <Upload size={14} className="text-stone-400" />
-              {uploading ? "Uploading..." : logoUrl ? "Replace" : "Choose File"}
+            <label
+              className={cn(
+                "inline-flex cursor-pointer items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-[13px] font-medium text-stone-700 shadow-sm transition-colors hover:bg-stone-50",
+                uploading && "cursor-not-allowed opacity-60"
+              )}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin text-stone-500" />
+                  Uploading…
+                </>
+              ) : (
+                <>
+                  <Upload size={14} className="text-stone-400" />
+                  {logoUrl ? "Replace" : "Choose File"}
+                </>
+              )}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp"
                 onChange={handleLogoUpload}
                 className="hidden"
                 disabled={uploading}
               />
             </label>
-            {logoUrl && (
+            {logoUrl && !uploading && (
               <button
-                onClick={() => { setLogoUrl(""); updatePreview({ logoUrl: null }); }}
+                onClick={() => {
+                  setLogoUrl("");
+                  updatePreview({ logoUrl: null });
+                  setLogoError(null);
+                }}
                 className="rounded-lg p-2 text-stone-400 transition-colors hover:bg-stone-50 hover:text-red-500"
               >
                 <X size={16} />
@@ -275,7 +390,13 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
           </p>
         </div>
         <div className="px-6 py-5">
-          <FontThemePicker value={fontTheme} onChange={setFontTheme} />
+          <FontThemePicker
+            value={fontTheme}
+            onChange={(v) => {
+              setFontTheme(v);
+              updatePreview({ fontTheme: v });
+            }}
+          />
         </div>
       </div>
 
@@ -289,27 +410,33 @@ export default function AppBrandingPanel({ mosque }: { mosque: MosqueData }) {
           </p>
         </div>
         <div className="px-6 py-5">
-          <HeaderStylePicker value={headerStyle} onChange={setHeaderStyle} />
+          <HeaderStylePicker
+            value={headerStyle}
+            onChange={(v) => {
+              setHeaderStyle(v);
+              updatePreview({ headerStyle: v });
+            }}
+          />
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => handleSave(false)}
-          disabled={saving || !canComplete}
-          className={BTN_GHOST}
-        >
-          {saving ? "Saving..." : "Save Draft"}
-        </button>
-        <button
-          onClick={() => handleSave(true)}
-          disabled={saving || !canComplete}
-          className={canComplete && !saving ? BTN_PRIMARY : BTN_PRIMARY_DISABLED}
-        >
-          {saving && <Loader2 size={14} className="animate-spin" />}
-          Mark Complete
-        </button>
+      {/* Auto-save status */}
+      <div className="flex items-center justify-end text-[11.5px] text-stone-500">
+        {status === "saving" ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Loader2 size={11} className="animate-spin" />
+            Saving…
+          </span>
+        ) : status === "saved" ? (
+          <span className="inline-flex items-center gap-1.5 text-emerald-700">
+            <Check size={12} strokeWidth={2.5} />
+            Saved
+          </span>
+        ) : status === "error" ? (
+          <span className="text-red-600">Couldn&apos;t save — check your connection.</span>
+        ) : (
+          <span className="text-stone-400">Changes save automatically.</span>
+        )}
       </div>
     </div>
   );

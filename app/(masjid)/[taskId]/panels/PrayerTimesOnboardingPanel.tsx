@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, MapPin, Check, CheckCircle2, Loader2, ChevronDown, RefreshCcw, AlertTriangle } from "lucide-react";
+import { Settings, MapPin, Check, CheckCircle2, Loader2, ChevronDown, ChevronLeft, RefreshCcw, AlertTriangle } from "lucide-react";
 import {
   CALCULATION_METHODS,
   SCHOOLS,
@@ -123,7 +123,31 @@ export default function PrayerTimesOnboardingPanel({
   const { showToast } = useToast();
 
   const isConfigured = existingConfig.length === 5;
-  const [step, setStep] = useState<WizardStep>(isConfigured ? "view" : 1);
+
+  // Wizard step persistence: admins often bounce between onboarding tasks
+  // mid-wizard (Step 3 preview, Step 4 iqamah). Persist the current step to
+  // sessionStorage so navigating away and back doesn't reset them to Step 1.
+  const stepStorageKey = `prayer_times_wizard_step:${mosque.id}`;
+
+  const [step, setStep] = useState<WizardStep>(() => {
+    if (typeof window === "undefined") return isConfigured ? "view" : 1;
+    const saved = window.sessionStorage.getItem(stepStorageKey);
+    if (saved) {
+      const parsed = saved === "view" || saved === "success" ? saved : Number(saved);
+      // Only restore a numeric step within the valid range (1-5). Anything
+      // else falls through to the default resolution below.
+      if (typeof parsed === "number" && parsed >= 1 && parsed <= 5) return parsed as WizardStep;
+      if (parsed === "view" || parsed === "success") return parsed as WizardStep;
+    }
+    return isConfigured ? "view" : 1;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // `success` is transient — don't restore back into a celebration screen.
+    if (step === "success") return;
+    window.sessionStorage.setItem(stepStorageKey, String(step));
+  }, [step, stepStorageKey]);
   const [todaysPrayers, setTodaysPrayers] = useState<TodaysPrayer[] | null>(null);
   const [todaysPrayersError, setTodaysPrayersError] = useState<string | null>(null);
   const [syncingTodaysPrayers, setSyncingTodaysPrayers] = useState(false);
@@ -585,6 +609,7 @@ export default function PrayerTimesOnboardingPanel({
               </div>
               <div className="flex justify-between">
                 <button onClick={() => setStep(1)} className={BTN_GHOST}>
+                  <ChevronLeft size={14} />
                   Back
                 </button>
                 <button onClick={fetchPreview} disabled={loading} className={BTN_PRIMARY}>
@@ -627,6 +652,7 @@ export default function PrayerTimesOnboardingPanel({
               </div>
               <div className="flex justify-between">
                 <button onClick={() => setStep(2)} className={BTN_GHOST}>
+                  <ChevronLeft size={14} />
                   Change Method
                 </button>
                 <button onClick={() => setStep(4)} className={BTN_PRIMARY}>
@@ -692,6 +718,7 @@ export default function PrayerTimesOnboardingPanel({
               </div>
               <div className="flex justify-between">
                 <button onClick={() => setStep(3)} className={BTN_GHOST}>
+                  <ChevronLeft size={14} />
                   Back
                 </button>
                 <button onClick={() => setStep(5)} className={BTN_PRIMARY}>
@@ -738,6 +765,7 @@ export default function PrayerTimesOnboardingPanel({
               </div>
               <div className="flex items-center justify-between">
                 <button onClick={() => setStep(4)} className={BTN_GHOST}>
+                  <ChevronLeft size={14} />
                   Adjust Iqamah
                 </button>
                 <button onClick={handleSave} disabled={saving} className={BTN_PRIMARY}>

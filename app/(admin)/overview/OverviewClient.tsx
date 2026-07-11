@@ -688,12 +688,14 @@ export default function OverviewClient({
                             const isStripe = reason.toLowerCase().includes("stripe");
                             const isPrayer = reason.toLowerCase().includes("prayer") || reason.toLowerCase().includes("sync") || reason.toLowerCase().includes("iqamah");
                             const isContent = reason.toLowerCase().includes("content");
+                            const isReels = reason.toLowerCase().includes("reels");
                             const isCritical = reason.toLowerCase().includes("live but") || reason.toLowerCase().includes("missing");
 
                             let tagStyle = "bg-ink/[0.04] text-subtle";
                             if (isCritical) tagStyle = "bg-red-50 text-red-700";
                             else if (isStripe) tagStyle = "bg-violet-50 text-violet-700";
                             else if (isPrayer) tagStyle = "bg-sky-50 text-sky-700";
+                            else if (isReels) tagStyle = "bg-rose-50 text-rose-700";
                             else if (isAdmin) tagStyle = "bg-amber-50 text-amber-700";
                             else if (isContent) tagStyle = "bg-ink/[0.04] text-subtle";
 

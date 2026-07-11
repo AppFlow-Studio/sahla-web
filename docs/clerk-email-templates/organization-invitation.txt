@@ -1,0 +1,20 @@
+You're invited to join {{organization.name}} on Sahla.
+
+Accept the invitation to sign in and start managing {{organization.name}} —
+programs, prayer times, donations, and every announcement that reaches
+the community.
+
+Accept your invitation:
+{{action_url}}
+
+(This link is unique to you and expires in 30 days.)
+
+What you can do inside:
+  • Post programs, events, and jummah times to the app
+  • Send push notifications the whole community actually sees
+  • Track donations, business ads, and member growth
+
+Didn't expect this invitation? Safely ignore this email — nothing was
+created for you.
+
+— Sahla · Every mosque, its own app

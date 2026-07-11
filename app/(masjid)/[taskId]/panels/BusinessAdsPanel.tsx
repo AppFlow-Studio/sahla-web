@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { Check, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 
 type AdsConfig = {
@@ -10,6 +11,8 @@ type AdsConfig = {
   onboardingFee: string;
   monthlyRate: string;
 };
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export default function BusinessAdsPanel({
   mosqueId,
@@ -20,7 +23,6 @@ export default function BusinessAdsPanel({
 }) {
   const router = useRouter();
   const { showToast } = useToast();
-  const [saving, setSaving] = useState(false);
 
   const [enabled, setEnabled] = useState(initialConfig?.enabled ?? false);
   const [onboardingFee, setOnboardingFee] = useState(initialConfig?.onboardingFee ?? "200");
@@ -30,32 +32,85 @@ export default function BusinessAdsPanel({
   const monthly = parseInt(monthlyRate) || 0;
   const projectedAnnual5 = (fee * 5) + (monthly * 5 * 12);
 
-  async function handleSave(markComplete = false) {
-    setSaving(true);
-    try {
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const lastSavedRef = useRef<string>(
+    JSON.stringify({
+      enabled: initialConfig?.enabled ?? false,
+      onboardingFee: initialConfig?.onboardingFee ?? "200",
+      monthlyRate: initialConfig?.monthlyRate ?? "50",
+    })
+  );
+  const debounceRef = useRef<number | null>(null);
+  // If the config has been saved before we assume the task is already
+  // marked complete; only fire markComplete once per fresh session.
+  const alreadyMarkedRef = useRef(!!initialConfig);
+  const hasSavedOnceRef = useRef(false);
+
+  // Auto-save on any change, debounced. On the very first change from
+  // defaults we also fire `markComplete` so the sidebar checks off Business
+  // Ads without the admin pressing anything. `keepalive: true` keeps the
+  // save alive across a Next-button navigation.
+  useEffect(() => {
+    const snapshot = JSON.stringify({ enabled, onboardingFee, monthlyRate });
+    if (snapshot === lastSavedRef.current) return;
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(async () => {
+      setStatus("saving");
+      try {
+        const shouldMarkComplete = !alreadyMarkedRef.current;
+        const config: AdsConfig = {
+          enabled,
+          onboardingFee: onboardingFee.trim(),
+          monthlyRate: monthlyRate.trim(),
+        };
+        const res = await fetch(`/api/mosques/${mosqueId}/ads-config`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            config,
+            ...(shouldMarkComplete ? { markComplete: "ads_config" } : {}),
+          }),
+          keepalive: true,
+        });
+        if (!res.ok) throw new Error("Failed to save");
+        lastSavedRef.current = snapshot;
+        hasSavedOnceRef.current = true;
+        if (shouldMarkComplete) {
+          alreadyMarkedRef.current = true;
+          router.refresh();
+        }
+        setStatus("saved");
+      } catch {
+        setStatus("error");
+        showToast("Couldn't save ad config", "error");
+      }
+    }, 700);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [enabled, onboardingFee, monthlyRate, mosqueId, router, showToast]);
+
+  // If the admin lands here and never touches anything, still mark the task
+  // complete on unmount / next-navigation. Defaults are a valid answer.
+  useEffect(() => {
+    if (alreadyMarkedRef.current) return;
+    return () => {
+      if (alreadyMarkedRef.current || hasSavedOnceRef.current) return;
       const config: AdsConfig = {
         enabled,
         onboardingFee: onboardingFee.trim(),
         monthlyRate: monthlyRate.trim(),
       };
-
-      const res = await fetch(`/api/mosques/${mosqueId}/ads-config`, {
+      void fetch(`/api/mosques/${mosqueId}/ads-config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          config,
-          ...(markComplete ? { markComplete: "ads_config" } : {}),
-        }),
+        body: JSON.stringify({ config, markComplete: "ads_config" }),
+        keepalive: true,
       });
-      if (!res.ok) throw new Error("Failed to save");
-      showToast(markComplete ? "Business ads configured" : "Ad config saved", "success");
-      router.refresh();
-    } catch {
-      showToast("Failed to save ad config", "error");
-    } finally {
-      setSaving(false);
-    }
-  }
+    };
+  }, [enabled, onboardingFee, monthlyRate, mosqueId]);
 
   return (
     <div className="space-y-6">
@@ -167,22 +222,23 @@ export default function BusinessAdsPanel({
         )}
       </AnimatePresence>
 
-      {/* Actions */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => handleSave(false)}
-          disabled={saving}
-          className="rounded-lg border border-stone-300 px-5 py-2.5 text-[13px] font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-40"
-        >
-          {saving ? "Saving..." : "Save Draft"}
-        </button>
-        <button
-          onClick={() => handleSave(true)}
-          disabled={saving}
-          className="rounded-lg bg-emerald-600 px-5 py-2.5 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
-        >
-          Mark Complete
-        </button>
+      {/* Auto-save status */}
+      <div className="flex items-center justify-end text-[11.5px] text-stone-500">
+        {status === "saving" ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Loader2 size={11} className="animate-spin" />
+            Saving…
+          </span>
+        ) : status === "saved" ? (
+          <span className="inline-flex items-center gap-1.5 text-emerald-700">
+            <Check size={12} strokeWidth={2.5} />
+            Saved
+          </span>
+        ) : status === "error" ? (
+          <span className="text-red-600">Couldn&apos;t save — check your connection.</span>
+        ) : (
+          <span className="text-stone-400">Changes save automatically.</span>
+        )}
       </div>
     </div>
   );

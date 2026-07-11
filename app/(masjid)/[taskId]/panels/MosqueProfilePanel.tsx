@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import { usePreview } from "../../components/OnboardingPreviewContext";
 import { Dropdown } from "@/app/(admin)/components/Dropdown";
 import AddressAutocomplete, { type SelectedPlace } from "../../components/AddressAutocomplete";
-import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY, BTN_PRIMARY_DISABLED, BTN_GHOST } from "@/lib/ui-classes";
+import { INPUT_CLASS, LABEL_CLASS } from "@/lib/ui-classes";
 
 const US_TIMEZONES = [
   { value: "America/New_York", label: "Eastern (ET)" },
@@ -31,13 +31,14 @@ type MosqueData = {
 
 const FIELDS = ["name", "address", "city", "state", "phone", "email", "timezone"] as const;
 
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
 export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
   const router = useRouter();
   const { showToast } = useToast();
   const { updatePreview } = usePreview();
-  const [saving, setSaving] = useState(false);
 
-  const [form, setForm] = useState({
+  const initialForm = {
     name: mosque.name || "",
     address: mosque.address || "",
     city: mosque.city || "",
@@ -45,7 +46,12 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
     phone: mosque.phone || "",
     email: mosque.email || "",
     timezone: mosque.timezone || "America/New_York",
-  });
+  };
+  const [form, setForm] = useState(initialForm);
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const lastSavedRef = useRef<string>(JSON.stringify(initialForm));
+  const debounceRef = useRef<number | null>(null);
+  const isFirstRender = useRef(true);
 
   function updateField(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -69,26 +75,46 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
   const filledCount = FIELDS.filter((f) => form[f].trim() !== "").length;
   const canComplete = filledCount >= 4;
 
-  async function handleSave(markComplete = false) {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/mosques/${mosque.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          ...(markComplete ? { markComplete: "mosque_profile" } : {}),
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      showToast(markComplete ? "Mosque profile completed" : "Profile saved", "success");
-      router.refresh();
-    } catch {
-      showToast("Failed to save profile", "error");
-    } finally {
-      setSaving(false);
+  // Auto-save on change, debounced. Sends the current `canComplete` state
+  // so the sidebar checkmark tracks live — if the admin clears fields down
+  // below the threshold, the task un-checks. `keepalive: true` keeps the
+  // save alive across a Next-button navigation.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
     }
-  }
+    const serialized = JSON.stringify(form);
+    if (serialized === lastSavedRef.current) return;
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(async () => {
+      const snapshot = serialized;
+      setStatus("saving");
+      try {
+        const res = await fetch(`/api/mosques/${mosque.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...form,
+            [canComplete ? "markComplete" : "unmarkComplete"]: "mosque_profile",
+          }),
+          keepalive: true,
+        });
+        if (!res.ok) throw new Error("Failed to save");
+        lastSavedRef.current = snapshot;
+        router.refresh();
+        setStatus("saved");
+      } catch {
+        setStatus("error");
+        showToast("Couldn't save changes", "error");
+      }
+    }, 700);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [form, canComplete, mosque.id, router, showToast]);
 
   return (
     <div className="space-y-6">
@@ -195,23 +221,23 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => handleSave(false)}
-          disabled={saving}
-          className={BTN_GHOST}
-        >
-          {saving ? "Saving..." : "Save Draft"}
-        </button>
-        <button
-          onClick={() => handleSave(true)}
-          disabled={saving || !canComplete}
-          className={canComplete && !saving ? BTN_PRIMARY : BTN_PRIMARY_DISABLED}
-        >
-          {saving && <Loader2 size={14} className="animate-spin" />}
-          Mark Complete
-        </button>
+      {/* Auto-save status */}
+      <div className="flex items-center justify-end text-[11.5px] text-stone-500">
+        {status === "saving" ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Loader2 size={11} className="animate-spin" />
+            Saving…
+          </span>
+        ) : status === "saved" ? (
+          <span className="inline-flex items-center gap-1.5 text-emerald-700">
+            <Check size={12} strokeWidth={2.5} />
+            Saved
+          </span>
+        ) : status === "error" ? (
+          <span className="text-red-600">Couldn&apos;t save — check your connection.</span>
+        ) : (
+          <span className="text-stone-400">Changes save automatically.</span>
+        )}
       </div>
     </div>
   );

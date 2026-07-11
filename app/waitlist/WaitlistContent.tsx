@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ListChecks, Rocket, CheckCircle,
   Users, Bell, Heart, Megaphone, TrendingUp,
@@ -32,6 +32,30 @@ const agenda = [
   },
 ];
 
+/**
+ * Smooth-scroll to the "How the waitlist works" section. Retries a few
+ * times because a hydration remount can briefly leave the target detached
+ * from the DOM, and falls back to a raw `window.scrollTo` (with the header
+ * offset baked in) if the modern `scrollIntoView` returns falsy.
+ */
+function scrollToHowItWorks(attempt = 0) {
+  const target = document.getElementById("how-it-works");
+  if (!target) {
+    if (attempt < 4) {
+      window.setTimeout(() => scrollToHowItWorks(attempt + 1), 120);
+    }
+    return;
+  }
+  try {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch {
+    // Older browsers: manual smooth scroll with a header-height offset.
+    const rect = target.getBoundingClientRect();
+    const top = rect.top + window.scrollY - 96;
+    window.scrollTo({ top, behavior: "smooth" });
+  }
+}
+
 export default function WaitlistContent() {
   const [form, setForm] = useState({
     name: "",
@@ -46,6 +70,12 @@ export default function WaitlistContent() {
   const [errorMsg, setErrorMsg] = useState("");
   const [alreadyMosque, setAlreadyMosque] = useState("");
 
+  // Immersive fullscreen overlay: while the request is in flight → spinning
+  // ring, once it resolves → morphs to a check, then dismisses and scrolls
+  // the user down to "How the waitlist works". Kept in its own state so the
+  // overlay can outlive the raw request timing.
+  const [overlayPhase, setOverlayPhase] = useState<"hidden" | "loading" | "success">("hidden");
+
   function update(field: keyof typeof form, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
@@ -54,6 +84,8 @@ export default function WaitlistContent() {
     e.preventDefault();
     setStatus("submitting");
     setErrorMsg("");
+    setOverlayPhase("loading");
+    const overlayStart = Date.now();
 
     try {
       const res = await fetch("/api/waitlist", {
@@ -67,20 +99,43 @@ export default function WaitlistContent() {
         if (res.status === 409 && data?.alreadyJoined) {
           setAlreadyMosque(typeof data.mosqueName === "string" ? data.mosqueName : "");
           setStatus("already");
+          setOverlayPhase("hidden");
           return;
         }
         throw new Error(data?.error || "Something went wrong.");
       }
 
+      // Hold the loading ring for a minimum beat so a super-fast response
+      // doesn't feel jittery, then transition to the checkmark.
+      const held = Date.now() - overlayStart;
+      const minLoadingMs = 900;
+      if (held < minLoadingMs) {
+        await new Promise((r) => setTimeout(r, minLoadingMs - held));
+      }
+      setOverlayPhase("success");
       setStatus("success");
+
+      // Give the user time to see the checkmark, then fade the overlay and
+      // smooth-scroll them down to "How the waitlist works". Defensive:
+      // if a hydration remount ate the target briefly, retry a few times
+      // before giving up (rare, but a Turbopack RSC-cache race can cause it).
+      await new Promise((r) => setTimeout(r, 1200));
+      setOverlayPhase("hidden");
+      // Wait for the overlay's exit animation to finish so the scroll and
+      // the fade don't compete for the user's eye.
+      await new Promise((r) => setTimeout(r, 380));
+      scrollToHowItWorks();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
       setStatus("error");
+      setOverlayPhase("hidden");
     }
   }
 
   return (
     <>
+      <SubmitOverlay phase={overlayPhase} />
+
       <section id="top" className="bg-[#fffbf2] pt-36 pb-20">
         <div className="mx-auto max-w-[1200px] px-8">
           <div className="grid items-start gap-16 lg:grid-cols-2">
@@ -247,7 +302,7 @@ export function WaitlistExtras() {
   return (
     <>
       {/* What happens after you join the waitlist */}
-      <section className="bg-[#fffbf2] py-[80px]">
+      <section id="how-it-works" className="scroll-mt-24 bg-[#fffbf2] py-[80px]">
         <div className="mx-auto max-w-[1100px] px-8">
           <motion.div
             className="mb-12 text-center"
@@ -380,5 +435,141 @@ export function WaitlistExtras() {
         </div>
       </section>
     </>
+  );
+}
+
+/**
+ * Fullscreen submit overlay. Two phases:
+ *  - "loading": a slowly rotating ring with a soft breathing pulse behind
+ *    it, so a fast API response still feels "considered".
+ *  - "success": the ring completes into a filled emerald disc; a check
+ *    strokes into it with a spring; small radial glow lands behind it.
+ * Both phases share the same layout so the transition feels like a single
+ * continuous animation, not a swap.
+ */
+function SubmitOverlay({ phase }: { phase: "hidden" | "loading" | "success" }) {
+  const visible = phase !== "hidden";
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          key="waitlist-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, transition: { duration: 0.35 } }}
+          transition={{ duration: 0.25 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#fffbf2]/95 backdrop-blur-md"
+        >
+          {/* Soft ambient glow behind the mark. */}
+          <motion.div
+            aria-hidden
+            className="absolute h-[420px] w-[420px] rounded-full"
+            initial={{ opacity: 0.2, scale: 0.85 }}
+            animate={{
+              opacity: phase === "success" ? 0.55 : 0.25,
+              scale: phase === "success" ? 1.05 : 0.9,
+            }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              background:
+                "radial-gradient(closest-side, rgba(74,140,101,0.28), rgba(74,140,101,0) 70%)",
+              filter: "blur(6px)",
+            }}
+          />
+
+          <div className="relative flex flex-col items-center">
+            <div className="relative flex h-[140px] w-[140px] items-center justify-center">
+              {/* Loading ring */}
+              <AnimatePresence>
+                {phase === "loading" && (
+                  <motion.svg
+                    key="loading-ring"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                    viewBox="0 0 100 100"
+                    className="absolute inset-0 h-full w-full"
+                  >
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="46"
+                      fill="none"
+                      stroke="rgba(10,38,30,0.08)"
+                      strokeWidth="4"
+                    />
+                    <motion.circle
+                      cx="50"
+                      cy="50"
+                      r="46"
+                      fill="none"
+                      stroke="#1a6b42"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                      strokeDasharray="72 220"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1.1, ease: "linear", repeat: Infinity }}
+                      style={{ transformOrigin: "50% 50%" }}
+                    />
+                  </motion.svg>
+                )}
+              </AnimatePresence>
+
+              {/* Success mark */}
+              <AnimatePresence>
+                {phase === "success" && (
+                  <motion.div
+                    key="success-disc"
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0, transition: { duration: 0.25 } }}
+                    transition={{ type: "spring", stiffness: 260, damping: 18 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    <div className="flex h-[110px] w-[110px] items-center justify-center rounded-full bg-[#1a6b42] shadow-[0_20px_50px_-15px_rgba(26,107,66,0.45)]">
+                      <motion.svg
+                        viewBox="0 0 32 32"
+                        className="h-14 w-14"
+                        fill="none"
+                        stroke="#fffbf2"
+                        strokeWidth={3.2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <motion.path
+                          d="M8 16.5 L14 22 L24 11"
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: 1 }}
+                          transition={{ duration: 0.45, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+                        />
+                      </motion.svg>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <motion.div
+              className="mt-8 text-center"
+              key={phase}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <p className="font-[family-name:var(--font-hero)] text-[22px] leading-tight text-dark-green">
+                {phase === "loading"
+                  ? "Reserving your spot…"
+                  : "You’re on the list."}
+              </p>
+              <p className="mt-2 text-[13px] text-dark-green/50">
+                {phase === "loading"
+                  ? "Adding your mosque to the next wave."
+                  : "Here’s what happens next."}
+              </p>
+            </motion.div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

@@ -6,7 +6,6 @@ import { NextResponse } from "next/server";
 const TIER_CONFIG: Record<string, { envKey: string; name: string }> = {
   core: { envKey: "STRIPE_PRICE_CORE", name: "Sahla Core" },
   core_crm: { envKey: "STRIPE_PRICE_CORE_CRM", name: "Sahla Core + CRM" },
-  complete: { envKey: "STRIPE_PRICE_COMPLETE", name: "Sahla Complete" },
 };
 
 export async function POST(

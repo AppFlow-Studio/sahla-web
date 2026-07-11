@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { markOnboardingStep } from "@/lib/supabase/onboarding";
+import { markOnboardingStep, setOnboardingStep } from "@/lib/supabase/onboarding";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -112,6 +112,15 @@ export async function DELETE(
 
   const supabase = createAdminSupabaseClient();
 
+  // Fetch the type first so we know which onboarding key to potentially
+  // un-check after the delete.
+  const { data: existing } = await supabase
+    .from("content_items")
+    .select("type")
+    .eq("content_id", contentId)
+    .eq("mosque_id", mosqueId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("content_items")
     .delete()
@@ -120,6 +129,21 @@ export async function DELETE(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // If that was the last program (or event), un-check the corresponding
+  // sidebar task so it stops showing as done.
+  const deletedType = existing?.type;
+  if (deletedType === "program" || deletedType === "event") {
+    const { count } = await supabase
+      .from("content_items")
+      .select("*", { count: "exact", head: true })
+      .eq("mosque_id", mosqueId)
+      .eq("type", deletedType);
+    if ((count ?? 0) === 0) {
+      const taskKey = deletedType === "program" ? "programs" : "events";
+      await setOnboardingStep(supabase, mosqueId, taskKey, false);
+    }
   }
 
   return NextResponse.json({ success: true });
