@@ -75,23 +75,23 @@ export default function HeaderStylePicker({
             onClick={() => onChange(style.key)}
             aria-pressed={selected}
             className={cn(
-              "group relative flex flex-col rounded-xl border bg-white p-4 text-left transition-all",
+              "group relative flex h-full flex-col rounded-xl border bg-white p-4 text-left transition-all",
               selected
-                ? "border-[#0A261E] shadow-[0_0_0_2px_rgba(10,38,30,0.10)]"
-                : "border-stone-200 hover:border-stone-300 hover:shadow-sm"
+                ? "border-[#0A261E] shadow-[0_0_0_2px_rgba(10,38,30,0.08)]"
+                : "border-[#0A261E]/[0.08] hover:border-[#0A261E]/25 hover:shadow-sm"
             )}
           >
             {selected && (
-              <span className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#0A261E] text-white">
+              <span className="absolute right-2.5 top-2.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-[#0A261E] text-white">
                 <Check size={12} strokeWidth={3} />
               </span>
             )}
 
             <HeaderMock variant={style.key} />
 
-            <p className="text-[13px] font-semibold text-stone-900">{style.label}</p>
-            <p className="mt-0.5 text-[11px] leading-snug text-stone-500">{style.description}</p>
-            <p className="mt-2 text-[10px] font-medium uppercase tracking-wide text-stone-400">
+            <p className="text-[13px] font-semibold text-[#0A261E]">{style.label}</p>
+            <p className="mt-1 text-[11px] leading-snug text-[#0A261E]/55">{style.description}</p>
+            <p className="mt-auto pt-3 text-[10px] font-medium uppercase tracking-wide text-[#0A261E]/40">
               {style.hint}
             </p>
           </button>

@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { createStripeClient } from "@/lib/stripe";
+import { createStripeClient, ACCOUNT_INCLUDES, mapAccountStatus } from "@/lib/stripe";
 import { markOnboardingStep } from "@/lib/supabase/onboarding";
 import { NextResponse } from "next/server";
 
@@ -34,31 +34,30 @@ export async function GET(
 
   let account;
   try {
-    account = await stripe.accounts.retrieve(mosque.stripe_account_id);
+    account = await stripe.v2.core.accounts.retrieve(mosque.stripe_account_id, {
+      include: [...ACCOUNT_INCLUDES],
+    });
   } catch {
     return NextResponse.json({ status: "not_connected" });
   }
 
-  let status: string;
-  if (account.charges_enabled) {
-    status = "connected";
+  const result = mapAccountStatus(account);
+
+  // Persist Connect status to the mosque row so the admin Revenue view reflects
+  // it without depending on account.updated webhook delivery. This read-through
+  // runs whenever the mosque returns from Stripe; the webhook remains the
+  // real-time path for updates that land while they're not looking.
+  await supabase
+    .from("mosques")
+    .update({
+      stripe_charges_enabled: result.charges_enabled,
+      stripe_payouts_enabled: result.payouts_enabled,
+    })
+    .eq("id", mosqueId);
+
+  if (result.status === "connected") {
     await markOnboardingStep(supabase, mosqueId, "stripe_connect");
-  } else if (account.requirements?.past_due?.length) {
-    status = "issues";
-  } else {
-    status = "pending";
   }
 
-  return NextResponse.json({
-    status,
-    charges_enabled: account.charges_enabled,
-    payouts_enabled: account.payouts_enabled,
-    requirements: {
-      currently_due: account.requirements?.currently_due ?? [],
-      past_due: account.requirements?.past_due ?? [],
-    },
-    business_profile: {
-      name: account.business_profile?.name ?? null,
-    },
-  });
+  return NextResponse.json(result);
 }

@@ -25,6 +25,22 @@ const REQUIREMENT_LABELS: Record<string, string> = {
   "individual.verification.document": "Identity document",
   "tos_acceptance.date": "Terms of service acceptance",
   "tos_acceptance.ip": "Terms of service acceptance",
+
+  // Accounts v2 field paths
+  "configuration.merchant.mcc": "Business category",
+  "configuration.merchant.statement_descriptor.descriptor": "Statement descriptor",
+  "configuration.merchant.support.phone": "Support phone number",
+  "defaults.profile.business_url": "Business website URL",
+  "defaults.profile.product_description": "Description of services",
+  "identity.attestations.terms_of_service.account.date": "Terms of service acceptance",
+  "identity.attestations.terms_of_service.account.ip": "Terms of service acceptance",
+  "identity.entity_type": "Business type",
+  "representative.date_of_birth.day": "Date of birth",
+  "representative.date_of_birth.month": "Date of birth",
+  "representative.date_of_birth.year": "Date of birth",
+  "representative.email": "Email address",
+  "representative.given_name": "First name",
+  "representative.surname": "Last name",
 };
 
 export function humanizeRequirement(req: string): string {
