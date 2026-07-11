@@ -101,6 +101,35 @@ export default async function TaskPage({
     else eventsData = contentRes.data ?? [];
   }
 
+  // Programs are sorted into the mosque's program categories (the Discover
+  // program cards). Load the category options plus each program's current
+  // category set so the Programs panel can offer them as pick options.
+  let programCategories: Array<{ id: string; title: string }> = [];
+  let programAssignments: Record<string, string[]> = {};
+  if (taskId === "programs") {
+    const [catsRes, assignRes] = await Promise.all([
+      supabase
+        .from("program_categories")
+        .select("id, title")
+        .eq("mosque_id", mosque.id)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("program_category_content")
+        .select("category_id, content_id")
+        .eq("mosque_id", mosque.id),
+    ]);
+    programCategories = catsRes.data ?? [];
+    const map: Record<string, string[]> = {};
+    for (const r of (assignRes.data ?? []) as {
+      category_id: string;
+      content_id: string;
+    }[]) {
+      (map[r.content_id] ??= []).push(r.category_id);
+    }
+    programAssignments = map;
+  }
+
   // The "categories" onboarding task now configures the Discover Program Cards
   // (program_categories). Task id kept as "categories" for onboarding_progress
   // continuity.
@@ -130,6 +159,7 @@ export default async function TaskPage({
     duration_sec: number | null;
     created_at: string;
   }> = [];
+  let reelsSetupMode: "self" | "sahla" = "self";
   if (taskId === "reels") {
     const { data } = await supabase
       .from("reels")
@@ -139,6 +169,20 @@ export default async function TaskPage({
       .eq("mosque_id", mosque.id)
       .order("created_at", { ascending: false });
     reelsData = data ?? [];
+
+    // Separate, resilient read: if the column hasn't been migrated yet the
+    // query errors and we simply fall back to "self" rather than 500-ing.
+    const { data: modeRow } = await supabase
+      .from("mosques")
+      .select("reels_setup_mode")
+      .eq("id", mosque.id)
+      .maybeSingle();
+    if (
+      modeRow &&
+      (modeRow as { reels_setup_mode?: string }).reels_setup_mode === "sahla"
+    ) {
+      reelsSetupMode = "sahla";
+    }
   }
 
   const progress = ((mosque.onboarding_progress ?? {}) as Record<string, unknown>);
@@ -300,7 +344,13 @@ export default async function TaskPage({
           <SpeakersPanel mosqueId={mosque.id} initialSpeakers={speakersData ?? []} />
         )}
         {taskId === "programs" && (
-          <ProgramsPanel mosqueId={mosque.id} initialPrograms={programsData ?? []} speakers={speakersData ?? []} />
+          <ProgramsPanel
+            mosqueId={mosque.id}
+            initialPrograms={programsData ?? []}
+            speakers={speakersData ?? []}
+            categories={programCategories}
+            initialAssignments={programAssignments}
+          />
         )}
         {taskId === "events" && (
           <EventsPanel mosqueId={mosque.id} initialEvents={eventsData ?? []} speakers={speakersData ?? []} />
@@ -309,6 +359,7 @@ export default async function TaskPage({
           <ReelsOnboardingPanel
             mosqueId={mosque.id}
             initialScope={(mosque as { reels_scope?: "own" | "global" }).reels_scope ?? "own"}
+            initialSetupMode={reelsSetupMode}
             initialReels={reelsData}
           />
         )}

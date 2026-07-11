@@ -10,7 +10,7 @@ const ALLOWED_FIELDS = [
   "app_name", "logo_url", "brand_color", "accent_color", "secondary_color",
   "font_theme", "header_style",
   "calculation_method", "school",
-  "reels_scope",
+  "reels_scope", "reels_setup_mode",
   // App store identifiers — used by the Builds tab / store sync to map a
   // mosque to its App Store Connect app and Play package.
   "bundle_id", "package_name",

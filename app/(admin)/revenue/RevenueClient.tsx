@@ -17,7 +17,6 @@ import {
 const TIER_MRR: Record<string, number> = {
   core: 300,
   core_crm: 300,
-  complete: 325,
 };
 const DEFAULT_MRR = 300;
 
@@ -1120,7 +1119,7 @@ export default function RevenueClient({ mosques, monthlyBurn, paymentStats, dona
                 {sorted.map((row) => {
                   const sc = statusConfig[row.status] ?? statusConfig.canceled;
                   const hc = healthConfig[row.health] ?? healthConfig["No Data"];
-                  const tierLabel = row.tier === "complete" ? "Complete" : row.tier === "core_crm" ? "Core+CRM" : row.tier === "core" ? "Core" : "—";
+                  const tierLabel = row.tier === "core_crm" ? "Core+CRM" : row.tier === "core" ? "Core" : "—";
                   return (
                     <tr key={row.id} className="border-b border-[#0A261E]/8 transition-colors last:border-0 hover:bg-[#f5f0e8]">
                       <td className="px-5 py-3">
