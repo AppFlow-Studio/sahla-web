@@ -7,6 +7,8 @@ import PageTransition from "@/app/components/PageTransition";
 import OnboardingPreviewProvider from "./components/OnboardingPreviewContext";
 import OnboardingPhonePreview from "./components/OnboardingPhonePreview";
 import { getMosqueOnboardingData, getMosquePreviewContent } from "./data";
+import { normalizeFontTheme } from "@/lib/font-themes";
+import { normalizeHeaderStyle } from "@/lib/header-styles";
 
 const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 
@@ -27,9 +29,18 @@ export default async function MasjidLayout({
   // Once a mosque has paid (`ready`) or shipped (`live`), onboarding is a
   // closed chapter — bounce them into the CRM. HQ admins keep access so they
   // can QA the onboarding flow at any time.
+  //
+  // Dev-only bypass: when `ONBOARDING_ALLOW_REENTRY=1` is set in a non-prod
+  // env, skip the redirect so anyone can re-enter onboarding for testing.
+  // The NODE_ENV gate is hard-coded so a leaked env var can't take effect
+  // in production builds.
   const isHQ = SAHLA_HQ_ORG_ID && orgId === SAHLA_HQ_ORG_ID;
+  const devReentry =
+    process.env.NODE_ENV !== "production" &&
+    process.env.ONBOARDING_ALLOW_REENTRY === "1";
   if (
     !isHQ &&
+    !devReentry &&
     (mosque?.onboarding_status === "ready" ||
       mosque?.onboarding_status === "live")
   ) {
@@ -56,6 +67,8 @@ export default async function MasjidLayout({
     programs: previewContent.programs,
     donationProject: donationsConfig?.projectName?.trim() || "",
     donationGoal: Number(donationsConfig?.goalAmount ?? 0) || 0,
+    fontTheme: normalizeFontTheme(mosque?.font_theme),
+    headerStyle: normalizeHeaderStyle(mosque?.header_style),
   };
 
   return (

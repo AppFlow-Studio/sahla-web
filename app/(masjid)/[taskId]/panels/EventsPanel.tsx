@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Plus, Upload, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
@@ -58,6 +59,7 @@ export default function EventsPanel({
   initialEvents: ContentItem[];
   speakers: Speaker[];
 }) {
+  const router = useRouter();
   const { showToast } = useToast();
   const [events, setEvents] = useState(initialEvents);
   const [saving, setSaving] = useState(false);
@@ -126,6 +128,8 @@ export default function EventsPanel({
       if (!res.ok) throw new Error("Failed");
       setEvents((prev) => prev.filter((e) => e.content_id !== contentId));
       showToast("Event removed", "success");
+      // Refresh so the sidebar picks up the un-mark when this was the last one.
+      router.refresh();
     } catch { showToast("Failed to remove", "error"); }
   }
 

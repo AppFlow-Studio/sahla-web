@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { Check, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import { usePreview } from "../../components/OnboardingPreviewContext";
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 /** Render raw digits as a comma-grouped string ("50000" → "50,000"). */
 function formatWithCommas(digits: string) {
@@ -34,7 +37,6 @@ export default function DonationsPanel({
   const router = useRouter();
   const { showToast } = useToast();
   const { updatePreview } = usePreview();
-  const [saving, setSaving] = useState(false);
 
   const [projectName, setProjectName] = useState(initialConfig?.projectName ?? "");
   // Stored as raw digits ("50000"); commas are applied only for display.
@@ -82,39 +84,93 @@ export default function DonationsPanel({
     setEditValue("");
   }
 
-  async function handleSave(markComplete = false) {
-    if (!projectName.trim()) {
-      showToast("Project name is required", "error");
+  const canComplete = projectName.trim().length > 0;
+
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const lastSavedRef = useRef<string>(
+    JSON.stringify({
+      projectName: initialConfig?.projectName ?? "",
+      goalAmount: String(initialConfig?.goalAmount ?? "").replace(/[^0-9]/g, ""),
+      suggestedAmounts: initialConfig?.suggestedAmounts ?? DEFAULT_AMOUNTS,
+      suggestedEnabled: initialConfig?.suggestedEnabled ?? true,
+      recurringEnabled: initialConfig?.recurringEnabled ?? true,
+    })
+  );
+  const debounceRef = useRef<number | null>(null);
+  const isFirstRender = useRef(true);
+
+  // Auto-save on any change, debounced. When there's a project name, hit
+  // the donations endpoint (which persists the config + marks complete).
+  // When the admin clears the project name, un-check the task via the
+  // mosque PATCH endpoint — the donations endpoint requires a non-empty
+  // name so it can't handle the un-mark itself. `keepalive: true` keeps
+  // the save alive across a Next-button navigation.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
       return;
     }
+    const snapshot = JSON.stringify({
+      projectName,
+      goalAmount,
+      suggestedAmounts,
+      suggestedEnabled,
+      recurringEnabled,
+    });
+    if (snapshot === lastSavedRef.current) return;
 
-    setSaving(true);
-    try {
-      const config: DonationConfig = {
-        projectName: projectName.trim(),
-        goalAmount: goalAmount.trim(),
-        suggestedAmounts,
-        suggestedEnabled,
-        recurringEnabled,
-      };
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(async () => {
+      setStatus("saving");
+      try {
+        if (canComplete) {
+          const config: DonationConfig = {
+            projectName: projectName.trim(),
+            goalAmount: goalAmount.trim(),
+            suggestedAmounts,
+            suggestedEnabled,
+            recurringEnabled,
+          };
+          const res = await fetch(`/api/mosques/${mosqueId}/donations`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ config, markComplete: "donations" }),
+            keepalive: true,
+          });
+          if (!res.ok) throw new Error("Failed to save");
+        } else {
+          // Project name is empty — un-check the task in the sidebar.
+          const res = await fetch(`/api/mosques/${mosqueId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ unmarkComplete: "donations" }),
+            keepalive: true,
+          });
+          if (!res.ok) throw new Error("Failed to save");
+        }
+        lastSavedRef.current = snapshot;
+        router.refresh();
+        setStatus("saved");
+      } catch {
+        setStatus("error");
+        showToast("Couldn't save donations config", "error");
+      }
+    }, 700);
 
-      const res = await fetch(`/api/mosques/${mosqueId}/donations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          config,
-          ...(markComplete ? { markComplete: "donations" } : {}),
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      showToast(markComplete ? "Donations setup completed" : "Donations saved", "success");
-      router.refresh();
-    } catch {
-      showToast("Failed to save donations config", "error");
-    } finally {
-      setSaving(false);
-    }
-  }
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [
+    projectName,
+    goalAmount,
+    suggestedAmounts,
+    suggestedEnabled,
+    recurringEnabled,
+    canComplete,
+    mosqueId,
+    router,
+    showToast,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -264,22 +320,23 @@ export default function DonationsPanel({
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => handleSave(false)}
-          disabled={saving}
-          className="rounded-lg border border-stone-300 px-5 py-2.5 text-[13px] font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-40"
-        >
-          {saving ? "Saving..." : "Save Draft"}
-        </button>
-        <button
-          onClick={() => handleSave(true)}
-          disabled={saving || !projectName.trim()}
-          className="rounded-lg bg-emerald-600 px-5 py-2.5 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
-        >
-          Mark Complete
-        </button>
+      {/* Auto-save status */}
+      <div className="flex items-center justify-end text-[11.5px] text-stone-500">
+        {status === "saving" ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Loader2 size={11} className="animate-spin" />
+            Saving…
+          </span>
+        ) : status === "saved" ? (
+          <span className="inline-flex items-center gap-1.5 text-emerald-700">
+            <Check size={12} strokeWidth={2.5} />
+            Saved
+          </span>
+        ) : status === "error" ? (
+          <span className="text-red-600">Couldn&apos;t save — check your connection.</span>
+        ) : (
+          <span className="text-stone-400">Changes save automatically.</span>
+        )}
       </div>
     </div>
   );

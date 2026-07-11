@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { markOnboardingStep } from "@/lib/supabase/onboarding";
+import { markOnboardingStep, setOnboardingStep } from "@/lib/supabase/onboarding";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -96,6 +96,15 @@ export async function DELETE(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // If that was the last speaker, un-check the Speakers task in the sidebar.
+  const { count } = await supabase
+    .from("speaker_data")
+    .select("*", { count: "exact", head: true })
+    .eq("mosque_id", mosqueId);
+  if ((count ?? 0) === 0) {
+    await setOnboardingStep(supabase, mosqueId, "speakers", false);
   }
 
   return NextResponse.json({ success: true });

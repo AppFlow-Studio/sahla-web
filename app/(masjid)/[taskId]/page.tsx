@@ -2,7 +2,6 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ALL_TASKS, ONBOARDING_CATEGORIES } from "../components/onboarding-tasks";
 import { getMosqueOnboardingData } from "../data";
@@ -44,7 +43,6 @@ export default async function TaskPage({
     notFound();
   }
 
-  const prevTask = taskIndex > 0 ? ALL_TASKS[taskIndex - 1] : null;
   const nextTask = taskIndex < ALL_TASKS.length - 1 ? ALL_TASKS[taskIndex + 1] : null;
 
   const session = await auth();
@@ -251,7 +249,7 @@ export default async function TaskPage({
       tasks: allOnboardingTasks.map((t) => ({
         id: t.id,
         label: t.label,
-        required: t.badge === "REQ",
+        required: t.badge === "Required",
         completed: !!(progress as Record<string, boolean>)[t.id],
       })),
     };
@@ -308,8 +306,8 @@ export default async function TaskPage({
     <div className="mx-auto max-w-2xl py-8">
       <div className="mb-2 flex items-center gap-2">
         <span
-          className={`text-[9px] font-bold rounded px-1.5 py-0.5 ${
-            task.badge === "REQ"
+          className={`text-[10px] font-semibold rounded-full px-2 py-0.5 ${
+            task.badge === "Required"
               ? "bg-amber-100 text-amber-700"
               : "bg-stone-100 text-stone-500"
           }`}
@@ -406,20 +404,11 @@ export default async function TaskPage({
         )}
       </div>
 
-      {/* Prev/Next navigation */}
-      <div className="mt-10 flex items-center justify-between gap-4 border-t border-stone-200 pt-6">
-        {prevTask ? (
-          <Link
-            href={`/${prevTask.id}`}
-            className="group inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800"
-          >
-            <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
-            {prevTask.label}
-          </Link>
-        ) : (
-          <div />
-        )}
-
+      {/* Prev-task link removed on purpose — the sidebar already handles
+          cross-task navigation, and having a second "back" alongside each
+          panel's wizard back buttons was confusing. Only the forward Next
+          remains. */}
+      <div className="mt-10 flex items-center justify-end gap-4 border-t border-stone-200 pt-6">
         {nextTask ? (
           <Link
             href={`/${nextTask.id}`}

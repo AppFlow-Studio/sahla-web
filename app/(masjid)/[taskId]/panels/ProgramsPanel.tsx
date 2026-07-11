@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, Plus, Upload, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
@@ -67,6 +68,7 @@ export default function ProgramsPanel({
   /** contentId → categoryIds the program is currently sorted into. */
   initialAssignments?: Record<string, string[]>;
 }) {
+  const router = useRouter();
   const { showToast } = useToast();
   const [programs, setPrograms] = useState(initialPrograms);
   const [assignments, setAssignments] =
@@ -197,6 +199,8 @@ export default function ProgramsPanel({
         return next;
       });
       showToast("Program removed", "success");
+      // Refresh so the sidebar picks up the un-mark when this was the last one.
+      router.refresh();
     } catch { showToast("Failed to remove", "error"); }
   }
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback } from "react";
+import type { FontThemeKey } from "@/lib/font-themes";
+import type { HeaderStyleKey } from "@/lib/header-styles";
 
 /** A Discover "Program" category card as shown in the app preview. */
 export type PreviewCategory = {
@@ -29,6 +31,8 @@ type PreviewState = {
   donationProject: string;
   /** Fundraising goal in whole dollars; 0 → no goal / progress bar. */
   donationGoal: number;
+  fontTheme: FontThemeKey;
+  headerStyle: HeaderStyleKey;
 };
 
 type PreviewContextValue = PreviewState & {
@@ -44,6 +48,8 @@ const PreviewContext = createContext<PreviewContextValue>({
   programs: [],
   donationProject: "",
   donationGoal: 0,
+  fontTheme: "classic",
+  headerStyle: "classic",
   updatePreview: () => {},
 });
 

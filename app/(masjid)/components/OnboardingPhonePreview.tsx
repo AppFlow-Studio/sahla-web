@@ -13,6 +13,8 @@ export default function OnboardingPhonePreview() {
     programs,
     donationProject,
     donationGoal,
+    fontTheme,
+    headerStyle,
   } = usePreview();
 
   return (
@@ -30,6 +32,8 @@ export default function OnboardingPhonePreview() {
           programs={programs}
           donationProject={donationProject}
           donationGoal={donationGoal}
+          fontTheme={fontTheme}
+          headerStyle={headerStyle}
         />
         <EditsSummary
           appName={appName}

@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { setOnboardingStep } from "@/lib/supabase/onboarding";
 import { NextResponse } from "next/server";
 
 const AUDIENCE_FILTERS = ["All", "Kids", "Youth", "Adults"] as const;
@@ -97,20 +98,14 @@ export async function POST(
     }
   }
 
-  if (body.markComplete) {
-    const { data: mosque } = await supabase
-      .from("mosques")
-      .select("onboarding_progress")
-      .eq("id", mosqueId)
-      .single();
-
-    const progress =
-      (mosque?.onboarding_progress as Record<string, boolean>) || {};
-    progress.categories = true;
-    await supabase
-      .from("mosques")
-      .update({ onboarding_progress: progress })
-      .eq("id", mosqueId);
+  // Live-track completion: mark done when there's at least one valid card,
+  // and un-mark when the admin has wiped them all (rows.length === 0). The
+  // client's markComplete flag is treated as a "please try to mark" signal
+  // that only takes effect when the criterion is met.
+  if (rows.length > 0 && body.markComplete) {
+    await setOnboardingStep(supabase, mosqueId, "categories", true);
+  } else if (rows.length === 0) {
+    await setOnboardingStep(supabase, mosqueId, "categories", false);
   }
 
   return NextResponse.json({ success: true, count: rows.length });

@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  Check,
   Loader2,
   Upload,
   Trash2,
@@ -17,6 +18,8 @@ import {
 import { useToast } from "../../components/ToastProvider";
 import { cn } from "@/lib/utils";
 import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY } from "@/lib/ui-classes";
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 type ReelRecord = {
   reel_id: string;
@@ -78,8 +81,80 @@ export default function ReelsOnboardingPanel({
   const [caption, setCaption] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const lastSavedRef = useRef<string>(
+    JSON.stringify({ scope: initialScope, setupMode: initialSetupMode })
+  );
+  const debounceRef = useRef<number | null>(null);
+  const alreadyMarkedRef = useRef(false);
+  const isFirstRender = useRef(true);
+
+  // Auto-save scope + setup mode on any change, debounced. First save also
+  // fires `markComplete: "reels"`. `keepalive: true` keeps the save alive
+  // across a Next-button navigation. Individual reel uploads are separate
+  // (they have their own upload button and endpoint).
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const snapshot = JSON.stringify({ scope, setupMode });
+    if (snapshot === lastSavedRef.current) return;
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(async () => {
+      setStatus("saving");
+      try {
+        const shouldMarkComplete = !alreadyMarkedRef.current;
+        const res = await fetch(`/api/mosques/${mosqueId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reels_scope: scope,
+            reels_setup_mode: setupMode,
+            ...(shouldMarkComplete ? { markComplete: "reels" } : {}),
+          }),
+          keepalive: true,
+        });
+        if (!res.ok) throw new Error("Save failed");
+        lastSavedRef.current = snapshot;
+        if (shouldMarkComplete) {
+          alreadyMarkedRef.current = true;
+          router.refresh();
+        }
+        setStatus("saved");
+      } catch {
+        setStatus("error");
+        showToast("Couldn't save reels setup", "error");
+      }
+    }, 700);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [scope, setupMode, mosqueId, router, showToast]);
+
+  // Land-and-flush: if the admin visits and hits Next without changing
+  // anything, still mark the task complete on unmount. Defaults are a
+  // valid answer here (self-managed, own-scope).
+  useEffect(() => {
+    if (alreadyMarkedRef.current) return;
+    return () => {
+      if (alreadyMarkedRef.current) return;
+      void fetch(`/api/mosques/${mosqueId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reels_scope: scope,
+          reels_setup_mode: setupMode,
+          markComplete: "reels",
+        }),
+        keepalive: true,
+      });
+    };
+  }, [scope, setupMode, mosqueId]);
 
   async function handleUpload() {
     if (!selectedFile) {
@@ -149,28 +224,6 @@ export default function ReelsOnboardingPanel({
       showToast("Couldn't remove reel", "error");
     } finally {
       setRemovingId(null);
-    }
-  }
-
-  async function handleSaveAndComplete() {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/mosques/${mosqueId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reels_scope: scope,
-          reels_setup_mode: setupMode,
-          markComplete: "reels",
-        }),
-      });
-      if (!res.ok) throw new Error("Save failed");
-      showToast("Reels setup complete", "success");
-      router.refresh();
-    } catch {
-      showToast("Failed to save reels setup", "error");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -503,23 +556,23 @@ export default function ReelsOnboardingPanel({
         )}
       </div>
 
-      {/* Actions */}
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleSaveAndComplete}
-          disabled={saving}
-          className={cn(BTN_PRIMARY, saving && "opacity-60")}
-        >
-          {saving ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save & Complete"
-          )}
-        </button>
+      {/* Auto-save status */}
+      <div className="flex items-center justify-end text-[11.5px] text-stone-500">
+        {status === "saving" ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Loader2 size={11} className="animate-spin" />
+            Saving…
+          </span>
+        ) : status === "saved" ? (
+          <span className="inline-flex items-center gap-1.5 text-emerald-700">
+            <Check size={12} strokeWidth={2.5} />
+            Saved
+          </span>
+        ) : status === "error" ? (
+          <span className="text-red-600">Couldn&apos;t save — check your connection.</span>
+        ) : (
+          <span className="text-stone-400">Changes save automatically.</span>
+        )}
       </div>
     </div>
   );

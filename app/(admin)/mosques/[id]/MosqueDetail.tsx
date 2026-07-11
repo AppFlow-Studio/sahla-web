@@ -162,7 +162,7 @@ const PIPELINE_STAGES = ["lead", "contacted", "demo", "contract", "onboarding", 
 
 function getNextTask(progress: Record<string, boolean> | null) {
   // First incomplete REQ task, then first incomplete any task
-  const req = ALL_TASKS.find((t) => t.badge === "REQ" && progress?.[t.id] !== true);
+  const req = ALL_TASKS.find((t) => t.badge === "Required" && progress?.[t.id] !== true);
   if (req) return req;
   return ALL_TASKS.find((t) => progress?.[t.id] !== true) || null;
 }
@@ -577,12 +577,12 @@ function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
                             <span
                               className={cn(
                                 "cursor-default rounded-md px-1.5 py-0.5 uppercase tracking-wider",
-                                task.badge === "REQ"
+                                task.badge === "Required"
                                   ? "text-[10px] font-bold"
                                   : "text-[10px] font-semibold"
                               )}
                               style={
-                                task.badge === "REQ"
+                                task.badge === "Required"
                                   ? { backgroundColor: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }
                                   : { backgroundColor: "#fafaf9", border: "1px solid #e7e5e4", color: "#a8a29e" }
                               }
@@ -595,7 +595,7 @@ function TasksTab({ progress }: { progress: Record<string, boolean> | null }) {
                               className="rounded-lg bg-stone-900 px-3 py-1.5 text-xs text-white shadow-lg"
                               sideOffset={5}
                             >
-                              {task.badge === "REQ" ? "Required for launch" : "Recommended but optional"}
+                              {task.badge === "Required" ? "Required for launch" : "Recommended but optional"}
                               <Tooltip.Arrow className="fill-stone-900" />
                             </Tooltip.Content>
                           </Tooltip.Portal>

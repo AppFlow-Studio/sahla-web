@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  Check,
   ChevronDown,
   ChevronUp,
   ImagePlus,
@@ -15,7 +16,9 @@ import {
 import { useToast } from "../../components/ToastProvider";
 import { usePreview } from "../../components/OnboardingPreviewContext";
 import { cn } from "@/lib/utils";
-import { INPUT_CLASS, BTN_PRIMARY } from "@/lib/ui-classes";
+import { INPUT_CLASS } from "@/lib/ui-classes";
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 const AUDIENCE_FILTERS = ["All", "Kids", "Youth", "Adults"] as const;
 type AudienceFilter = (typeof AUDIENCE_FILTERS)[number];
@@ -89,7 +92,21 @@ export default function ProgramCardsOnboardingPanel({
   const [drafts, setDrafts] = useState<Draft[]>(() =>
     buildInitialDrafts(initialCards)
   );
-  const [saving, setSaving] = useState(false);
+
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const lastSavedRef = useRef<string>(
+    JSON.stringify(
+      buildInitialDrafts(initialCards).map((d) => ({
+        title: d.title.trim(),
+        imageUrl: d.imageUrl,
+        bgColor: d.bgColor,
+        audienceFilter: d.audienceFilter,
+      }))
+    )
+  );
+  const debounceRef = useRef<number | null>(null);
+  const isFirstRender = useRef(true);
+  const saving = status === "saving";
 
   // Keep the live phone preview's Discover cards in sync as cards are edited.
   const { updatePreview } = usePreview();
@@ -138,42 +155,66 @@ export default function ProgramCardsOnboardingPanel({
     setDrafts((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function handleSave() {
-    const valid = drafts.filter((d) => d.title.trim().length > 0);
-    if (valid.length === 0) {
-      showToast("Add at least one card", "error");
+  // Auto-save on any draft change, debounced. Always POSTs (including with
+  // an empty valid-cards list) so the backend can live-track completion:
+  // it marks Program Categories done when ≥1 card exists and un-marks it
+  // when the admin has deleted them all. `keepalive: true` keeps the save
+  // alive across a Next-button navigation.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
       return;
     }
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/mosques/${mosqueId}/program-categories`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          categories: valid.map((d) => ({
-            title: d.title.trim(),
-            image_url: d.imageUrl,
-            bg_color: d.bgColor,
-            audience_filter: d.audienceFilter,
-          })),
-          markComplete: true,
-        }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Failed to save");
+    const valid = drafts.filter((d) => d.title.trim().length > 0);
+
+    const snapshot = JSON.stringify(
+      valid.map((d) => ({
+        title: d.title.trim(),
+        imageUrl: d.imageUrl,
+        bgColor: d.bgColor,
+        audienceFilter: d.audienceFilter,
+      }))
+    );
+    if (snapshot === lastSavedRef.current) return;
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(async () => {
+      setStatus("saving");
+      try {
+        const res = await fetch(`/api/mosques/${mosqueId}/program-categories`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            categories: valid.map((d) => ({
+              title: d.title.trim(),
+              image_url: d.imageUrl,
+              bg_color: d.bgColor,
+              audience_filter: d.audienceFilter,
+            })),
+            markComplete: true,
+          }),
+          keepalive: true,
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(body.error ?? "Failed to save");
+        }
+        lastSavedRef.current = snapshot;
+        router.refresh();
+        setStatus("saved");
+      } catch (err) {
+        setStatus("error");
+        showToast(
+          err instanceof Error ? err.message : "Couldn't save program cards",
+          "error"
+        );
       }
-      showToast("Program cards saved", "success");
-      router.refresh();
-    } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : "Failed to save program cards",
-        "error"
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
+    }, 700);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [drafts, mosqueId, router, showToast]);
 
   return (
     <div className="space-y-5">
@@ -334,22 +375,23 @@ export default function ProgramCardsOnboardingPanel({
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className={cn(BTN_PRIMARY, saving && "opacity-60")}
-        >
-          {saving ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save & Complete"
-          )}
-        </button>
+      {/* Auto-save status */}
+      <div className="flex items-center justify-end text-[11.5px] text-stone-500">
+        {status === "saving" ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Loader2 size={11} className="animate-spin" />
+            Saving…
+          </span>
+        ) : status === "saved" ? (
+          <span className="inline-flex items-center gap-1.5 text-emerald-700">
+            <Check size={12} strokeWidth={2.5} />
+            Saved
+          </span>
+        ) : status === "error" ? (
+          <span className="text-red-600">Couldn&apos;t save — check your connection.</span>
+        ) : (
+          <span className="text-stone-400">Changes save automatically.</span>
+        )}
       </div>
     </div>
   );
