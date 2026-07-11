@@ -53,6 +53,24 @@ export default async function OverviewPage() {
 
   const allMosques = mosques ?? [];
 
+  /* Reels: mosques that asked the Sahla team to produce reels for them
+     (reels_setup_mode = 'sahla') and don't have any reels uploaded yet.
+     The mode column may be absent in un-migrated envs, so this read is
+     isolated — a missing column just yields no requests rather than 500-ing. */
+  const [{ data: reelsModeRows }, { data: reelRows }] = await Promise.all([
+    supabase.from("mosques").select("id, reels_setup_mode"),
+    supabase.from("reels").select("mosque_id"),
+  ]);
+  const mosquesWithReels = new Set(
+    (reelRows ?? []).map((r) => r.mosque_id as string)
+  );
+  const sahlaReelsRequests = (reelsModeRows ?? [])
+    .filter(
+      (r) => (r as { reels_setup_mode?: string }).reels_setup_mode === "sahla"
+    )
+    .map((r) => r.id as string)
+    .filter((id) => !mosquesWithReels.has(id));
+
   /* onboarding status buckets */
   const onboardingStatusCounts = { pipeline: 0, in_progress: 0, ready: 0, live: 0 };
   for (const m of allMosques) {
@@ -342,6 +360,15 @@ export default async function OverviewPage() {
     const item = getOrCreate(id, name);
     item.reasons.push("No content (speakers, programs, or events)");
     if (item.severity === "info") item.severity = "info";
+  }
+
+  // Sahla-managed reels requests — mosque opted for us to produce their reels
+  // and none have been uploaded yet. A standing fulfillment task for the team.
+  for (const id of sahlaReelsRequests) {
+    const mosque = allMosques.find((m) => m.id === id);
+    if (!mosque) continue;
+    const item = getOrCreate(id, (mosque.name as string) || "Unnamed");
+    item.reasons.push("Wants Sahla-made reels");
   }
 
   const attentionQueue = [...attentionMap.values()]

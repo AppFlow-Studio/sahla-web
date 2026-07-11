@@ -1,19 +1,25 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  Check,
   Loader2,
   Upload,
   Trash2,
   Globe2,
   Building2,
   Play,
+  Sparkles,
+  UserRoundCog,
+  CheckCircle2,
 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import { cn } from "@/lib/utils";
 import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY } from "@/lib/ui-classes";
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 type ReelRecord = {
   reel_id: string;
@@ -26,6 +32,7 @@ type ReelRecord = {
 };
 
 type ReelsScope = "own" | "global";
+type ReelsSetupMode = "self" | "sahla";
 
 const ACCEPTED_VIDEO_TYPES = "video/mp4,video/webm";
 const MAX_BYTES = 200 * 1024 * 1024; // 200 MB — Bunny streaming handles it fine.
@@ -55,10 +62,12 @@ function rejectIfUnsupportedFormat(file: File): string | null {
 export default function ReelsOnboardingPanel({
   mosqueId,
   initialScope,
+  initialSetupMode = "self",
   initialReels,
 }: {
   mosqueId: string;
   initialScope: ReelsScope;
+  initialSetupMode?: ReelsSetupMode;
   initialReels: ReelRecord[];
 }) {
   const router = useRouter();
@@ -66,13 +75,86 @@ export default function ReelsOnboardingPanel({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [scope, setScope] = useState<ReelsScope>(initialScope);
+  const [setupMode, setSetupMode] = useState<ReelsSetupMode>(initialSetupMode);
   const [reels, setReels] = useState<ReelRecord[]>(initialReels);
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const lastSavedRef = useRef<string>(
+    JSON.stringify({ scope: initialScope, setupMode: initialSetupMode })
+  );
+  const debounceRef = useRef<number | null>(null);
+  const alreadyMarkedRef = useRef(false);
+  const isFirstRender = useRef(true);
+
+  // Auto-save scope + setup mode on any change, debounced. First save also
+  // fires `markComplete: "reels"`. `keepalive: true` keeps the save alive
+  // across a Next-button navigation. Individual reel uploads are separate
+  // (they have their own upload button and endpoint).
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const snapshot = JSON.stringify({ scope, setupMode });
+    if (snapshot === lastSavedRef.current) return;
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(async () => {
+      setStatus("saving");
+      try {
+        const shouldMarkComplete = !alreadyMarkedRef.current;
+        const res = await fetch(`/api/mosques/${mosqueId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reels_scope: scope,
+            reels_setup_mode: setupMode,
+            ...(shouldMarkComplete ? { markComplete: "reels" } : {}),
+          }),
+          keepalive: true,
+        });
+        if (!res.ok) throw new Error("Save failed");
+        lastSavedRef.current = snapshot;
+        if (shouldMarkComplete) {
+          alreadyMarkedRef.current = true;
+          router.refresh();
+        }
+        setStatus("saved");
+      } catch {
+        setStatus("error");
+        showToast("Couldn't save reels setup", "error");
+      }
+    }, 700);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [scope, setupMode, mosqueId, router, showToast]);
+
+  // Land-and-flush: if the admin visits and hits Next without changing
+  // anything, still mark the task complete on unmount. Defaults are a
+  // valid answer here (self-managed, own-scope).
+  useEffect(() => {
+    if (alreadyMarkedRef.current) return;
+    return () => {
+      if (alreadyMarkedRef.current) return;
+      void fetch(`/api/mosques/${mosqueId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reels_scope: scope,
+          reels_setup_mode: setupMode,
+          markComplete: "reels",
+        }),
+        keepalive: true,
+      });
+    };
+  }, [scope, setupMode, mosqueId]);
 
   async function handleUpload() {
     if (!selectedFile) {
@@ -145,29 +227,82 @@ export default function ReelsOnboardingPanel({
     }
   }
 
-  async function handleSaveAndComplete() {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/mosques/${mosqueId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reels_scope: scope,
-          markComplete: "reels",
-        }),
-      });
-      if (!res.ok) throw new Error("Save failed");
-      showToast("Reels setup complete", "success");
-      router.refresh();
-    } catch {
-      showToast("Failed to save reels setup", "error");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <div className="space-y-5">
+      {/* Setup mode: upload your own vs. let Sahla populate for you */}
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
+          <p className="text-[14px] font-semibold text-stone-900">
+            How do you want to add reels?
+          </p>
+          <p className="mt-0.5 text-[12px] text-stone-500">
+            Upload your own short videos, or let our team curate and post them
+            for you.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 px-6 py-5 md:grid-cols-2">
+          {(
+            [
+              {
+                value: "self" as const,
+                label: "I'll upload my own",
+                description:
+                  "Post your own vertical videos — reminders, event clips, khutbah highlights.",
+                icon: Upload,
+              },
+              {
+                value: "sahla" as const,
+                label: "Have Sahla populate them",
+                description:
+                  "Skip uploading — our team curates and posts branded reels for your masjid.",
+                icon: Sparkles,
+              },
+            ]
+          ).map((opt) => {
+            const active = setupMode === opt.value;
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setSetupMode(opt.value)}
+                className={cn(
+                  "flex items-start gap-3 rounded-lg border p-4 text-left transition-all",
+                  active
+                    ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500"
+                    : "border-stone-200 bg-white hover:border-stone-300"
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                    active ? "bg-emerald-500 text-white" : "bg-stone-100 text-stone-500"
+                  )}
+                >
+                  <Icon size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-semibold text-stone-900">
+                    {opt.label}
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-stone-500">
+                    {opt.description}
+                  </p>
+                </div>
+                <div
+                  className={cn(
+                    "mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2",
+                    active ? "border-emerald-600" : "border-stone-300"
+                  )}
+                >
+                  {active && <div className="h-2 w-2 rounded-full bg-emerald-600" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Scope toggle */}
       <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
         <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
@@ -241,7 +376,8 @@ export default function ReelsOnboardingPanel({
         </div>
       </div>
 
-      {/* Upload */}
+      {/* Upload (self) or Sahla hand-off card (sahla) */}
+      {setupMode === "self" ? (
       <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
         <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
           <p className="text-[14px] font-semibold text-stone-900">
@@ -323,6 +459,9 @@ export default function ReelsOnboardingPanel({
           </div>
         </div>
       </div>
+      ) : (
+        <SahlaPopulateCard />
+      )}
 
       {/* Uploaded reels list */}
       <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
@@ -332,7 +471,9 @@ export default function ReelsOnboardingPanel({
           </p>
           <p className="mt-0.5 text-[12px] text-stone-500">
             {reels.length === 0
-              ? "Nothing here yet — upload your first reel above."
+              ? setupMode === "sahla"
+                ? "Our team will post reels here — nothing to do on your end."
+                : "Nothing here yet — upload your first reel above."
               : `${reels.length} ${reels.length === 1 ? "reel" : "reels"} live in your app right now.`}
           </p>
         </div>
@@ -342,7 +483,9 @@ export default function ReelsOnboardingPanel({
               <Play size={18} className="text-stone-400" />
             </div>
             <p className="mt-3 text-[12px] text-stone-500">
-              No reels yet.
+              {setupMode === "sahla"
+                ? "Sahla will curate and post reels for you."
+                : "No reels yet."}
             </p>
           </div>
         ) : (
@@ -413,23 +556,68 @@ export default function ReelsOnboardingPanel({
         )}
       </div>
 
-      {/* Actions */}
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleSaveAndComplete}
-          disabled={saving}
-          className={cn(BTN_PRIMARY, saving && "opacity-60")}
-        >
-          {saving ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save & Complete"
-          )}
-        </button>
+      {/* Auto-save status */}
+      <div className="flex items-center justify-end text-[11.5px] text-stone-500">
+        {status === "saving" ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Loader2 size={11} className="animate-spin" />
+            Saving…
+          </span>
+        ) : status === "saved" ? (
+          <span className="inline-flex items-center gap-1.5 text-emerald-700">
+            <Check size={12} strokeWidth={2.5} />
+            Saved
+          </span>
+        ) : status === "error" ? (
+          <span className="text-red-600">Couldn&apos;t save — check your connection.</span>
+        ) : (
+          <span className="text-stone-400">Changes save automatically.</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Shown when the admin opts to have the Sahla team populate reels for them. */
+function SahlaPopulateCard() {
+  const steps = [
+    "Our team curates short, vertical reels branded for your masjid.",
+    "We upload and schedule them for you — no editing or exporting on your end.",
+    "They appear here and in your app's Reels tab after launch.",
+  ];
+  return (
+    <div className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/40 shadow-sm">
+      <div className="flex items-start gap-3 border-b border-emerald-100 bg-emerald-50/60 px-6 py-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-white">
+          <Sparkles size={17} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[14px] font-semibold text-stone-900">
+            Sahla will handle your reels
+          </p>
+          <p className="mt-0.5 text-[12px] text-stone-600">
+            You&apos;ve asked our team to curate and post reels for you. Here&apos;s
+            what happens next.
+          </p>
+        </div>
+      </div>
+      <div className="space-y-3 px-6 py-5">
+        <ul className="space-y-2.5">
+          {steps.map((step) => (
+            <li key={step} className="flex items-start gap-2.5">
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600" />
+              <span className="text-[12.5px] text-stone-700">{step}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="flex items-start gap-2 rounded-lg border border-stone-200 bg-white px-3.5 py-3">
+          <UserRoundCog size={15} className="mt-0.5 shrink-0 text-stone-400" />
+          <p className="text-[11.5px] text-stone-500">
+            Changed your mind? Switch back to{" "}
+            <span className="font-medium text-stone-700">I&apos;ll upload my own</span>{" "}
+            above anytime to post your own videos.
+          </p>
+        </div>
       </div>
     </div>
   );

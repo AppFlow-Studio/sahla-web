@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "../../components/ToastProvider";
+import { Check } from "lucide-react";
 import { usePreview } from "../../components/OnboardingPreviewContext";
 
 type PreviewData = {
@@ -27,32 +27,35 @@ type PreviewData = {
 
 export default function PreviewAppPanelOnboarding({ data }: { data: PreviewData }) {
   const router = useRouter();
-  const { showToast } = useToast();
   const { brandColor, accentColor, appName } = usePreview();
-  const [saving, setSaving] = useState(false);
+  const markedRef = useRef(false);
 
-  async function handleMarkComplete() {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/mosques/${data.mosque.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brand_color: brandColor,
-          accent_color: accentColor,
-          app_name: appName,
-          markComplete: "preview_app",
-        }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      showToast("Preview reviewed", "success");
-      router.refresh();
-    } catch {
-      showToast("Failed to mark complete", "error");
-    } finally {
-      setSaving(false);
-    }
-  }
+  // Review-only screen — visiting = reviewing, so silently mark complete on
+  // mount. Also flushes the live-preview brand/accent/app-name back to the
+  // DB in case the admin edited them in App Branding without saving there.
+  // Idempotent on the backend; guarded by ref so we only fire once.
+  useEffect(() => {
+    if (markedRef.current) return;
+    markedRef.current = true;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/mosques/${data.mosque.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            brand_color: brandColor,
+            accent_color: accentColor,
+            app_name: appName,
+            markComplete: "preview_app",
+          }),
+          keepalive: true,
+        });
+        if (res.ok) router.refresh();
+      } catch {
+        // Silent — the Next button still works either way.
+      }
+    })();
+  }, [data.mosque.id, brandColor, accentColor, appName, router]);
 
   return (
     <div className="space-y-5">
@@ -89,15 +92,11 @@ export default function PreviewAppPanelOnboarding({ data }: { data: PreviewData 
         </div>
       </div>
 
-      {/* Mark Complete */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleMarkComplete}
-          disabled={saving}
-          className="rounded-lg bg-emerald-600 px-5 py-2.5 text-[13px] font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
-        >
-          {saving ? "Saving..." : "Looks Good — Mark Complete"}
-        </button>
+      <div className="flex items-center justify-end text-[11.5px] text-emerald-700">
+        <span className="inline-flex items-center gap-1.5">
+          <Check size={12} strokeWidth={2.5} />
+          Marked as reviewed
+        </span>
       </div>
     </div>
   );

@@ -1,0 +1,167 @@
+<!--
+  Clerk-DSL Sahla organization invitation — SAFE MODE.
+  Uses only bare <re-*> tags and only the standard attributes Clerk
+  documents (background-color, color, padding, margin, font-size, etc.).
+  Everything else — CSS <style> blocks, <meta> tags, class attributes,
+  <re-image> with dynamic src — has been stripped so Clerk's parser can
+  never silently reject part of it.
+
+  Visual style mirrors the Business Ad receipt email
+  (supabase/functions/stripe-webhooks/index.ts:adReceiptHtml): warm cream
+  outer, org name at top, white 16px-radius card with gold BOARD
+  INVITATION eyebrow, dark green H1, deep-green pill CTA, gold-outlined
+  CERTIFIED-style badge, muted footer.
+
+  Variables Clerk substitutes at send time:
+    {{org.name}}       — the mosque org name
+    {{inviter_name}}   — the person inviting (may be empty)
+    {{action_url}}     — the accept-invitation link
+-->
+<re-html>
+  <re-head>
+    <re-title>You're invited to {{org.name}}</re-title>
+  </re-head>
+  <re-body
+    background-color="#f1efe9"
+    padding="0px 0px 44px 0px"
+  >
+    <re-preheader>
+      {{#if inviter_name}}{{inviter_name}} invited you to join {{org.name}} on Sahla. Accept to sign in.{{else}}You've been invited to join {{org.name}} on Sahla. Accept to sign in.{{/if}}
+    </re-preheader>
+
+    <!-- Header outside the card: Sahla logo + org name + subtitle.
+         We deliberately use the Sahla wordmark instead of `{{org.logo_image_url}}`
+         so the header is consistent across every invite — a fresh mosque
+         that hasn't uploaded a logo yet would otherwise show Clerk's
+         auto-generated initials avatar, which looks broken. The mosque's
+         own brand shows up everywhere else once they're in-app; here it's
+         a Sahla-platform message. Same asset the Business Ad receipt uses
+         (supabase/functions/stripe-webhooks/index.ts:adReceiptHtml). -->
+    <re-block padding="40px 16px 24px 16px" align="center">
+      <re-image
+        src="https://www.sahla.co/sahla-logo.png"
+        alt="Sahla"
+        width="72"
+        height="72"
+        border-radius="14px"
+        style="border-radius: 14px;"
+      ></re-image>
+      <re-text
+        margin="12px 0px 0px 0px"
+        align="center"
+        font-size="20px"
+        font-weight="bold"
+        line-height="24px"
+        color="#0A261E"
+      >
+        {{org.name}}
+      </re-text>
+      <re-text
+        margin="4px 0px 0px 0px"
+        align="center"
+        font-size="12px"
+        line-height="16px"
+        color="#77746c"
+      >
+        Board Invitation · Sahla
+      </re-text>
+    </re-block>
+
+    <!-- White card -->
+    <re-main
+      background-color="#ffffff"
+      border-radius="16px"
+    >
+      <re-block padding="36px 32px 32px 32px">
+        <re-text
+          margin="0px 0px 6px 0px"
+          align="left"
+          font-size="10px"
+          font-weight="bold"
+          line-height="14px"
+          color="#B8922A"
+        >
+          BOARD INVITATION
+        </re-text>
+        <re-heading
+          level="h1"
+          align="left"
+          color="#0A261E"
+          font-size="22px"
+          line-height="28px"
+          font-weight="bold"
+        >
+          You're invited to {{org.name}}.
+        </re-heading>
+        <re-text
+          margin="16px 0px 0px 0px"
+          align="left"
+          font-size="15px"
+          line-height="24px"
+          color="#525252"
+        >
+          {{#if inviter_name}}{{inviter_name}} invited you to join {{org.name}} on Sahla.{{else}}You've been invited to join {{org.name}} on Sahla.{{/if}} Accept to sign in and start managing your masjid — programs, prayer times, donations, and every announcement that reaches the community.
+        </re-text>
+
+        <re-block padding="24px 0px 8px 0px" align="center">
+          <re-button
+            href="{{action_url}}"
+            background-color="#0A261E"
+            color="#ffffff"
+            border-radius="9999px"
+            padding="14px 40px"
+            font-size="14px"
+            font-weight="bold"
+          >
+            Accept invitation
+          </re-button>
+        </re-block>
+
+        <re-block padding="16px 0px 0px 0px" align="center">
+          <re-text
+            margin="0px 0px 0px 0px"
+            align="center"
+            font-size="11px"
+            font-weight="bold"
+            line-height="16px"
+            color="#B8922A"
+          >
+            SECURE  ·  ONE-CLICK  ·  EXPIRES IN 30 DAYS
+          </re-text>
+        </re-block>
+      </re-block>
+    </re-main>
+
+    <!-- Footer outside the card -->
+    <re-block padding="24px 16px 0px 16px" align="center">
+      <re-text
+        margin="0px 0px 0px 0px"
+        align="center"
+        font-size="12px"
+        font-weight="bold"
+        line-height="18px"
+        color="#767371"
+      >
+        Sahla
+      </re-text>
+      <re-text
+        margin="4px 0px 0px 0px"
+        align="center"
+        font-size="11px"
+        line-height="16px"
+        color="#8f8b85"
+      >
+        Every mosque, its own app
+      </re-text>
+      <re-text
+        margin="12px 0px 0px 0px"
+        align="center"
+        font-size="11px"
+        line-height="16px"
+        color="#8f8b85"
+      >
+        Didn't expect this invitation? You can safely ignore this email — nothing was created for you.
+      </re-text>
+    </re-block>
+  </re-body>
+</re-html>

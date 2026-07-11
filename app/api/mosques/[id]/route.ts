@@ -10,7 +10,7 @@ const ALLOWED_FIELDS = [
   "app_name", "logo_url", "brand_color", "accent_color", "secondary_color",
   "font_theme", "header_style",
   "calculation_method", "school",
-  "reels_scope",
+  "reels_scope", "reels_setup_mode",
   // App store identifiers — used by the Builds tab / store sync to map a
   // mosque to its App Store Connect app and Play package.
   "bundle_id", "package_name",
@@ -27,7 +27,7 @@ export async function PATCH(
 
   const { id: mosqueId } = await params;
   const body = await request.json();
-  const { markComplete, ...fields } = body;
+  const { markComplete, unmarkComplete, ...fields } = body;
 
   // Filter to allowed fields only
   const updateData: Record<string, unknown> = {};
@@ -38,6 +38,9 @@ export async function PATCH(
   }
 
   const supabase = createAdminSupabaseClient();
+
+  const progressChangeRequested =
+    typeof markComplete === "string" || typeof unmarkComplete === "string";
 
   // Update mosque fields when there's something to update. Skipping this on
   // empty payloads (e.g. mark-complete-only requests) avoids PostgREST
@@ -66,7 +69,7 @@ export async function PATCH(
         session.userId
       ).catch((err) => console.error("Clerk org logo sync failed:", err));
     }
-  } else if (markComplete) {
+  } else if (progressChangeRequested) {
     // No field update; read current progress so we can merge the flag in.
     const { data: mosque, error } = await supabase
       .from("mosques")
@@ -80,9 +83,17 @@ export async function PATCH(
       (mosque?.onboarding_progress as Record<string, boolean>) || {};
   }
 
-  // Mark task complete if requested
-  if (markComplete && typeof markComplete === "string") {
+  // Apply a mark/un-mark request. Panels send `markComplete: "<stepKey>"`
+  // when the completion criterion is met and `unmarkComplete: "<stepKey>"`
+  // when it stops being met (e.g. required fields were cleared). Only one
+  // of the two should be present per request.
+  if (typeof markComplete === "string") {
     currentProgress[markComplete] = true;
+  }
+  if (typeof unmarkComplete === "string") {
+    currentProgress[unmarkComplete] = false;
+  }
+  if (progressChangeRequested) {
     const { error: progressError } = await supabase
       .from("mosques")
       .update({ onboarding_progress: currentProgress })

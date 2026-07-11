@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import { cn } from "@/lib/utils";
-import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY } from "@/lib/ui-classes";
+import { INPUT_CLASS, LABEL_CLASS } from "@/lib/ui-classes";
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 type JummahSlot = { time: string; khateeb_name: string; topic: string };
 type JummahRecord = {
@@ -28,7 +30,6 @@ export default function JummahSetupPanel({
 }) {
   const router = useRouter();
   const { showToast } = useToast();
-  const [saving, setSaving] = useState(false);
 
   const [slotCount, setSlotCount] = useState(
     existingJummah.length > 0 ? existingJummah.length : 1
@@ -69,34 +70,66 @@ export default function JummahSetupPanel({
     );
   }
 
-  async function handleSave() {
-    if (slots.some((s) => !s.time)) {
-      showToast("All jummah slots need a time", "error");
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const lastSavedRef = useRef<string>(
+    JSON.stringify({
+      slots: existingJummah.map((j) => ({
+        time: j.prayer_time || "12:15",
+        khateeb_name: j.khateeb_name || "",
+        topic: j.topic || "",
+      })),
+      capacityEnabled: existingJummah.some((j) => j.capacity_status != null),
+    })
+  );
+  const debounceRef = useRef<number | null>(null);
+  const isFirstRender = useRef(true);
+
+  // Auto-save on any change, debounced. The backend marks jummah_setup
+  // complete automatically on any successful save. `keepalive: true` keeps
+  // the save alive across a Next-button navigation.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
       return;
     }
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/mosques/${mosque.id}/jummah`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slots: slots.map((s) => ({
-            time: s.time,
-            khateeb_name: s.khateeb_name || null,
-            topic: s.topic || null,
-            capacity_status: capacityEnabled ? "open" : null,
-          })),
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      showToast("Jummah setup saved", "success");
-      router.refresh();
-    } catch {
-      showToast("Failed to save jummah setup", "error");
-    } finally {
-      setSaving(false);
-    }
-  }
+    // Don't save while any slot is missing a time — that's an invalid state
+    // and would blank out existing data on the backend.
+    if (slots.some((s) => !s.time)) return;
+
+    const snapshot = JSON.stringify({ slots, capacityEnabled });
+    if (snapshot === lastSavedRef.current) return;
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(async () => {
+      setStatus("saving");
+      try {
+        const res = await fetch(`/api/mosques/${mosque.id}/jummah`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slots: slots.map((s) => ({
+              time: s.time,
+              khateeb_name: s.khateeb_name || null,
+              topic: s.topic || null,
+              capacity_status: capacityEnabled ? "open" : null,
+            })),
+          }),
+          keepalive: true,
+        });
+        if (!res.ok) throw new Error("Failed to save");
+        lastSavedRef.current = snapshot;
+        setStatus("saved");
+        router.refresh();
+      } catch {
+        setStatus("error");
+        showToast("Couldn't save jummah setup", "error");
+      }
+    }, 700);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [slots, capacityEnabled, mosque.id, router, showToast]);
 
   return (
     <div className="space-y-5">
@@ -191,30 +224,37 @@ export default function JummahSetupPanel({
           <button
             onClick={() => setCapacityEnabled(!capacityEnabled)}
             className={cn(
-              "relative h-6 w-11 rounded-full transition-colors",
+              "relative h-5 w-9 rounded-full transition-colors",
               capacityEnabled ? "bg-emerald-500" : "bg-stone-300"
             )}
           >
             <span
               className={cn(
-                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
-                capacityEnabled ? "translate-x-5" : "translate-x-0.5"
+                "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-[left]",
+                capacityEnabled ? "left-[18px]" : "left-0.5"
               )}
             />
           </button>
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className={BTN_PRIMARY}
-        >
-          {saving && <Loader2 size={14} className="animate-spin" />}
-          {saving ? "Saving..." : "Save & Complete"}
-        </button>
+      {/* Auto-save status */}
+      <div className="flex items-center justify-end text-[11.5px] text-stone-500">
+        {status === "saving" ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Loader2 size={11} className="animate-spin" />
+            Saving…
+          </span>
+        ) : status === "saved" ? (
+          <span className="inline-flex items-center gap-1.5 text-emerald-700">
+            <Check size={12} strokeWidth={2.5} />
+            Saved
+          </span>
+        ) : status === "error" ? (
+          <span className="text-red-600">Couldn&apos;t save — check your connection.</span>
+        ) : (
+          <span className="text-stone-400">Changes save automatically.</span>
+        )}
       </div>
     </div>
   );

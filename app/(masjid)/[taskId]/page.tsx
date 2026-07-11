@@ -2,7 +2,6 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ALL_TASKS, ONBOARDING_CATEGORIES } from "../components/onboarding-tasks";
 import { getMosqueOnboardingData } from "../data";
@@ -44,7 +43,6 @@ export default async function TaskPage({
     notFound();
   }
 
-  const prevTask = taskIndex > 0 ? ALL_TASKS[taskIndex - 1] : null;
   const nextTask = taskIndex < ALL_TASKS.length - 1 ? ALL_TASKS[taskIndex + 1] : null;
 
   const session = await auth();
@@ -101,6 +99,35 @@ export default async function TaskPage({
     else eventsData = contentRes.data ?? [];
   }
 
+  // Programs are sorted into the mosque's program categories (the Discover
+  // program cards). Load the category options plus each program's current
+  // category set so the Programs panel can offer them as pick options.
+  let programCategories: Array<{ id: string; title: string }> = [];
+  let programAssignments: Record<string, string[]> = {};
+  if (taskId === "programs") {
+    const [catsRes, assignRes] = await Promise.all([
+      supabase
+        .from("program_categories")
+        .select("id, title")
+        .eq("mosque_id", mosque.id)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("program_category_content")
+        .select("category_id, content_id")
+        .eq("mosque_id", mosque.id),
+    ]);
+    programCategories = catsRes.data ?? [];
+    const map: Record<string, string[]> = {};
+    for (const r of (assignRes.data ?? []) as {
+      category_id: string;
+      content_id: string;
+    }[]) {
+      (map[r.content_id] ??= []).push(r.category_id);
+    }
+    programAssignments = map;
+  }
+
   // The "categories" onboarding task now configures the Discover Program Cards
   // (program_categories). Task id kept as "categories" for onboarding_progress
   // continuity.
@@ -130,6 +157,7 @@ export default async function TaskPage({
     duration_sec: number | null;
     created_at: string;
   }> = [];
+  let reelsSetupMode: "self" | "sahla" = "self";
   if (taskId === "reels") {
     const { data } = await supabase
       .from("reels")
@@ -139,6 +167,20 @@ export default async function TaskPage({
       .eq("mosque_id", mosque.id)
       .order("created_at", { ascending: false });
     reelsData = data ?? [];
+
+    // Separate, resilient read: if the column hasn't been migrated yet the
+    // query errors and we simply fall back to "self" rather than 500-ing.
+    const { data: modeRow } = await supabase
+      .from("mosques")
+      .select("reels_setup_mode")
+      .eq("id", mosque.id)
+      .maybeSingle();
+    if (
+      modeRow &&
+      (modeRow as { reels_setup_mode?: string }).reels_setup_mode === "sahla"
+    ) {
+      reelsSetupMode = "sahla";
+    }
   }
 
   const progress = ((mosque.onboarding_progress ?? {}) as Record<string, unknown>);
@@ -207,7 +249,7 @@ export default async function TaskPage({
       tasks: allOnboardingTasks.map((t) => ({
         id: t.id,
         label: t.label,
-        required: t.badge === "REQ",
+        required: t.badge === "Required",
         completed: !!(progress as Record<string, boolean>)[t.id],
       })),
     };
@@ -264,8 +306,8 @@ export default async function TaskPage({
     <div className="mx-auto max-w-2xl py-8">
       <div className="mb-2 flex items-center gap-2">
         <span
-          className={`text-[9px] font-bold rounded px-1.5 py-0.5 ${
-            task.badge === "REQ"
+          className={`text-[10px] font-semibold rounded-full px-2 py-0.5 ${
+            task.badge === "Required"
               ? "bg-amber-100 text-amber-700"
               : "bg-stone-100 text-stone-500"
           }`}
@@ -300,7 +342,13 @@ export default async function TaskPage({
           <SpeakersPanel mosqueId={mosque.id} initialSpeakers={speakersData ?? []} />
         )}
         {taskId === "programs" && (
-          <ProgramsPanel mosqueId={mosque.id} initialPrograms={programsData ?? []} speakers={speakersData ?? []} />
+          <ProgramsPanel
+            mosqueId={mosque.id}
+            initialPrograms={programsData ?? []}
+            speakers={speakersData ?? []}
+            categories={programCategories}
+            initialAssignments={programAssignments}
+          />
         )}
         {taskId === "events" && (
           <EventsPanel mosqueId={mosque.id} initialEvents={eventsData ?? []} speakers={speakersData ?? []} />
@@ -309,6 +357,7 @@ export default async function TaskPage({
           <ReelsOnboardingPanel
             mosqueId={mosque.id}
             initialScope={(mosque as { reels_scope?: "own" | "global" }).reels_scope ?? "own"}
+            initialSetupMode={reelsSetupMode}
             initialReels={reelsData}
           />
         )}
@@ -355,20 +404,11 @@ export default async function TaskPage({
         )}
       </div>
 
-      {/* Prev/Next navigation */}
-      <div className="mt-10 flex items-center justify-between gap-4 border-t border-stone-200 pt-6">
-        {prevTask ? (
-          <Link
-            href={`/${prevTask.id}`}
-            className="group inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800"
-          >
-            <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
-            {prevTask.label}
-          </Link>
-        ) : (
-          <div />
-        )}
-
+      {/* Prev-task link removed on purpose — the sidebar already handles
+          cross-task navigation, and having a second "back" alongside each
+          panel's wizard back buttons was confusing. Only the forward Next
+          remains. */}
+      <div className="mt-10 flex items-center justify-end gap-4 border-t border-stone-200 pt-6">
         {nextTask ? (
           <Link
             href={`/${nextTask.id}`}

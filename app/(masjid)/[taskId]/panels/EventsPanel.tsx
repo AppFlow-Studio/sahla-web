@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Plus, Upload, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import CSVImport from "../../components/CSVImport";
+import TimePicker, { formatTimeLabel } from "../../components/TimePicker";
 import { Dropdown } from "@/app/(admin)/components/Dropdown";
 import { cn } from "@/lib/utils";
 import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY_SM, BTN_GHOST_SM } from "@/lib/ui-classes";
@@ -45,6 +47,9 @@ const GENDER_OPTIONS = [
   { value: "Sisters", label: "Sisters" },
 ];
 
+const NAME_MAX = 40;
+const DESCRIPTION_MAX = 300;
+
 export default function EventsPanel({
   mosqueId,
   initialEvents,
@@ -54,6 +59,7 @@ export default function EventsPanel({
   initialEvents: ContentItem[];
   speakers: Speaker[];
 }) {
+  const router = useRouter();
   const { showToast } = useToast();
   const [events, setEvents] = useState(initialEvents);
   const [saving, setSaving] = useState(false);
@@ -122,6 +128,8 @@ export default function EventsPanel({
       if (!res.ok) throw new Error("Failed");
       setEvents((prev) => prev.filter((e) => e.content_id !== contentId));
       showToast("Event removed", "success");
+      // Refresh so the sidebar picks up the un-mark when this was the last one.
+      router.refresh();
     } catch { showToast("Failed to remove", "error"); }
   }
 
@@ -152,7 +160,9 @@ export default function EventsPanel({
                       </span>
                     )}
                     {event.start_time && (
-                      <span className="text-[10px] text-stone-400">{event.start_time}</span>
+                      <span className="text-[10px] text-stone-400">
+                        {formatTimeLabel(event.start_time) ?? event.start_time}
+                      </span>
                     )}
                     {event.gender !== "All" && (
                       <span className="rounded-md border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">
@@ -206,20 +216,46 @@ export default function EventsPanel({
             </div>
             <div className="space-y-4 px-6 py-5">
               <div>
-                <label className={LABEL_CLASS}>Event Name</label>
+                <div className="flex items-center justify-between">
+                  <label className={LABEL_CLASS}>Event Name</label>
+                  <span
+                    className={cn(
+                      "mb-1.5 text-[10.5px] tabular-nums",
+                      name.length >= NAME_MAX ? "text-red-500" : "text-stone-400"
+                    )}
+                  >
+                    {name.length}/{NAME_MAX}
+                  </span>
+                </div>
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
+                  maxLength={NAME_MAX}
                   placeholder="e.g., Ramadan Iftar"
                   className={INPUT_CLASS}
                 />
               </div>
               <div>
-                <label className={LABEL_CLASS}>Description</label>
+                <div className="flex items-center justify-between">
+                  <label className={LABEL_CLASS}>Description</label>
+                  <span
+                    className={cn(
+                      "mb-1.5 text-[10.5px] tabular-nums",
+                      description.length >= DESCRIPTION_MAX
+                        ? "text-red-500"
+                        : "text-stone-400"
+                    )}
+                  >
+                    {description.length}/{DESCRIPTION_MAX}
+                  </span>
+                </div>
                 <textarea
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) =>
+                    setDescription(e.target.value.slice(0, DESCRIPTION_MAX))
+                  }
+                  maxLength={DESCRIPTION_MAX}
                   placeholder="Brief description (optional)"
                   rows={2}
                   className="w-full resize-none rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none transition-colors placeholder:text-stone-400 hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
@@ -238,12 +274,7 @@ export default function EventsPanel({
                 </div>
                 <div>
                   <label className={LABEL_CLASS}>Time</label>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className={cn(INPUT_CLASS, "tabular-nums")}
-                  />
+                  <TimePicker value={startTime} onChange={setStartTime} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
