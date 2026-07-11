@@ -43,10 +43,10 @@ export default function FontThemePicker({
             onClick={() => onChange(theme.key)}
             aria-pressed={selected}
             className={cn(
-              "group relative flex flex-col rounded-xl border bg-white p-4 text-left transition-all",
+              "group relative flex h-full flex-col rounded-xl border bg-white p-4 text-left transition-all",
               selected
-                ? "border-[#0A261E] shadow-[0_0_0_2px_rgba(10,38,30,0.10)]"
-                : "border-stone-200 hover:border-stone-300 hover:shadow-sm"
+                ? "border-[#0A261E] shadow-[0_0_0_2px_rgba(10,38,30,0.08)]"
+                : "border-[#0A261E]/[0.08] hover:border-[#0A261E]/25 hover:shadow-sm"
             )}
           >
             {selected && (
@@ -56,24 +56,24 @@ export default function FontThemePicker({
             )}
 
             {/* Real-font preview */}
-            <div className="mb-3 flex h-16 items-end gap-2 border-b border-stone-100 pb-3">
+            <div className="mb-3 border-b border-[#0A261E]/[0.07] pb-3">
               <span
                 className={fonts.displayClass}
-                style={{ fontWeight: fonts.displayWeight, fontSize: 38, lineHeight: 1, color: "#0A261E" }}
+                style={{ fontWeight: fonts.displayWeight, fontSize: 40, lineHeight: 1, color: "#0A261E" }}
               >
                 Aa
               </span>
               <span
-                className={fonts.bodyClass}
-                style={{ fontSize: 12, color: "#78716c", paddingBottom: 3 }}
+                className={cn(fonts.bodyClass, "mt-2 block whitespace-nowrap")}
+                style={{ fontSize: 11.5, color: "rgba(10,38,30,0.5)" }}
               >
                 Maghrib 7:48
               </span>
             </div>
 
-            <p className="text-[13px] font-semibold text-stone-900">{theme.label}</p>
-            <p className="mt-0.5 text-[11px] leading-snug text-stone-500">{theme.description}</p>
-            <p className="mt-2 text-[10px] font-medium uppercase tracking-wide text-stone-400">
+            <p className="text-[13px] font-semibold text-[#0A261E]">{theme.label}</p>
+            <p className="mt-1 text-[11px] leading-snug text-[#0A261E]/55">{theme.description}</p>
+            <p className="mt-auto pt-3 text-[10px] font-medium uppercase tracking-wide text-[#0A261E]/40">
               {theme.pairing}
             </p>
           </button>

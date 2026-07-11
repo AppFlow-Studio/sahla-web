@@ -6,7 +6,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ALL_TASKS, ONBOARDING_CATEGORIES } from "../components/onboarding-tasks";
 import { getMosqueOnboardingData } from "../data";
 import TaskPageTransition from "./TaskPageTransition";
-import { createStripeClient } from "@/lib/stripe";
+import { createStripeClient, ACCOUNT_INCLUDES, mapAccountStatus } from "@/lib/stripe";
 import { markOnboardingStep } from "@/lib/supabase/onboarding";
 
 // Lazy-load panels — only the active panel is compiled/loaded per request.
@@ -262,33 +262,32 @@ export default async function TaskPage({
     if (stripeAccountId) {
       try {
         const stripe = createStripeClient();
-        const account = await stripe.accounts.retrieve(stripeAccountId);
-        stripeStatus = {
-          status: (account.charges_enabled ? "connected" :
-            account.requirements?.past_due?.length ? "issues" : "pending") as "connected" | "pending" | "issues",
-          charges_enabled: account.charges_enabled,
-          payouts_enabled: account.payouts_enabled,
-          requirements: {
-            currently_due: account.requirements?.currently_due ?? [],
-            past_due: account.requirements?.past_due ?? [],
-          },
-          business_profile: { name: account.business_profile?.name ?? null },
-        };
+        const account = await stripe.v2.core.accounts.retrieve(stripeAccountId, {
+          include: [...ACCOUNT_INCLUDES],
+        });
+        stripeStatus = mapAccountStatus(account);
+        const mosqueRowId = (mosque as Record<string, unknown>).id as string;
+        const supabase = createAdminSupabaseClient();
+        // Persist Connect status so the admin Revenue view stays accurate even
+        // if the account.updated webhook isn't delivered. This runs on every
+        // view of the panel, so it's the authoritative read-through.
+        await supabase
+          .from("mosques")
+          .update({
+            stripe_charges_enabled: stripeStatus.charges_enabled,
+            stripe_payouts_enabled: stripeStatus.payouts_enabled,
+          })
+          .eq("id", mosqueRowId);
         // Self-heal: if charges are enabled but the task isn't marked
         // complete, mark it now. The API-route path (panel useEffect on
         // ?stripe_return) only fires once and can miss this when Stripe
         // activates asynchronously after the redirect.
-        if (account.charges_enabled) {
+        if (stripeStatus.charges_enabled) {
           const progress = (mosque as Record<string, unknown>).onboarding_progress as
             | Record<string, boolean>
             | null;
           if (!progress?.stripe_connect) {
-            const supabase = createAdminSupabaseClient();
-            await markOnboardingStep(
-              supabase,
-              (mosque as Record<string, unknown>).id as string,
-              "stripe_connect"
-            );
+            await markOnboardingStep(supabase, mosqueRowId, "stripe_connect");
           }
         }
       } catch {

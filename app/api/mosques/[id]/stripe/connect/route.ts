@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { createStripeClient } from "@/lib/stripe";
+import { createStripeClient, ACCOUNT_INCLUDES } from "@/lib/stripe";
 import { NextResponse } from "next/server";
 
 export async function POST(
@@ -31,43 +31,80 @@ export async function POST(
     return NextResponse.json({ error: "Mosque not found" }, { status: 404 });
   }
 
-  let accountId = mosque.stripe_account_id;
+  try {
+    let accountId = mosque.stripe_account_id;
 
-  // Create new Stripe account if none exists
-  if (!accountId) {
-    const account = await stripe.accounts.create({
-      type: "standard",
-      business_profile: {
-        mcc: "8661",
-        name: mosque.name || undefined,
-        url: mosque.slug
-          ? `https://sahla.co/${mosque.slug}`
-          : "https://sahla.co",
-      },
-      metadata: { mosque_id: mosqueId },
+    // Create new Stripe account (Accounts v2) if none exists.
+    if (!accountId) {
+      const account = await stripe.v2.core.accounts.create({
+        display_name: mosque.name || undefined,
+        // Full Stripe dashboard access — the mosque owns and controls the account.
+        dashboard: "full",
+        identity: { country: "US" },
+        configuration: {
+          merchant: {
+            mcc: "8661",
+            // Request card processing so charges can be enabled.
+            capabilities: { card_payments: { requested: true } },
+          },
+        },
+        defaults: {
+          profile: {
+            business_url: mosque.slug
+              ? `https://sahla.co/${mosque.slug}`
+              : "https://sahla.co",
+          },
+          // Standard-equivalent: Stripe collects fees directly from the
+          // connected account and the account bears its own losses.
+          responsibilities: {
+            fees_collector: "stripe",
+            losses_collector: "stripe",
+          },
+        },
+        metadata: { mosque_id: mosqueId },
+      });
+      accountId = account.id;
+
+      await supabase
+        .from("mosques")
+        .update({ stripe_account_id: accountId })
+        .eq("id", mosqueId);
+    }
+
+    // Check if already fully connected (card payments active).
+    const existing = await stripe.v2.core.accounts.retrieve(accountId, {
+      include: [...ACCOUNT_INCLUDES],
     });
-    accountId = account.id;
+    if (
+      existing.configuration?.merchant?.capabilities?.card_payments?.status ===
+      "active"
+    ) {
+      return NextResponse.json({ already_connected: true });
+    }
 
-    await supabase
-      .from("mosques")
-      .update({ stripe_account_id: accountId })
-      .eq("id", mosqueId);
+    // Create an Account Link for hosted onboarding / continuation.
+    // NOTE: v2 Account Links require HTTPS return/refresh URLs — even for
+    // localhost. Set NEXT_PUBLIC_APP_URL to an https origin.
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const accountLink = await stripe.v2.core.accountLinks.create({
+      account: accountId,
+      use_case: {
+        type: "account_onboarding",
+        account_onboarding: {
+          configurations: ["merchant"],
+          refresh_url: `${baseUrl}/stripe_connect?stripe=refresh`,
+          return_url: `${baseUrl}/stripe_connect?stripe=success`,
+        },
+      },
+    });
+
+    return NextResponse.json({ url: accountLink.url });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[stripe/connect] failed to initiate connection:", message);
+    return NextResponse.json(
+      { error: "Failed to initiate Stripe connection", detail: message },
+      { status: 500 }
+    );
   }
-
-  // Check if already fully connected
-  const existing = await stripe.accounts.retrieve(accountId);
-  if (existing.charges_enabled) {
-    return NextResponse.json({ already_connected: true });
-  }
-
-  // Create Account Link for onboarding/continuation
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const accountLink = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: `${baseUrl}/stripe_connect?stripe=refresh`,
-    return_url: `${baseUrl}/stripe_connect?stripe=success`,
-    type: "account_onboarding",
-  });
-
-  return NextResponse.json({ url: accountLink.url });
 }
