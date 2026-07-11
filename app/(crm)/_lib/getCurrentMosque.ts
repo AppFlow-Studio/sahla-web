@@ -33,7 +33,7 @@ export type MosqueProfile = {
   phone: string;
   email: string;
   timezone: string;
-  tier: "core" | "core_crm" | "complete";
+  tier: "core" | "core_crm";
   primaryColor: string;
   accentColor: string;
   /** Font theme key — one of FONT_THEMES in lib/font-themes.ts. */

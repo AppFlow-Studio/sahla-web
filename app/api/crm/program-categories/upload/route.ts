@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { uploadToBunny } from "@/lib/bunny";
 import { requireCrmAccess } from "@/lib/supabase/requireCrmAccess";
 
-const BUCKET = "events_and_programs_images";
 const ALLOWED_MIME = new Set([
   "image/png",
   "image/jpeg",
@@ -11,8 +10,9 @@ const ALLOWED_MIME = new Set([
 ]);
 const MAX_BYTES = 5 * 1024 * 1024;
 
-// Cover-image upload for Discover "Program" cards. Writes to the shared public
-// events/programs bucket so the mobile app can render the returned URL directly.
+// Cover-image upload for Discover "Program" cards. Uploads to the shared
+// `sahla-co` Bunny storage zone and returns its public CDN URL so the mobile app
+// can render it directly — same zone the app's edge functions use.
 export async function POST(request: Request) {
   const access = await requireCrmAccess();
   if (!access.ok) return access.response;
@@ -46,16 +46,11 @@ export async function POST(request: Request) {
     .toString(36)
     .slice(2, 8)}.${ext}`;
 
-  const supabase = createAdminSupabaseClient();
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, file, { upsert: false, contentType: file.type });
-
-  if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  try {
+    const url = await uploadToBunny(path, file);
+    return NextResponse.json({ url });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Upload failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-
-  return NextResponse.json({ url: urlData.publicUrl });
 }

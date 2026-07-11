@@ -233,8 +233,8 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
                 {task.label}
               </span>
               {!task.completed && (
-                <span className="ml-auto text-[9px] font-bold rounded px-1.5 py-0.5 bg-amber-100 text-amber-700">
-                  REQ
+                <span className="ml-auto text-[10px] font-semibold rounded-full px-2 py-0.5 bg-amber-100 text-amber-700">
+                  Required
                 </span>
               )}
             </div>

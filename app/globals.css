@@ -237,6 +237,13 @@ body {
   100% { transform: translateY(260%); }
 }
 
+/* Skeleton shimmer sweep — used by image/file upload states so admins see
+   the file is being processed (mirrors the Claude/GitHub file-upload UX). */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 @keyframes shimmer {
   0% { background-position: -200% center; }
   100% { background-position: 200% center; }
