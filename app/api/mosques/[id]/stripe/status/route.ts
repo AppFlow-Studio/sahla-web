@@ -42,6 +42,19 @@ export async function GET(
   }
 
   const result = mapAccountStatus(account);
+
+  // Persist Connect status to the mosque row so the admin Revenue view reflects
+  // it without depending on account.updated webhook delivery. This read-through
+  // runs whenever the mosque returns from Stripe; the webhook remains the
+  // real-time path for updates that land while they're not looking.
+  await supabase
+    .from("mosques")
+    .update({
+      stripe_charges_enabled: result.charges_enabled,
+      stripe_payouts_enabled: result.payouts_enabled,
+    })
+    .eq("id", mosqueId);
+
   if (result.status === "connected") {
     await markOnboardingStep(supabase, mosqueId, "stripe_connect");
   }

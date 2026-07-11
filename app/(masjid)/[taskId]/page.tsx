@@ -266,6 +266,18 @@ export default async function TaskPage({
           include: [...ACCOUNT_INCLUDES],
         });
         stripeStatus = mapAccountStatus(account);
+        const mosqueRowId = (mosque as Record<string, unknown>).id as string;
+        const supabase = createAdminSupabaseClient();
+        // Persist Connect status so the admin Revenue view stays accurate even
+        // if the account.updated webhook isn't delivered. This runs on every
+        // view of the panel, so it's the authoritative read-through.
+        await supabase
+          .from("mosques")
+          .update({
+            stripe_charges_enabled: stripeStatus.charges_enabled,
+            stripe_payouts_enabled: stripeStatus.payouts_enabled,
+          })
+          .eq("id", mosqueRowId);
         // Self-heal: if charges are enabled but the task isn't marked
         // complete, mark it now. The API-route path (panel useEffect on
         // ?stripe_return) only fires once and can miss this when Stripe
@@ -275,12 +287,7 @@ export default async function TaskPage({
             | Record<string, boolean>
             | null;
           if (!progress?.stripe_connect) {
-            const supabase = createAdminSupabaseClient();
-            await markOnboardingStep(
-              supabase,
-              (mosque as Record<string, unknown>).id as string,
-              "stripe_connect"
-            );
+            await markOnboardingStep(supabase, mosqueRowId, "stripe_connect");
           }
         }
       } catch {
