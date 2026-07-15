@@ -1,9 +1,10 @@
 # Cal.com → pipeline sync
 
 Cal.com bookings automatically move waitlist leads through the Sahla CRM
-pipeline. Booking a call flips a `lead` row to `contacted` and stamps
-the appointment time; the `contacted → demo` promotion happens
-automatically one hour before the call via `pg_cron`.
+pipeline. Booking a call flips a `lead` row to `contacted`; the
+`contacted → demo` promotion happens only after the meeting actually
+finishes (via Cal.com's `MEETING_ENDED` webhook). No-shows stay at
+`contacted` because they cancelled first.
 
 ## How it works
 
@@ -17,11 +18,14 @@ automatically one hour before the call via `pg_cron`.
    attendee email, advances stage to `contacted`, stamps
    `next_booking_at` + `cal_booking_uid`, and appends a "Booked call for
    `<time>`" note.
-4. Every 5 min, `pg_cron` scans for `contacted` rows whose
-   `next_booking_at` is within the next hour and promotes them to `demo`.
+4. When the meeting's scheduled end time hits, Cal.com fires
+   `MEETING_ENDED`. The edge function matches by `cal_booking_uid`,
+   advances stage to `demo`, clears `next_booking_at` +
+   `cal_booking_uid`, and appends a "Demo call completed" note.
 5. If the booking is rescheduled or cancelled, Cal.com fires the
    matching event and the edge function updates the row accordingly
-   (cancel clears the booking-time fields but does **not** revert stage).
+   (cancel clears the booking-time fields but does **not** revert stage;
+   `MEETING_ENDED` won't fire for a cancelled booking).
 
 ## One-time setup
 
@@ -47,9 +51,12 @@ supabase db push --project-ref <main-ref>
 supabase functions deploy cal-webhook --project-ref <main-ref>
 ```
 
-The migration `20260715120000_pipeline_cal_booking_fields.sql` adds two
-columns to `pipeline_stages` (`next_booking_at`, `cal_booking_uid`) and
-schedules the pg_cron promotion job.
+Migrations involved:
+- `20260715120000_pipeline_cal_booking_fields.sql` — adds
+  `next_booking_at` and `cal_booking_uid` columns to `pipeline_stages`
+  (originally also scheduled a 1-hour-before pg_cron promotion job).
+- `20260715180000_drop_promote_pipeline_to_demo_cron.sql` — removes
+  that pg_cron job now that `MEETING_ENDED` handles the promotion.
 
 ### 3. Register the webhook in Cal.com
 
@@ -58,10 +65,11 @@ Cal.com dashboard → **Settings → Developer → Webhooks → New Webhook**:
 - **Subscriber URL**:
   - Staging: `https://<staging-ref>.supabase.co/functions/v1/cal-webhook`
   - Prod:    `https://<main-ref>.supabase.co/functions/v1/cal-webhook`
-- **Event triggers** (check all three):
+- **Event triggers** (check all four):
   - `BOOKING_CREATED`
   - `BOOKING_RESCHEDULED`
   - `BOOKING_CANCELLED`
+  - `MEETING_ENDED`
 - **Payload template**: leave default (Cal.com's standard JSON — the
   function's `CalWebhookEvent` type matches).
 - Copy the **Secret** Cal.com generates and paste it into Supabase as
@@ -78,9 +86,10 @@ Two webhooks total — one for the staging project, one for prod.
 3. In the CRM pipeline, that row should now be at `contacted` with a
    `next_booking_at` timestamp visible in the row detail (and a "Booked
    call for `<time>`" note in the notes JSON).
-4. Wait until one hour before the call (or fudge `next_booking_at` in
-   the DB for a test row) and confirm the cron promotes it to `demo`
-   within 5 minutes.
+4. Wait until the meeting's scheduled end time. Cal.com fires
+   `MEETING_ENDED`; the row should flip from `contacted` → `demo` and
+   `next_booking_at` should clear. (For a fast test, book a 15-min slot
+   at the top of the hour and wait 15 min.)
 
 ## Troubleshooting
 
@@ -91,9 +100,11 @@ Two webhooks total — one for the staging project, one for prod.
   for anyone finding your Cal.com link outside the waitlist flow. If it
   should have matched, check for a typo / case-sensitivity issue (the
   function uses `ilike` for the lookup).
-- **Cron didn't fire** — check `SELECT * FROM cron.job WHERE jobname =
-  'promote-pipeline-to-demo'` and `SELECT * FROM cron.job_run_details
-  ORDER BY start_time DESC LIMIT 5` for the last few runs.
+- **`MEETING_ENDED` didn't fire** — Cal.com sends this at the meeting's
+  scheduled end time, not necessarily when the call actually ends. If
+  the row is still at `contacted` after the scheduled end, check the
+  edge function logs for the event, and confirm `MEETING_ENDED` is
+  enabled on the Cal.com webhook.
 - **Reschedule didn't take effect** — the function matches
   `BOOKING_RESCHEDULED` by the `rescheduleUid` in the payload (Cal.com's
   reference to the *previous* booking uid). If a row was rescheduled but

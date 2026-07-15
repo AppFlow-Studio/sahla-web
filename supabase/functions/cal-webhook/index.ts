@@ -16,16 +16,19 @@
 //   BOOKING_CANCELLED   → match by uid, clear next_booking_at + cal_booking_uid,
 //                         append "Call cancelled" note. Stage is NOT reverted —
 //                         keeps the audit trail cleaner.
-//
-// A separate pg_cron job (20260715120000_pipeline_cal_booking_fields.sql)
-// promotes 'contacted' → 'demo' automatically when next_booking_at is within
-// the next hour, so day-of state reflects on the pipeline without touching.
+//   MEETING_ENDED       → match by uid, advance 'contacted' → 'demo',
+//                         clear next_booking_at + cal_booking_uid, append
+//                         "Demo call completed" note. This is what actually
+//                         moves a booked-and-attended call into the demo
+//                         stage — no-shows never fire MEETING_ENDED because
+//                         they cancelled first, so they stay at 'contacted'
+//                         (correctly).
 //
 // Setup:
 //   1. Set CAL_WEBHOOK_SECRET in Supabase Dashboard → Edge Functions → Secrets
 //   2. In Cal.com Dashboard → Settings → Developer → Webhooks → New:
 //      URL: https://<project-ref>.supabase.co/functions/v1/cal-webhook
-//      Events: BOOKING_CREATED, BOOKING_RESCHEDULED, BOOKING_CANCELLED
+//      Events: BOOKING_CREATED, BOOKING_RESCHEDULED, BOOKING_CANCELLED, MEETING_ENDED
 //      Copy the "Secret" Cal.com generates → paste into Supabase as CAL_WEBHOOK_SECRET
 //
 // ============================================================================
@@ -60,6 +63,7 @@ type CalWebhookEvent = {
     | "BOOKING_CREATED"
     | "BOOKING_RESCHEDULED"
     | "BOOKING_CANCELLED"
+    | "MEETING_ENDED"
     | string;
   createdAt?: string;
   payload: CalBookingPayload;
@@ -209,6 +213,39 @@ async function handleBookingRescheduled(event: CalWebhookEvent) {
   return { matched: true, pipelineId: row.id };
 }
 
+async function handleMeetingEnded(event: CalWebhookEvent) {
+  const { payload } = event;
+  const { data: row } = await supabase
+    .from("pipeline_stages")
+    .select("id, stage, notes")
+    .eq("cal_booking_uid", payload.uid)
+    .maybeSingle();
+
+  if (!row) {
+    return { matched: false, reason: "no pipeline row for uid" };
+  }
+
+  // Only advance forward. If they somehow already moved past demo (e.g. HQ
+  // moved them to 'contract' during the call), leave the stage alone but
+  // still stamp the note + clear the booking fields.
+  const nextStage =
+    row.stage === "lead" || row.stage === "contacted" ? "demo" : row.stage;
+
+  const { error } = await supabase
+    .from("pipeline_stages")
+    .update({
+      stage: nextStage,
+      next_booking_at: null,
+      cal_booking_uid: null,
+      notes: appendNote(row.notes, `Demo call completed`),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", row.id);
+
+  if (error) throw error;
+  return { matched: true, pipelineId: row.id, newStage: nextStage };
+}
+
 async function handleBookingCancelled(event: CalWebhookEvent) {
   const { payload } = event;
   const { data: row } = await supabase
@@ -226,8 +263,8 @@ async function handleBookingCancelled(event: CalWebhookEvent) {
     ? `Call cancelled — reason: ${reason}`
     : `Call cancelled`;
 
-  // Clear the booking-time fields so the cron doesn't fire on a stale slot.
-  // Stage stays as-is (audit-trail cleaner than reverting).
+  // Clear the booking-time fields so the CRM stops showing a stale
+  // upcoming call. Stage stays as-is (audit-trail cleaner than reverting).
   const { error } = await supabase
     .from("pipeline_stages")
     .update({
@@ -276,6 +313,9 @@ Deno.serve(async (req) => {
         break;
       case "BOOKING_CANCELLED":
         result = await handleBookingCancelled(event);
+        break;
+      case "MEETING_ENDED":
+        result = await handleMeetingEnded(event);
         break;
       default:
         // Unknown/unhandled event — ack so Cal.com doesn't retry.
