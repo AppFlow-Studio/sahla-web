@@ -32,3 +32,11 @@ entrypoint = "./functions/clerk-webhooks/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/clerk-webhooks/*.html" ]
+
+[functions.cal-webhook]
+enabled = true
+# Cal.com uses its own HMAC-SHA256 signature in X-Cal-Signature-256.
+# Verified inside the function against CAL_WEBHOOK_SECRET; keep Supabase's
+# JWT check off so Cal.com's requests aren't rejected at the auth layer.
+verify_jwt = false
+entrypoint = "./functions/cal-webhook/index.ts"
