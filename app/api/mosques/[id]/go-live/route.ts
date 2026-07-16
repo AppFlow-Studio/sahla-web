@@ -168,6 +168,10 @@ export async function POST(
       customer: customerId,
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
+      // Show the "Add promotion code" field so a mosque can enter a code (e.g.
+      // RAMADAN25) and get the discount from their very first invoice. Codes are
+      // created in HQ admin → Promo codes.
+      allow_promotion_codes: true,
       metadata: {
         mosque_id: mosqueId,
         type: "saas_subscription",

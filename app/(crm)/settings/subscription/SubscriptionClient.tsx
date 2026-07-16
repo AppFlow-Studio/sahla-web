@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import PageHeader from "../../_components/PageHeader";
 import { useMosque } from "../../_lib/mock-mosque";
 import { formatUsd, relativeShort } from "../../_lib/format";
+import { usePlanPricing } from "@/lib/use-plan-pricing";
 import type {
   CrmSubscriptionResponse,
   CrmInvoice,
@@ -29,7 +30,7 @@ const TIERS = [
   {
     id: "core" as const,
     name: "Sahla Core",
-    price: 300,
+    fallback: 300,
     description: "Branded iOS + Android app, donations, prayer times.",
     features: [
       "Fully branded iOS + Android binary",
@@ -41,7 +42,7 @@ const TIERS = [
   {
     id: "core_crm" as const,
     name: "Sahla Core + CRM",
-    price: 325,
+    fallback: 325,
     description:
       "Everything in Core plus the full Mosque CRM — programs, events, RSVPs, notifications, and the dashboard you're using right now.",
     features: [
@@ -69,6 +70,7 @@ async function fetchSubscription(): Promise<CrmSubscriptionResponse> {
 
 export default function SubscriptionClient() {
   const mosque = useMosque();
+  const pricing = usePlanPricing();
   const [portalLoading, setPortalLoading] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
 
@@ -81,6 +83,14 @@ export default function SubscriptionClient() {
   const sub = query.data;
   const tierId = sub?.tier ?? mosque.tier;
   const currentTier = TIERS.find((t) => t.id === tierId) ?? TIERS[1];
+
+  // Live price from Stripe (via /api/pricing), falling back to the tier's list
+  // amount until it loads or if the endpoint is unavailable.
+  const priceLabel = (id: (typeof TIERS)[number]["id"]) =>
+    pricing?.[id]?.formatted ??
+    formatUsd(TIERS.find((t) => t.id === id)?.fallback ?? 0);
+  const priceAmount = (id: (typeof TIERS)[number]["id"]) =>
+    pricing?.[id]?.amount ?? TIERS.find((t) => t.id === id)?.fallback ?? 0;
 
   async function openPortal() {
     if (mosque.isHQ) {
@@ -218,7 +228,7 @@ export default function SubscriptionClient() {
                 Monthly
               </p>
               <p className="font-display text-[36px] leading-none text-[var(--mosque-primary-fg,#fffbf2)]">
-                {formatUsd(currentTier.price)}
+                {priceLabel(currentTier.id)}
               </p>
             </div>
             <p className="text-[11.5px] text-[var(--mosque-primary-fg,#fffbf2)]/55">
@@ -267,7 +277,7 @@ export default function SubscriptionClient() {
                 ) : null}
                 <h4 className="font-display text-[18px] text-[#0A261E]">{tier.name}</h4>
                 <p className="mt-2 font-display text-[28px] leading-none text-[#0A261E]">
-                  {formatUsd(tier.price)}
+                  {priceLabel(tier.id)}
                   <span className="ml-1 text-[12px] font-sans font-normal text-[#0A261E]/55">
                     /mo
                   </span>
@@ -295,7 +305,9 @@ export default function SubscriptionClient() {
                       onClick={openPortal}
                       disabled={portalLoading}
                     >
-                      {tier.price > currentTier.price ? "Upgrade" : "Switch"}
+                      {priceAmount(tier.id) > priceAmount(currentTier.id)
+                        ? "Upgrade"
+                        : "Switch"}
                       <ArrowUpRight size={12} />
                     </Button>
                   </div>
