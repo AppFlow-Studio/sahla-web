@@ -7,11 +7,24 @@ import Navbar from "../components/Navbar";
 import WaitlistContent from "../waitlist/WaitlistContent";
 import BottomBar from "../components/BottomBar";
 import { Check } from "lucide-react";
+import { usePlanPricing } from "@/lib/use-plan-pricing";
+import type { PlanTier } from "@/lib/pricing";
 
-const plans = [
+const plans: {
+  name: string;
+  tier: PlanTier;
+  fallback: number;
+  period: string;
+  description: string;
+  features: string[];
+  cta: string;
+  href: string;
+  highlight: boolean;
+}[] = [
   {
     name: "Sahla Standard",
-    price: 300,
+    tier: "core",
+    fallback: 300,
     period: "/mo",
     description: "Everything your mosque needs to launch and run a branded mobile app.",
     features: [
@@ -32,7 +45,8 @@ const plans = [
   },
   {
     name: "Sahla + CRM",
-    price: 325,
+    tier: "core_crm",
+    fallback: 325,
     period: "/mo",
     description: "Everything in Standard, plus the admin CRM for deeper community management.",
     features: [
@@ -59,8 +73,11 @@ const noCharge = [
 
 export default function PricingPage() {
   const [sponsors, setSponsors] = useState(6);
+  const pricing = usePlanPricing();
+  const core = pricing?.core;
   const ratePerSponsor = 50;
-  const subscription = 300;
+  const subscription = core?.amount ?? 300;
+  const subscriptionLabel = core?.formatted ?? "$300";
   const revenue = sponsors * ratePerSponsor;
   const net = subscription - revenue;
 
@@ -97,7 +114,13 @@ export default function PricingPage() {
               >
                 <p className="mb-2 text-[12px] font-semibold tracking-[0.2em] uppercase text-dark-green/40">{plan.name}</p>
                 <div className="mb-4 flex items-baseline gap-1">
-                  <span className="font-[family-name:var(--font-hero)] text-[56px] leading-none text-dark-green">${plan.price}</span>
+                  {pricing ? (
+                    <span className="font-[family-name:var(--font-hero)] text-[56px] leading-none text-dark-green">
+                      {pricing[plan.tier].formatted}
+                    </span>
+                  ) : (
+                    <span className="my-2 inline-block h-[42px] w-28 animate-pulse rounded-lg bg-dark-green/10" />
+                  )}
                   <span className="text-[16px] text-dark-green/40">{plan.period}</span>
                 </div>
                 <p className="mb-8 text-[14px] leading-[1.6] text-dark-green/50">{plan.description}</p>
@@ -157,7 +180,7 @@ export default function PricingPage() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
           >
-            Sahla operates on a single $300/month subscription that guarantees you keep 100% of your community’s contributions.
+            Sahla operates on a single {subscriptionLabel}/month subscription that guarantees you keep 100% of your community’s contributions.
           </motion.p>
         </div>
       </section>
@@ -182,7 +205,7 @@ export default function PricingPage() {
               </p>
               <p className="max-w-[480px] text-[14px] leading-[1.7] text-dark-green/35">
                 {/* Most mosque platforms charge $99&ndash;149/month with a fee on every donation. Sahla charges ${subscription}/month flat and takes nothing from your donations or recurring ad revenue. */}
-                Sahla operates on a single $300/month subscription that guarantees you keep 100% of your community’s contributions.
+                Sahla operates on a single {subscriptionLabel}/month subscription that guarantees you keep 100% of your community’s contributions.
               </p>
             </motion.div>
 
@@ -211,7 +234,7 @@ export default function PricingPage() {
             <div className="space-y-4 border-t border-dark-green/[0.04] pt-6">
               <div className="flex justify-between">
                 <span className="text-[14px] text-dark-green/60">Subscription</span>
-                <span className="text-[16px] font-semibold text-dark-green">${subscription}/mo</span>
+                <span className="text-[16px] font-semibold text-dark-green">{subscriptionLabel}/mo</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[14px] text-dark-green/60">Sponsor revenue ({sponsors} x ${ratePerSponsor})</span>

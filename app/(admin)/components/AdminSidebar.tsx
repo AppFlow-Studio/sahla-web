@@ -114,6 +114,15 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    label: "Promo codes",
+    href: "/promo-codes",
+    icon: (
+      <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75M9 12h.008v.008H9V12Zm0 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 0v.008m0 0H9m10.5-6.75H4.5a1.5 1.5 0 0 0-1.5 1.5v2.25a1.5 1.5 0 0 0 1.5 1.5 1.5 1.5 0 0 1 0 3 1.5 1.5 0 0 0-1.5 1.5v2.25a1.5 1.5 0 0 0 1.5 1.5h15a1.5 1.5 0 0 0 1.5-1.5v-2.25a1.5 1.5 0 0 0-1.5-1.5 1.5 1.5 0 0 1 0-3 1.5 1.5 0 0 0 1.5-1.5V7.5a1.5 1.5 0 0 0-1.5-1.5Z" />
+      </svg>
+    ),
+  },
 ];
 
 export default function AdminSidebar() {

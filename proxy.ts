@@ -19,6 +19,7 @@ const ADMIN_PATHS = [
   "/revenue",
   "/expenses",
   "/builds",
+  "/promo-codes",
 ];
 
 // CRM routes — eventually tier-gated to mosques on `core_crm`. During the UI
@@ -54,7 +55,9 @@ const isMarketingRoute = createRouteMatcher([
 ]);
 const isLoginRoute = createRouteMatcher(["/login(.*)"]);
 const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
-const isPublicApiRoute = createRouteMatcher(["/api/waitlist(.*)"]);
+// /api/pricing exposes only public plan prices (read from Stripe) and is
+// consumed by the signed-out marketing /pricing page, so it must skip auth.
+const isPublicApiRoute = createRouteMatcher(["/api/waitlist(.*)", "/api/pricing(.*)"]);
 const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 const isSelectOrgRoute = createRouteMatcher(["/select-org"]);
 const isOnboardingEntryRoute = createRouteMatcher(["/onboarding"]);

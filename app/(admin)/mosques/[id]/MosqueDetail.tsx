@@ -9,6 +9,7 @@ import { ArrowLeft, MessageSquare, AlertTriangle, Check, Clock, MoreHorizontal, 
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { StatusBadge, STAGE_COLORS } from "../../components/StatusBadge";
 import PrayerTimesPanel from "./PrayerTimesPanel";
+import SubscriptionBillingCard from "./SubscriptionBillingCard";
 import type { IqamahConfig } from "@/lib/prayer/types";
 import { ONBOARDING_CATEGORIES, ALL_TASKS } from "@/app/(masjid)/components/onboarding-tasks";
 import { cn } from "@/lib/utils";
@@ -357,6 +358,11 @@ function OverviewTab({
             initialPackageName={mosque.package_name}
           />
         </motion.div>
+      )}
+
+      {/* ── SUBSCRIPTION & BILLING (ready/live — negotiated per-mosque discounts) ── */}
+      {(mosque.onboarding_status === "ready" || mosque.onboarding_status === "live") && (
+        <SubscriptionBillingCard mosqueId={mosque.id} />
       )}
 
       {/* ── PIPELINE: Stepper + Quick Actions ── */}
