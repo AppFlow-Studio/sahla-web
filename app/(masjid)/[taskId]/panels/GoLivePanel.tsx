@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "../../components/ToastProvider";
+import { usePlanPricing } from "@/lib/use-plan-pricing";
+import type { PlanTier } from "@/lib/pricing";
 
 type TaskStatus = {
   id: string;
@@ -19,16 +21,24 @@ type GoLiveData = {
 };
 
 const TIERS = [
-  { id: "core", label: "Sahla Core", price: "$300/mo" },
-  { id: "core_crm", label: "Sahla Core + CRM", price: "$325/mo" },
+  { id: "core", label: "Sahla Core", fallback: 300 },
+  { id: "core_crm", label: "Sahla Core + CRM", fallback: 325 },
 ] as const;
 
 export default function GoLivePanel({ data }: { data: GoLiveData }) {
   const { showToast } = useToast();
+  const pricing = usePlanPricing();
   const [launching, setLaunching] = useState(false);
   const [launched, setLaunched] = useState(false);
   const [selectedTier, setSelectedTier] = useState("core_crm");
   const [openingPortal, setOpeningPortal] = useState(false);
+
+  // "$300/mo" style label, read live from Stripe with a static fallback.
+  const priceLabel = (id: string) => {
+    const tier = TIERS.find((t) => t.id === id);
+    const money = pricing?.[id as PlanTier]?.formatted ?? `$${tier?.fallback ?? 0}`;
+    return `${money}/mo`;
+  };
 
   const requiredTasks = data.tasks.filter((t) => t.required);
   const optionalTasks = data.tasks.filter((t) => !t.required);
@@ -303,7 +313,7 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
                 )}
               </div>
               <span className="flex-1 text-[13px] font-medium text-stone-800">{tier.label}</span>
-              <span className="text-[13px] font-semibold text-stone-600">{tier.price}</span>
+              <span className="text-[13px] font-semibold text-stone-600">{priceLabel(tier.id)}</span>
             </label>
           ))}
         </div>
@@ -342,7 +352,7 @@ export default function GoLivePanel({ data }: { data: GoLiveData }) {
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
             </svg>
-            Go Live — {TIERS.find((t) => t.id === selectedTier)?.price ?? "$325/mo"}
+            Go Live — {priceLabel(selectedTier)}
           </>
         )}
       </button>

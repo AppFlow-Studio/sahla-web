@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Check, ArrowRight, MessageSquareText, ExternalLink, LayoutDashboard } from "lucide-react";
+import { getPlanPricing } from "@/lib/pricing";
 
 const FEATURES = [
   "Members directory with last-active + push status",
@@ -10,7 +11,8 @@ const FEATURES = [
   "Real-time activity feed of everything happening",
 ];
 
-export default function NoCrmAccessPage() {
+export default async function NoCrmAccessPage() {
+  const pricing = await getPlanPricing();
   return (
     <div className="min-h-screen bg-[#fffbf2] text-[#0A261E]">
       <div
@@ -36,7 +38,7 @@ export default function NoCrmAccessPage() {
               Your current Sahla plan is{" "}
               <span className="font-semibold text-[#fffbf2]">Sahla Core</span> — your mosque app
               is fully live, but the admin dashboard is part of the Core + CRM tier at{" "}
-              <span className="font-semibold text-[#fffbf2]">$325/mo</span>.
+              <span className="font-semibold text-[#fffbf2]">{pricing.core_crm.formatted}/mo</span>.
             </p>
           </div>
 
