@@ -146,8 +146,8 @@ export async function POST(req: Request) {
       to: email,
       replyTo: "info@sahla.co",
       subject: "You're on the Sahla waitlist",
-      html: confirmationEmailHtml({ name, mosqueName }),
-      text: confirmationEmailText({ name, mosqueName }),
+      html: confirmationEmailHtml({ name, email, mosqueName }),
+      text: confirmationEmailText({ name, email, mosqueName }),
     });
   } catch (err) {
     console.error("Failed to send waitlist confirmation email:", err);
@@ -156,24 +156,60 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true }, { status: 200 });
 }
 
-function confirmationEmailHtml({
+/**
+ * Cal.com booking URL. Query params pre-fill the booking form so admins
+ * don't retype their name/email, and land the mosque name in the notes
+ * field so the Sahla team has context before the call.
+ */
+function calBookingUrl({
   name,
+  email,
   mosqueName,
 }: {
   name: string;
+  email: string;
+  mosqueName: string;
+}): string {
+  const base = "https://cal.com/ahmad-hamoudeh-kc7pje/sahla-intro-call";
+  const params = new URLSearchParams({
+    name,
+    email,
+    notes: `Waitlist: ${mosqueName}`,
+  });
+  return `${base}?${params.toString()}`;
+}
+
+function confirmationEmailHtml({
+  name,
+  email,
+  mosqueName,
+}: {
+  name: string;
+  email: string;
   mosqueName: string;
 }) {
   const firstName = name.split(/\s+/)[0] || name;
+  const bookingUrl = calBookingUrl({ name, email, mosqueName });
   return sahlaEmailHtml({
-    preheader: `You're on the Sahla waitlist — we've reserved ${mosqueName}`,
+    preheader: `You're on the Sahla waitlist — book your call with ${mosqueName}`,
     body: `
       <p style="margin:0 0 14px;color:#0A261E;font-size:15px;line-height:1.7;">
         Asalamu alaykum ${escapeHtml(firstName)},
       </p>
-      <p style="margin:0 0 28px;color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">
+      <p style="margin:0 0 24px;color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">
         Thank you for reserving <strong style="color:#0A261E;">${escapeHtml(mosqueName)}</strong>'s place on the Sahla waitlist.
-        We've received your details and someone from our team will be in touch within three days.
+        The next step is booking a short call with our team so we can walk you through what your mosque's own app could look like.
       </p>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px;">
+        <tr>
+          <td align="left">
+            <a href="${bookingUrl}" style="display:inline-block;background-color:#0A261E;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:14px 32px;border-radius:9999px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+              Book your call &rarr;
+            </a>
+          </td>
+        </tr>
+      </table>
 
       <p style="margin:0 0 4px;font-size:10px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#0A261E;">What happens next</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
@@ -185,7 +221,7 @@ function confirmationEmailHtml({
             <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
               <td valign="top" style="padding-right:16px;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:24px;line-height:1;color:#B8922A;">1</td>
               <td valign="top" style="color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">
-                We'll reach out to schedule a short call with you &mdash; and anyone from your masjid's board who should be on it.
+                Book a time that works for you &mdash; bring anyone from your masjid's board who should be on the call.
               </td>
             </tr></table>
           </td>
@@ -217,20 +253,25 @@ function confirmationEmailHtml({
 
 function confirmationEmailText({
   name,
+  email,
   mosqueName,
 }: {
   name: string;
+  email: string;
   mosqueName: string;
 }) {
   const firstName = name.split(/\s+/)[0] || name;
+  const bookingUrl = calBookingUrl({ name, email, mosqueName });
   return [
     `Asalamu alaykum ${firstName},`,
     ``,
-    `Thank you for reserving ${mosqueName}'s place on the Sahla waitlist. We've received your details and someone from our team will be in touch within three days.`,
+    `Thank you for reserving ${mosqueName}'s place on the Sahla waitlist. The next step is booking a short call with our team so we can walk you through what your mosque's own app could look like.`,
+    ``,
+    `Book your call: ${bookingUrl}`,
     ``,
     `WHAT HAPPENS NEXT`,
     ``,
-    `1. We'll reach out to schedule a short call with you — and anyone from your masjid's board who should be on it.`,
+    `1. Book a time that works for you — bring anyone from your masjid's board who should be on the call.`,
     ``,
     `2. We'll walk through what your mosque's own app could look like, using a live Sahla app as a reference.`,
     ``,
