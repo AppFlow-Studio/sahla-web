@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ─── Drain worker for the scheduled_notifications queue ──────────────────────
+// ─── Drain worker for the scheduled_notifications queue ──────────────────
 //
 // Invoked by the per-minute cron (scheduled sends) and inline by the
 // /api/crm/notifications/send route (immediate sends). It NEVER accepts a push

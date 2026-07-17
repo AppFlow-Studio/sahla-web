@@ -217,8 +217,6 @@ async function fetchTableData(){
 // ============================================================================
 
 // ── user.created ────────────────────────────────────────────────────────
-// Clerk fires this when a new user signs up (in any mosque app or CRM).
-// We create their global profiles row.
 async function handleUserCreated(user: ClerkUser) {
   const email = getPrimaryEmail(user);
   const phone = getPrimaryPhone(user);
@@ -243,10 +241,6 @@ async function handleUserCreated(user: ClerkUser) {
   console.log(`Profile created: ${user.id} (${email})`);
 }
 
-
-// ── user.updated ────────────────────────────────────────────────────────
-// Clerk fires this when user updates their profile (name, email, pic, etc.).
-// We mirror the changes to our profiles table.
 async function handleUserUpdated(user: ClerkUser) {
   const email = getPrimaryEmail(user);
   const phone = getPrimaryPhone(user);
@@ -270,14 +264,6 @@ async function handleUserUpdated(user: ClerkUser) {
   console.log(`Profile updated: ${user.id}`);
 }
 
-
-// ── user.deleted ────────────────────────────────────────────────────────
-// Clerk fires this when a user account is deleted.
-// Deleting the profile is all we need: every per-user table has an
-// ON DELETE CASCADE foreign key to profiles(id) (migration
-// 20260529210000_user_deletion_cascade), so the whole user footprint is
-// removed in one statement. donations are unlinked (ON DELETE SET NULL) to
-// preserve financial history.
 async function handleUserDeleted(user: { id: string }) {
   const { error } = await supabase
     .from("profiles")
@@ -292,17 +278,6 @@ async function handleUserDeleted(user: { id: string }) {
   console.log(`Profile deleted + cascade cleanup complete: ${user.id}`);
 }
 
-
-// ── organizationMembership.created ──────────────────────────────────────
-// Clerk fires this when a user is added to an organization (mosque).
-// This happens when:
-//   - Mosque admin invites a user
-//   - User signs up through a mosque app (auto-joined to that org)
-//   - CRM creates a new mosque and invites the admin
-//
-// We:
-//   1. Log to activity_log (Pulse feed: "New user joined {Mosque}")
-//   2. Initialize empty user_preferences for this mosque (so recs work)
 async function handleMembershipCreated(membership: ClerkOrganizationMembership) {
   const clerkOrgId = membership.organization.id;
   const userId = membership.public_user_data.user_id;
@@ -312,13 +287,9 @@ async function handleMembershipCreated(membership: ClerkOrganizationMembership) 
   );
   const mosqueName = membership.organization.name;
 
-  // ── Guard: skip Sahla HQ org (not a mosque) ──
-  // When a team member is added to the Sahla HQ org, we don't create
-  // mosque user data (user_preferences, etc.) — they're a platform admin.
   if (await isSahlaOrg(clerkOrgId)) {
     console.log(`Skipping Sahla HQ org membership for ${userName} — not a mosque`);
 
-    // Still ensure profile exists (they need a profiles row for RLS)
     await supabase.from("profiles").upsert(
       {
         id: userId,
@@ -350,7 +321,6 @@ async function handleMembershipCreated(membership: ClerkOrganizationMembership) 
       throw teamError;
     }
 
-    // Log as team event, not user_signup
     await logActivity({
       actor_id: userId,
       actor_name: userName,
@@ -363,10 +333,8 @@ async function handleMembershipCreated(membership: ClerkOrganizationMembership) 
     return;
   }
 
-  // ── Normal mosque membership flow ──
   const mosqueId = await resolveMosqueId(clerkOrgId);
 
-  // Ensure profile exists (in case webhook ordering is weird)
   await supabase.from("profiles").upsert(
     {
       id: userId,
@@ -378,7 +346,6 @@ async function handleMembershipCreated(membership: ClerkOrganizationMembership) 
     { onConflict: "id" }
   );
 
-  // Log to activity feed
   await logActivity({
     mosque_id: mosqueId,
     actor_id: userId,
@@ -393,7 +360,6 @@ async function handleMembershipCreated(membership: ClerkOrganizationMembership) 
     },
   });
 
-  // Initialize user_preferences stub (so recommendation engine has a row to update)
   const { error: prefError } = await supabase
     .from("user_preferences")
     .upsert(
@@ -413,20 +379,14 @@ async function handleMembershipCreated(membership: ClerkOrganizationMembership) 
   );
 }
 
-
-// ── organizationMembership.updated ──────────────────────────────────────
-// Clerk fires this when a user's role changes within an organization.
-// e.g., member promoted to admin.
 async function handleMembershipUpdated(membership: ClerkOrganizationMembership) {
   const userName = displayName(
     membership.public_user_data.first_name,
     membership.public_user_data.last_name
   );
 
-  // ── Guard: Sahla HQ org role changes are team-level, not mosque-level ──
   const clerkOrgId = membership.organization.id;
   if (await isSahlaOrg(clerkOrgId)) {
-    // Update sahla_team.clerk_org_role if applicable
     await supabase
       .from("sahla_team")
       .update({ clerk_org_role: membership.role })
@@ -455,10 +415,6 @@ async function handleMembershipUpdated(membership: ClerkOrganizationMembership) 
   );
 }
 
-
-// ── organizationMembership.deleted ──────────────────────────────────────
-// Clerk fires this when a user leaves or is removed from an organization.
-// We clean up their mosque-scoped data and deactivate push tokens.
 async function handleMembershipDeleted(membership: ClerkOrganizationMembership) {
   const clerkOrgId = membership.organization.id;
   const userId = membership.public_user_data.user_id;
@@ -467,7 +423,6 @@ async function handleMembershipDeleted(membership: ClerkOrganizationMembership) 
     membership.public_user_data.last_name
   );
 
-  // ── Guard: Sahla HQ org removal = deactivate team member, not mosque cleanup ──
   if (await isSahlaOrg(clerkOrgId)) {
     await supabase
       .from("sahla_team")
@@ -486,17 +441,14 @@ async function handleMembershipDeleted(membership: ClerkOrganizationMembership) 
     return;
   }
 
-  // ── Normal mosque membership removal ──
   const mosqueId = await resolveMosqueId(clerkOrgId);
 
-  // Deactivate push tokens for this mosque (don't delete — other mosques unaffected)
   await supabase
     .from("push_tokens")
     .update({ is_active: false })
     .eq("user_id", userId)
     .eq("mosque_id", mosqueId);
 
-  // Clean up notification opt-ins for this mosque
   const notifTables = [
     "content_notifications",
     "content_notification_settings",
@@ -512,7 +464,6 @@ async function handleMembershipDeleted(membership: ClerkOrganizationMembership) 
       .eq("mosque_id", mosqueId);
   }
 
-  // Delete pending (unsent) notification schedule rows
   await supabase
     .from("content_notification_schedule")
     .delete()
@@ -527,7 +478,6 @@ async function handleMembershipDeleted(membership: ClerkOrganizationMembership) 
     .eq("mosque_id", mosqueId)
     .eq("is_sent", false);
 
-  // Log to activity feed
   await logActivity({
     mosque_id: mosqueId,
     actor_name: userName,
@@ -546,19 +496,10 @@ async function handleMembershipDeleted(membership: ClerkOrganizationMembership) 
   );
 }
 
-
-// ── session.created ─────────────────────────────────────────────────────
-// Clerk fires this when a user starts a new session (logs in).
-// We only care about CRM admin logins — these feed the health score's
-// "admin_activity" component (days since last admin login).
-//
-// We check: does this user have an active org? And is their role admin+?
-// If so, log it. Regular app user sessions are ignored.
 async function handleSessionCreated(session: ClerkSession) {
   const userId = session.user_id;
   const orgId = session.last_active_organization_id;
 
-  // Only log if there's an active organization (CRM/admin context)
   if (!orgId) {
     return;
   }
@@ -573,8 +514,6 @@ async function handleSessionCreated(session: ClerkSession) {
     ? displayName(profile.first_name, profile.last_name)
     : userId;
 
-  // ── Guard: Sahla HQ org logins are platform events, not mosque events ──
-  // Don't log as admin_login (which feeds mosque health scores).
   if (await isSahlaOrg(orgId)) {
     await logActivity({
       actor_id: userId,
@@ -588,8 +527,6 @@ async function handleSessionCreated(session: ClerkSession) {
     return;
   }
 
-  // ── Normal mosque admin login ──
-  // This feeds the health score's admin_activity component.
   const mosqueId = await resolveMosqueId(orgId);
   await logActivity({
     mosque_id: mosqueId,
@@ -604,17 +541,6 @@ async function handleSessionCreated(session: ClerkSession) {
   console.log(`Mosque admin login logged: ${name} → org ${orgId}`);
 }
 
-
-// ── organization.deleted ───────────────────────────────────────────────
-// Clerk fires this when an organization is deleted from the dashboard or via API.
-// We unlink the mosque so the lead can be re-graduated cleanly:
-//   - clear `clerk_org_id`
-//   - reset `onboarding_status` to 'setup'
-//   - roll the pipeline stage back to 'contract' (the stage immediately
-//     before onboarding — keeps history visible without forcing re-qualification)
-//
-// We never auto-delete the mosque row itself — that's a destructive admin call.
-// Sahla HQ org deletions are a no-op (HQ is referenced via sahla_config, not mosques).
 async function handleOrganizationDeleted(org: ClerkOrganization) {
   const clerkOrgId = org.id;
 
@@ -623,7 +549,6 @@ async function handleOrganizationDeleted(org: ClerkOrganization) {
     return;
   }
 
-  // Find the mosque this org was linked to.
   const { data: mosque } = await supabase
     .from("mosques")
     .select("id, name")
@@ -641,8 +566,6 @@ async function handleOrganizationDeleted(org: ClerkOrganization) {
     .update({
       clerk_org_id: null,
       onboarding_status: "setup",
-      // Reset the leave-onboarding email guard so a re-invited masjid gets a
-      // fresh one-time resume email if they leave the new onboarding mid-flow.
       resume_email_sent_at: null,
     })
     .eq("id", mosque.id);
@@ -676,18 +599,15 @@ async function handleOrganizationDeleted(org: ClerkOrganization) {
   console.log(`Mosque ${mosque.name} (${mosque.id}) unlinked from deleted org ${clerkOrgId}`);
 }
 
-
 // ============================================================================
 // MAIN HANDLER
 // ============================================================================
 
 Deno.serve(async (req: Request) => {
-  // Only accept POST
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  // ── Verify webhook signature using Svix ──
   const svixId = req.headers.get("svix-id");
   const svixTimestamp = req.headers.get("svix-timestamp");
   const svixSignature = req.headers.get("svix-signature");
@@ -712,13 +632,11 @@ Deno.serve(async (req: Request) => {
     return new Response("Invalid webhook signature", { status: 401 });
   }
 
-  // ── Route event to handler ──
   const startTime = Date.now();
   console.log(`\n→ Clerk webhook: ${event.type}`);
 
   try {
     switch (event.type) {
-      // User lifecycle
       case "user.created":
         await handleUserCreated(event.data as unknown as ClerkUser);
         break;
@@ -731,7 +649,6 @@ Deno.serve(async (req: Request) => {
         await handleUserDeleted(event.data as unknown as { id: string });
         break;
 
-      // Organization membership
       case "organizationMembership.created":
         await handleMembershipCreated(
           event.data as unknown as ClerkOrganizationMembership
@@ -750,14 +667,12 @@ Deno.serve(async (req: Request) => {
         );
         break;
 
-      // Session tracking (admin activity for health scores)
       case "session.created":
         await handleSessionCreated(
           event.data as unknown as ClerkSession
         );
         break;
 
-      // Organization lifecycle — clean up the mosque link when an org is deleted.
       case "organization.deleted":
         await handleOrganizationDeleted(
           event.data as unknown as ClerkOrganization
@@ -786,9 +701,6 @@ Deno.serve(async (req: Request) => {
     const duration = Date.now() - startTime;
     console.error(`✗ ${event.type} failed after ${duration}ms:`, error);
 
-    // Return 200 even on processing errors to prevent Clerk from retrying
-    // (we've received and acknowledged the webhook — the error is on our side).
-    // If we return 4xx/5xx, Clerk will retry and potentially create duplicate data.
     return new Response(
       JSON.stringify({
         success: false,
