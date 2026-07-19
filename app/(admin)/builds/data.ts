@@ -9,6 +9,18 @@ export type AppVersion = {
 
 export type AppStatus = "live" | "pending_review" | "building" | "rejected" | "unknown";
 
+/** An EAS Update (OTA) group — one publish, collapsed across platforms. */
+export type EasUpdate = {
+  group: string;
+  branch: string | null;
+  message: string;
+  runtimeVersion: string | null;
+  platforms: ("ios" | "android")[];
+  gitCommit: string | null;
+  publishedBy: string | null;
+  date: string | null;
+};
+
 export type AppBuild = {
   id: string;
   name: string;
@@ -25,6 +37,8 @@ export type AppBuild = {
   testflightVersion: string | null;
   testflightBuildNumber: string | null;
   versions: AppVersion[];
+  /** EAS Update (OTA) history, newest first. Empty when no EAS project linked. */
+  easUpdates: EasUpdate[];
 };
 
 type BuildVersionRow = {
@@ -45,6 +59,17 @@ type BuildRow = {
   app_build_versions: BuildVersionRow[] | null;
 };
 
+type EasUpdateRow = {
+  update_group: string;
+  branch: string | null;
+  message: string | null;
+  runtime_version: string | null;
+  platforms: string[] | null;
+  git_commit: string | null;
+  published_by: string | null;
+  published_at: string | null;
+};
+
 type MosqueRow = {
   id: string;
   name: string | null;
@@ -56,6 +81,7 @@ type MosqueRow = {
   launched_at: string | null;
   created_at: string | null;
   app_builds: BuildRow[] | null;
+  app_eas_updates: EasUpdateRow[] | null;
 };
 
 // Most-advanced-wins when a mosque has both iOS and Android build rows.
@@ -93,6 +119,10 @@ export async function fetchAppBuilds(): Promise<AppBuild[]> {
         platform, status, current_version, current_build_number,
         on_testflight, testflight_version, testflight_build_number,
         app_build_versions ( version, build_number, released_at, notes )
+      ),
+      app_eas_updates (
+        update_group, branch, message, runtime_version,
+        platforms, git_commit, published_by, published_at
       )
     `
     )
@@ -124,6 +154,26 @@ export async function fetchAppBuilds(): Promise<AppBuild[]> {
         return tb - ta;
       });
 
+    // EAS Update (OTA) history, newest first.
+    const easUpdates: EasUpdate[] = (m.app_eas_updates ?? [])
+      .map((u) => ({
+        group: u.update_group,
+        branch: u.branch,
+        message: u.message ?? "",
+        runtimeVersion: u.runtime_version,
+        platforms: (u.platforms ?? []).filter(
+          (p): p is "ios" | "android" => p === "ios" || p === "android"
+        ),
+        gitCommit: u.git_commit,
+        publishedBy: u.published_by,
+        date: u.published_at,
+      }))
+      .sort((a, b) => {
+        const ta = a.date ? new Date(a.date).getTime() : 0;
+        const tb = b.date ? new Date(b.date).getTime() : 0;
+        return tb - ta;
+      });
+
     const primaryBuild = builds[0];
     const iosBuild = builds.find((b) => b.platform === "ios");
     const platform: "ios" | "android" = m.bundle_id
@@ -146,6 +196,7 @@ export async function fetchAppBuilds(): Promise<AppBuild[]> {
       testflightVersion: iosBuild?.testflight_version ?? null,
       testflightBuildNumber: iosBuild?.testflight_build_number ?? null,
       versions,
+      easUpdates,
     };
   });
 }

@@ -10,6 +10,17 @@ type Version = {
   buildNumber?: string;
 };
 
+type EasUpdate = {
+  group: string;
+  branch: string | null;
+  message: string;
+  runtimeVersion: string | null;
+  platforms: ("ios" | "android")[];
+  gitCommit: string | null;
+  publishedBy: string | null;
+  date: string | null;
+};
+
 type App = {
   id: string;
   name: string;
@@ -24,6 +35,7 @@ type App = {
   testflightVersion: string | null;
   testflightBuildNumber: string | null;
   versions: Version[];
+  easUpdates: EasUpdate[];
 };
 
 /* TestFlight (iOS beta) pill — separate channel from App Store status. */
@@ -187,6 +199,81 @@ function VersionRow({ v, isLatest, index }: { v: Version; isLatest: boolean; ind
         </p>
         <div className="mt-2.5 rounded-xl border border-edge bg-sand/40 px-4 py-3">
           <p className="text-[13px] leading-relaxed text-subtle">{v.notes}</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── EAS OTA Update row ── */
+
+function EasUpdateRow({ u, isLatest, index }: { u: EasUpdate; isLatest: boolean; index: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3, delay: Math.min(index * 0.06, 0.4), ease: [0.25, 0.46, 0.45, 0.94] }}
+      className="relative flex gap-4 pb-6 last:pb-0"
+    >
+      {/* Timeline connector */}
+      <div className="flex flex-col items-center">
+        <div className={`relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+          isLatest ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/25" : "border-2 border-edge-bold bg-white"
+        }`}>
+          {/* OTA / broadcast glyph */}
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Z" />
+          </svg>
+        </div>
+        <div className="w-px flex-1 bg-edge" />
+      </div>
+
+      {/* Content */}
+      <div className="min-w-0 flex-1 pt-0.5">
+        <div className="flex flex-wrap items-center gap-2">
+          {u.branch && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-indigo-700 ring-1 ring-indigo-500/20">
+              <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 3v12m0 0a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm12-3a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm0 0v1.5a3 3 0 0 1-3 3h-6" />
+              </svg>
+              {u.branch}
+            </span>
+          )}
+          {u.runtimeVersion && (
+            <span className="font-mono text-[10px] text-faint">runtime {u.runtimeVersion}</span>
+          )}
+          {u.platforms.map((p) => (
+            <span key={p} className="text-faint" title={p === "ios" ? "iOS" : "Android"}>
+              {platformIcon(p)}
+            </span>
+          ))}
+          {isLatest && (
+            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 ring-1 ring-indigo-500/20">
+              Latest
+            </span>
+          )}
+        </div>
+        <p className="mt-1.5 text-[13px] font-medium leading-snug text-ink">
+          {u.message || "No message"}
+        </p>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-faint">
+          <span>
+            {u.date
+              ? new Date(u.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              : "Date unknown"}
+          </span>
+          {u.publishedBy && (
+            <>
+              <span className="opacity-40">·</span>
+              <span>{u.publishedBy}</span>
+            </>
+          )}
+          {u.gitCommit && (
+            <>
+              <span className="opacity-40">·</span>
+              <span className="font-mono">{u.gitCommit.slice(0, 7)}</span>
+            </>
+          )}
         </div>
       </div>
     </motion.div>
@@ -441,6 +528,15 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
                     />
                   </div>
                 )}
+                {selected.easUpdates.length > 0 && (
+                  <div className="grid grid-cols-2 divide-x divide-edge border-b border-edge">
+                    <StatCell label="OTA Updates" value={String(selected.easUpdates.length)} mono />
+                    <StatCell
+                      label="Latest OTA"
+                      value={selected.easUpdates[0]?.date ? daysSince(selected.easUpdates[0].date!) : "—"}
+                    />
+                  </div>
+                )}
 
                 {/* Version history */}
                 <div className="px-6 py-6">
@@ -470,6 +566,30 @@ export default function BuildsClient({ apps }: { apps: App[] }) {
                     </div>
                   )}
                 </div>
+
+                {/* EAS OTA update history */}
+                {selected.easUpdates.length > 0 && (
+                  <div className="border-t border-edge px-6 py-6">
+                    <div className="mb-5 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-faint">
+                          OTA Updates
+                        </h3>
+                        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-indigo-600 ring-1 ring-indigo-500/20">
+                          EAS
+                        </span>
+                      </div>
+                      <span className="rounded-full bg-ink/5 px-2.5 py-0.5 text-[11px] font-semibold text-faint">
+                        {selected.easUpdates.length} update{selected.easUpdates.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div>
+                      {selected.easUpdates.map((u, i) => (
+                        <EasUpdateRow key={u.group} u={u} isLatest={i === 0} index={i} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ) : (
               <motion.div

@@ -1,3 +1,4 @@
+import { createPrivateKey, sign as cryptoSign } from "node:crypto";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import type { AppStatus } from "@/app/(admin)/builds/data";
 
@@ -55,23 +56,222 @@ export function getStoreConfigStatus(): { ios: boolean; android: boolean } {
   };
 }
 
-// ─── Store clients (implement when credentials are available) ───
+// ─── App Store Connect client ───
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const ASC_BASE = "https://api.appstoreconnect.apple.com";
+
+function base64url(input: Buffer | string): string {
+  return Buffer.from(input).toString("base64url");
+}
+
+/**
+ * The private key is stored in `APPSTORE_CONNECT_PRIVATE_KEY` either as the raw
+ * `.p8` PEM or (preferred, to survive single-line env vars) base64-encoded.
+ * Detect which and return the PEM.
+ */
+function getPrivateKeyPem(): string {
+  const raw = (process.env.APPSTORE_CONNECT_PRIVATE_KEY ?? "").trim();
+  if (raw.includes("BEGIN PRIVATE KEY")) return raw.replace(/\\n/g, "\n");
+  return Buffer.from(raw, "base64").toString("utf8");
+}
+
+/** Short-lived ES256 JWT for the App Store Connect API (max lifetime 20 min). */
+function makeAppStoreToken(): string {
+  const keyId = process.env.APPSTORE_CONNECT_KEY_ID;
+  const issuerId = process.env.APPSTORE_CONNECT_ISSUER_ID;
+  if (!keyId || !issuerId) throw new StoreNotConfiguredError("ios");
+
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "ES256", kid: keyId, typ: "JWT" };
+  const payload = {
+    iss: issuerId,
+    iat: now,
+    exp: now + 60 * 15,
+    aud: "appstoreconnect-v1",
+  };
+  const signingInput = `${base64url(JSON.stringify(header))}.${base64url(
+    JSON.stringify(payload)
+  )}`;
+  const key = createPrivateKey(getPrivateKeyPem());
+  const signature = cryptoSign("sha256", Buffer.from(signingInput), {
+    key,
+    dsaEncoding: "ieee-p1363", // JOSE requires raw R||S, not DER
+  });
+  return `${signingInput}.${base64url(signature)}`;
+}
+
+async function ascGet<T = unknown>(path: string, token: string): Promise<T> {
+  const res = await fetch(`${ASC_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(
+      `App Store Connect ${res.status} on ${path}${body ? `: ${body.slice(0, 300)}` : ""}`
+    );
+  }
+  return res.json() as Promise<T>;
+}
+
+/** appStoreState → our coarse AppStatus. */
+function mapAppStoreState(state: string | undefined): AppStatus {
+  switch (state) {
+    case "READY_FOR_SALE":
+    case "PREORDER_READY_FOR_SALE":
+    case "REPLACED_WITH_NEW_VERSION":
+      return "live";
+    case "WAITING_FOR_REVIEW":
+    case "IN_REVIEW":
+    case "WAITING_FOR_EXPORT_COMPLIANCE":
+    case "PENDING_APPLE_RELEASE":
+    case "PENDING_DEVELOPER_RELEASE":
+    case "PENDING_CONTRACT":
+    case "ACCEPTED":
+      return "pending_review";
+    case "PREPARE_FOR_SUBMISSION":
+    case "PROCESSING_FOR_APP_STORE":
+    case "INVALID_BINARY":
+      return "building";
+    case "REJECTED":
+    case "DEVELOPER_REJECTED":
+    case "METADATA_REJECTED":
+      return "rejected";
+    default:
+      return "unknown";
+  }
+}
+
+const TESTFLIGHT_ACTIVE_STATES = new Set([
+  "IN_BETA_TESTING",
+  "IN_BETA_REVIEW",
+  "BETA_APPROVED",
+  "READY_FOR_BETA_TESTING",
+]);
+
+type AscResource = {
+  id: string;
+  attributes?: Record<string, unknown>;
+  relationships?: Record<string, { data?: { id: string; type: string } | null }>;
+};
+type AscList = { data?: AscResource[]; included?: AscResource[] };
+
 async function fetchIosBuild(bundleId: string): Promise<BuildSyncResult> {
   if (!getStoreConfigStatus().ios) throw new StoreNotConfiguredError("ios");
-  // TODO(store-sync): implement against the App Store Connect API.
-  //   1. Build a JWT (ES256) from APPSTORE_CONNECT_{ISSUER_ID,KEY_ID,PRIVATE_KEY}.
-  //   2. GET /v1/apps?filter[bundleId]=<bundleId> → app id.
-  //   3. GET /v1/apps/{id}/appStoreVersions (include appStoreVersionLocalizations
-  //      for "whatsNew") and /v1/builds for build numbers.
-  //   4. Map appStoreState → AppStatus (READY_FOR_SALE→live, WAITING_FOR_REVIEW/
-  //      IN_REVIEW→pending_review, PROCESSING/uploading→building, REJECTED→rejected).
-  //   5. TestFlight: GET /v1/builds?filter[app]=<id> + buildBetaDetails
-  //      (externalBuildState). Set onTestflight when a build is in external
-  //      beta (IN_BETA_TESTING/IN_BETA_REVIEW) and fill testflightVersion/
-  //      testflightBuildNumber/testflightState. Independent of appStoreState.
-  throw new Error("App Store Connect client not implemented");
+  const token = makeAppStoreToken();
+
+  // 1. Resolve the app by bundle id.
+  const apps = await ascGet<AscList>(
+    `/v1/apps?filter[bundleId]=${encodeURIComponent(bundleId)}&limit=1`,
+    token
+  );
+  const appId = apps.data?.[0]?.id;
+  if (!appId) {
+    throw new Error(`No App Store Connect app found for bundle id ${bundleId}`);
+  }
+
+  // 2. App Store versions (with their build) for iOS.
+  const versionsRes = await ascGet<AscList>(
+    `/v1/apps/${appId}/appStoreVersions?filter[platform]=IOS&limit=10&include=build` +
+      `&fields[appStoreVersions]=versionString,appStoreState,createdDate,build` +
+      `&fields[builds]=version`,
+    token
+  );
+  const buildVersionById = new Map<string, string>();
+  for (const inc of versionsRes.included ?? []) {
+    const v = inc.attributes?.version;
+    if (typeof v === "string") buildVersionById.set(inc.id, v);
+  }
+
+  const versions: SyncedVersion[] = (versionsRes.data ?? []).map((v) => {
+    const buildRelId = v.relationships?.build?.data?.id;
+    return {
+      version: String(v.attributes?.versionString ?? ""),
+      buildNumber: buildRelId ? buildVersionById.get(buildRelId) : undefined,
+      releasedAt:
+        typeof v.attributes?.createdDate === "string"
+          ? v.attributes.createdDate
+          : undefined,
+      storeState:
+        typeof v.attributes?.appStoreState === "string"
+          ? v.attributes.appStoreState
+          : undefined,
+    };
+  });
+
+  // "Current" = the live version if one exists, else the newest returned.
+  const liveVersion = versionsRes.data?.find(
+    (v) => mapAppStoreState(v.attributes?.appStoreState as string) === "live"
+  );
+  const current = liveVersion ?? versionsRes.data?.[0];
+  const currentBuildRelId = current?.relationships?.build?.data?.id;
+
+  // 3. TestFlight — most recent builds + their external beta state.
+  let onTestflight = false;
+  let testflightVersion: string | undefined;
+  let testflightBuildNumber: string | undefined;
+  let testflightState: string | undefined;
+  try {
+    const builds = await ascGet<AscList>(
+      `/v1/builds?filter[app]=${appId}&sort=-uploadedDate&limit=10` +
+        `&include=buildBetaDetail,preReleaseVersion` +
+        `&fields[builds]=version,uploadedDate,buildBetaDetail,preReleaseVersion` +
+        `&fields[buildBetaDetails]=externalBuildState,internalBuildState` +
+        `&fields[preReleaseVersions]=version`,
+      token
+    );
+    const betaById = new Map<string, Record<string, unknown>>();
+    const preReleaseById = new Map<string, string>();
+    for (const inc of builds.included ?? []) {
+      if (inc.attributes?.externalBuildState || inc.attributes?.internalBuildState) {
+        betaById.set(inc.id, inc.attributes);
+      }
+      if (typeof inc.attributes?.version === "string" && !inc.attributes?.externalBuildState) {
+        preReleaseById.set(inc.id, inc.attributes.version);
+      }
+    }
+    const activeBuild = (builds.data ?? []).find((b) => {
+      const betaId = b.relationships?.buildBetaDetail?.data?.id;
+      const beta = betaId ? betaById.get(betaId) : undefined;
+      const ext = beta?.externalBuildState as string | undefined;
+      const int = beta?.internalBuildState as string | undefined;
+      return (
+        (ext && TESTFLIGHT_ACTIVE_STATES.has(ext)) || int === "IN_BETA_TESTING"
+      );
+    });
+    if (activeBuild) {
+      onTestflight = true;
+      testflightBuildNumber = String(activeBuild.attributes?.version ?? "");
+      const preId = activeBuild.relationships?.preReleaseVersion?.data?.id;
+      testflightVersion = preId ? preReleaseById.get(preId) : undefined;
+      const betaId = activeBuild.relationships?.buildBetaDetail?.data?.id;
+      const beta = betaId ? betaById.get(betaId) : undefined;
+      const ext = beta?.externalBuildState as string | undefined;
+      const int = beta?.internalBuildState as string | undefined;
+      // Report whichever state actually made the build active (external beta
+      // takes precedence, else fall back to the internal testing state).
+      testflightState =
+        ext && TESTFLIGHT_ACTIVE_STATES.has(ext) ? ext : int ?? ext ?? undefined;
+    }
+  } catch {
+    // TestFlight is best-effort; a failure here shouldn't fail the whole sync.
+  }
+
+  return {
+    status: mapAppStoreState(current?.attributes?.appStoreState as string),
+    currentVersion: current
+      ? String(current.attributes?.versionString ?? "")
+      : undefined,
+    currentBuildNumber: currentBuildRelId
+      ? buildVersionById.get(currentBuildRelId)
+      : undefined,
+    storeAppId: appId,
+    onTestflight,
+    testflightVersion,
+    testflightBuildNumber,
+    testflightState,
+    versions,
+  };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
