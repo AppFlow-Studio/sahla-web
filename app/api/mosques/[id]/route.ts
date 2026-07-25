@@ -14,6 +14,8 @@ const ALLOWED_FIELDS = [
   // App store identifiers — used by the Builds tab / store sync to map a
   // mosque to its App Store Connect app and Play package.
   "bundle_id", "package_name",
+  // Expo/EAS project id — maps the mosque to its EAS Update (OTA) history.
+  "eas_project_id",
 ];
 
 export async function PATCH(

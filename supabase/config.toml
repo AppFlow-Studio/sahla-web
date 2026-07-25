@@ -5,6 +5,15 @@ verify_jwt = true
 import_map = "./functions/sync-prayer-times/deno.json"
 entrypoint = "./functions/sync-prayer-times/index.ts"
 
+[functions.sync-app-builds]
+enabled = true
+# Invoked by the app-builds sync cron via net.http_post (no Authorization
+# header). Read-only against external stores; only writes HQ build tables the
+# service role already owns — safe to leave unauthenticated.
+verify_jwt = false
+import_map = "./functions/sync-app-builds/deno.json"
+entrypoint = "./functions/sync-app-builds/index.ts"
+
 [functions.stripe-webhooks]
 enabled = true
 verify_jwt = false

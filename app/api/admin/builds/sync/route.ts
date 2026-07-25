@@ -1,6 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { syncAppBuilds, getStoreConfigStatus } from "@/lib/appstore/storeSync";
+import { syncEasUpdates, getEasConfigStatus } from "@/lib/eas/easSync";
+
+// storeSync signs a JWT with node:crypto — force the Node runtime.
+export const runtime = "nodejs";
 
 const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 
@@ -16,7 +20,7 @@ export async function GET() {
       { status: 403 }
     );
   }
-  return NextResponse.json({ stores: getStoreConfigStatus() });
+  return NextResponse.json({ stores: getStoreConfigStatus(), eas: getEasConfigStatus() });
 }
 
 /** Trigger a build sync across all ready/live mosque apps. */
@@ -33,8 +37,8 @@ export async function POST() {
   }
 
   try {
-    const summary = await syncAppBuilds();
-    return NextResponse.json(summary);
+    const [builds, eas] = await Promise.all([syncAppBuilds(), syncEasUpdates()]);
+    return NextResponse.json({ builds, eas });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Sync failed";
     return NextResponse.json({ error: message }, { status: 500 });

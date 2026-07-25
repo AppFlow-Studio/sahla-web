@@ -21,7 +21,7 @@ type Mosque = {
   subscription_status: string | null; onboarding_status: string | null; onboarding_progress: Record<string, boolean> | null;
   launched_at: string | null; created_at: string; updated_at: string; brand_color: string | null;
   calculation_method: number | null; school: number | null;
-  bundle_id: string | null; package_name: string | null;
+  bundle_id: string | null; package_name: string | null; eas_project_id: string | null;
   reels_setup_mode?: string | null;
 };
 
@@ -356,6 +356,7 @@ function OverviewTab({
             mosqueId={mosque.id}
             initialBundleId={mosque.bundle_id}
             initialPackageName={mosque.package_name}
+            initialEasProjectId={mosque.eas_project_id}
           />
         </motion.div>
       )}
@@ -413,41 +414,49 @@ function AppStoreIdsCard({
   mosqueId,
   initialBundleId,
   initialPackageName,
+  initialEasProjectId,
 }: {
   mosqueId: string;
   initialBundleId: string | null;
   initialPackageName: string | null;
+  initialEasProjectId: string | null;
 }) {
   const [bundleId, setBundleId] = useState(initialBundleId ?? "");
   const [packageName, setPackageName] = useState(initialPackageName ?? "");
+  const [easProjectId, setEasProjectId] = useState(initialEasProjectId ?? "");
   // Baseline reflecting what's persisted; updated on a successful save so the
   // button re-disables until the next edit.
   const [saved, setSaved] = useState({
     bundleId: initialBundleId ?? "",
     packageName: initialPackageName ?? "",
+    easProjectId: initialEasProjectId ?? "",
   });
   const [saving, setSaving] = useState(false);
 
   const dirty =
-    bundleId.trim() !== saved.bundleId || packageName.trim() !== saved.packageName;
+    bundleId.trim() !== saved.bundleId ||
+    packageName.trim() !== saved.packageName ||
+    easProjectId.trim() !== saved.easProjectId;
 
   async function save() {
     setSaving(true);
     try {
       const nextBundle = bundleId.trim();
       const nextPackage = packageName.trim();
+      const nextEas = easProjectId.trim();
       const res = await fetch(`/api/mosques/${mosqueId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bundle_id: nextBundle || null,
           package_name: nextPackage || null,
+          eas_project_id: nextEas || null,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(body.error ?? `Save failed (${res.status}).`);
       toast.success("App store IDs saved.");
-      setSaved({ bundleId: nextBundle, packageName: nextPackage });
+      setSaved({ bundleId: nextBundle, packageName: nextPackage, easProjectId: nextEas });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Save failed.");
     } finally {
@@ -460,7 +469,7 @@ function AppStoreIdsCard({
       <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
         <p className="text-[14px] font-semibold text-stone-900">App Store IDs</p>
         <p className="mt-0.5 text-[12px] text-stone-500">
-          Used by the Builds tab to sync this app&apos;s status and versions from the stores.
+          Used by the Builds tab to sync this app&apos;s store status, versions, and EAS OTA updates.
         </p>
       </div>
       <div className="grid grid-cols-1 gap-4 px-6 py-5 sm:grid-cols-2">
@@ -489,6 +498,22 @@ function AppStoreIdsCard({
             autoCapitalize="none"
             className="mt-1.5 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-[13px] text-stone-900 outline-none transition-colors focus:border-stone-400"
           />
+        </label>
+        <label className="block sm:col-span-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+            EAS project ID
+          </span>
+          <input
+            value={easProjectId}
+            onChange={(e) => setEasProjectId(e.target.value)}
+            placeholder="00000000-0000-0000-0000-000000000000"
+            spellCheck={false}
+            autoCapitalize="none"
+            className="mt-1.5 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 font-mono text-[13px] text-stone-900 outline-none transition-colors focus:border-stone-400"
+          />
+          <span className="mt-1 block text-[11px] text-stone-400">
+            Expo project id — powers the OTA update history on the Builds tab.
+          </span>
         </label>
       </div>
       <div className="flex justify-end border-t border-stone-100 px-6 py-3">
