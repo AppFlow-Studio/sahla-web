@@ -170,7 +170,7 @@ function calBookingUrl({
   email: string;
   mosqueName: string;
 }): string {
-  const base = "https://cal.com/ahmad-hamoudeh-kc7pje/sahla-intro-call";
+  const base = "https://cal.com/sahla/sahla-intro-call";
   const params = new URLSearchParams({
     name,
     email,
