@@ -30,6 +30,7 @@
     "@tanstack/react-query": "^5.95.2",
     "@tanstack/react-table": "^8.21.3",
     "3dsvg": "^0.2.1",
+    "botid": "^1.5.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

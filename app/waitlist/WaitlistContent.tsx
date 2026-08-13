@@ -65,6 +65,9 @@ export default function WaitlistContent() {
     city: "",
     country: "",
     notes: "",
+    // Honeypot: hidden from real users, so it should always stay empty. A bot
+    // that autofills it gets silently rejected server-side.
+    companyWebsite: "",
   });
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error" | "already">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -200,6 +203,21 @@ export default function WaitlistContent() {
                 </div>
               ) : (
                 <form className="space-y-5" onSubmit={handleSubmit}>
+                  {/* Honeypot — visually hidden and skipped by keyboard/AT.
+                      Real users never fill it; bots that autofill it are
+                      silently rejected by /api/waitlist. */}
+                  <div aria-hidden="true" className="absolute left-[-9999px] top-[-9999px] h-0 w-0 overflow-hidden" style={{ opacity: 0 }}>
+                    <label htmlFor="company-website">Company website</label>
+                    <input
+                      id="company-website"
+                      type="text"
+                      name="companyWebsite"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={form.companyWebsite}
+                      onChange={(e) => update("companyWebsite", e.target.value)}
+                    />
+                  </div>
                   <div>
                     <label className="mb-1.5 block text-[12px] font-medium tracking-wide text-dark-green/50">Your Name</label>
                     <input
