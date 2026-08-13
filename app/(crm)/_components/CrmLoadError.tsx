@@ -40,7 +40,7 @@ export default function CrmLoadError() {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mosque-accent,#B8922A)]/12 text-[var(--mosque-accent,#B8922A)]">
               <AlertTriangle size={22} strokeWidth={2.2} />
             </div>
-            <p className="mt-5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--mosque-accent,#B8922A)]">
+            <p className="mt-5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--mosque-primary,#0A261E)]">
               Couldn’t load your CRM
             </p>
             <h1 className="mt-2 font-display text-2xl leading-tight text-[#0A261E] md:text-[28px]">

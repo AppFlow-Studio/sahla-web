@@ -168,7 +168,7 @@ export default function FirstLoginTour() {
 
           {/* Content */}
           <div className="space-y-3 px-6 pt-5 pb-2 md:px-8">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--mosque-accent,#B8922A)]">
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--mosque-primary,#0A261E)]">
               {step.eyebrow}
             </p>
             <AnimatePresence mode="wait">
