@@ -3,7 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { HexColorPicker } from "react-colorful";
-import { Check, Lock, RotateCcw, Save, Sparkles } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  Loader2,
+  Pipette,
+  RotateCcw,
+  Save,
+  Sparkles,
+  Upload,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -35,6 +45,7 @@ export default function ThemeClient() {
   const mosque = useMosque();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [appName, setAppName] = useState(mosque.appName ?? "");
   const [primary, setPrimary] = useState(mosque.primaryColor);
   const [accent, setAccent] = useState(mosque.accentColor);
   const [fontTheme, setFontTheme] = useState<FontThemeKey>(
@@ -43,20 +54,74 @@ export default function ThemeClient() {
   const [headerStyle, setHeaderStyle] = useState<HeaderStyleKey>(
     normalizeHeaderStyle(mosque.headerStyle),
   );
+  const [logoUrl, setLogoUrl] = useState(mosque.logoUrl ?? "");
+  const [uploading, setUploading] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const dirty =
+    appName !== (mosque.appName ?? "") ||
     primary !== mosque.primaryColor ||
     accent !== mosque.accentColor ||
     fontTheme !== normalizeFontTheme(mosque.fontTheme) ||
-    headerStyle !== normalizeHeaderStyle(mosque.headerStyle);
+    headerStyle !== normalizeHeaderStyle(mosque.headerStyle) ||
+    logoUrl !== (mosque.logoUrl ?? "");
 
   function reset() {
+    setAppName(mosque.appName ?? "");
     setPrimary(mosque.primaryColor);
     setAccent(mosque.accentColor);
     setFontTheme(normalizeFontTheme(mosque.fontTheme));
     setHeaderStyle(normalizeHeaderStyle(mosque.headerStyle));
+    setLogoUrl(mosque.logoUrl ?? "");
+    setLogoError(null);
     toast.success("Reverted to current theme");
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Reset the input so re-choosing the same file after an error still fires.
+    e.target.value = "";
+    if (!file) return;
+
+    if (mosque.isHQ) {
+      toast("HQ preview — sign in as a mosque admin to upload a logo.");
+      return;
+    }
+
+    setLogoError(null);
+    if (!file.type.startsWith("image/")) {
+      setLogoError("That doesn't look like an image. PNG, JPG, or WebP only.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      setLogoError(
+        `Your logo is ${mb} MB — needs to be under 2 MB. Try compressing it (tinypng.com works well) and upload again.`,
+      );
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/mosques/${mosque.id}/logo`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const { url } = (await res.json()) as { url: string };
+      // Uploaded to storage — persist to the mosque record on "Apply theme".
+      setLogoUrl(url);
+      toast.success("Logo uploaded", {
+        description: "Click Apply theme to save it to your app.",
+      });
+    } catch {
+      setLogoError("Couldn't upload — check your connection and try again.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function save() {
@@ -76,10 +141,12 @@ export default function ThemeClient() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          app_name: appName.trim() || null,
           brand_color: primary,
           accent_color: accent,
           font_theme: fontTheme,
           header_style: headerStyle,
+          logo_url: logoUrl || null,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -132,6 +199,118 @@ export default function ThemeClient() {
       <div className="grid gap-5 lg:grid-cols-[420px_1fr]">
         {/* Editor */}
         <section className="space-y-5">
+          <section className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
+            <header className="mb-3">
+              <h2 className="text-[13.5px] font-semibold text-[#0A261E]">App name</h2>
+              <p className="text-[12px] text-[#0A261E]/55">
+                The name shown under your app icon and in the app header. Keep it
+                short — iOS truncates the home-screen label after ~10 characters.
+              </p>
+            </header>
+            <div className="relative">
+              <Input
+                value={appName}
+                onChange={(e) => setAppName(e.target.value.slice(0, 25))}
+                placeholder={mosque.name}
+                maxLength={25}
+                className="pr-14"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] tabular-nums text-[#0A261E]/40">
+                {appName.length}/25
+              </span>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
+            <header className="mb-3">
+              <h2 className="text-[13.5px] font-semibold text-[#0A261E]">Logo</h2>
+              <p className="text-[12px] text-[#0A261E]/55">
+                Square image, at least 512×512&nbsp;px. Shown on your app&apos;s
+                home screen and across the dashboard. PNG, JPG, or WebP · max 2&nbsp;MB.
+              </p>
+            </header>
+
+            {/* Persistent inline error — harder to miss than a 3-second toast. */}
+            {logoError && (
+              <div className="mb-3 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5">
+                <AlertCircle size={15} className="mt-0.5 shrink-0 text-red-600" />
+                <div className="flex-1 text-[12.5px] text-red-700">{logoError}</div>
+                <button
+                  type="button"
+                  onClick={() => setLogoError(null)}
+                  className="shrink-0 rounded-md p-0.5 text-red-500 transition-colors hover:bg-red-100"
+                  aria-label="Dismiss error"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div
+                  className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold shadow-sm ring-2 ring-white"
+                  style={{
+                    background:
+                      logoUrl && !uploading
+                        ? `url(${logoUrl}) center/cover`
+                        : `${primary}1f`,
+                    color: primary,
+                  }}
+                >
+                  {!logoUrl && !uploading && mosque.logoInitials}
+                </div>
+                {uploading && (
+                  <div className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-2xl bg-[#0A261E]/10">
+                    <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                    <Loader2 size={18} className="relative z-10 animate-spin text-[#0A261E]" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label
+                  className={cn(
+                    "inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#0A261E]/12 bg-white px-4 py-2 text-[13px] font-medium text-[#0A261E] shadow-sm transition-colors hover:bg-[#0A261E]/[0.03]",
+                    uploading && "cursor-not-allowed opacity-60",
+                  )}
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin text-[#0A261E]/60" />
+                      Uploading…
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={14} className="text-[#0A261E]/50" />
+                      {logoUrl ? "Replace" : "Choose file"}
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                </label>
+                {logoUrl && !uploading && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLogoUrl("");
+                      setLogoError(null);
+                    }}
+                    className="rounded-lg p-2 text-[#0A261E]/40 transition-colors hover:bg-[#0A261E]/[0.03] hover:text-red-500"
+                    aria-label="Remove logo"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+
           <ColorEditor
             label="Primary color"
             description="Used for the navigation, primary buttons, and headings in your app."
@@ -219,21 +398,6 @@ export default function ThemeClient() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-dashed border-[#0A261E]/15 bg-[var(--mosque-surface,#fffbf2)]/50 p-4">
-            <div className="flex items-start gap-3">
-              <Lock size={14} className="mt-0.5 text-[#0A261E]/45" />
-              <div>
-                <p className="text-[12.5px] font-semibold text-[#0A261E]">
-                  Logo and splash screen
-                </p>
-                <p className="mt-0.5 text-[11.5px] text-[#0A261E]/55">
-                  Upload + automatic EAS rebuild trigger ships next release.
-                  In the meantime, send your logo to support and we&rsquo;ll
-                  wire it in for you.
-                </p>
-              </div>
-            </div>
-          </div>
         </section>
 
         {/* Live preview — the real app-home mockup, themed live */}
@@ -244,10 +408,10 @@ export default function ThemeClient() {
             </p>
             <div className="flex justify-center">
               <AppPreviewPanel
-                appName={mosque.appName || mosque.name}
+                appName={appName || mosque.name}
                 brandColor={primary}
                 accentColor={accent}
-                logoUrl={mosque.logoUrl ?? undefined}
+                logoUrl={logoUrl || undefined}
                 fontTheme={fontTheme}
                 headerStyle={headerStyle}
                 homeOnly
@@ -281,10 +445,16 @@ function ColorEditor({
       <div className="flex items-center gap-3">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger
-            className="h-12 w-12 rounded-xl border border-[#0A261E]/15 transition-shadow hover:shadow-md"
+            className="group relative h-12 w-12 shrink-0 cursor-pointer rounded-xl border border-[#0A261E]/15 shadow-sm transition-all hover:scale-[1.03] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A261E]/30"
             style={{ background: value }}
-            aria-label={`Pick ${label}`}
-          />
+            aria-label={`Click to pick ${label}`}
+            title={`Click to change ${label.toLowerCase()}`}
+          >
+            {/* Persistent pipette badge so it's obvious the swatch opens a picker */}
+            <span className="absolute -bottom-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-[#0A261E]/10 bg-white text-[#0A261E] shadow-sm transition-transform group-hover:scale-110">
+              <Pipette size={11} />
+            </span>
+          </PopoverTrigger>
           <PopoverContent className="w-auto p-3" align="start">
             <HexColorPicker color={value} onChange={onChange} />
             <Input
@@ -307,6 +477,14 @@ function ColorEditor({
           </p>
         </div>
       </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-[#0A261E]/50 transition-colors hover:text-[#0A261E]/75"
+      >
+        <Pipette size={11} />
+        Click the swatch to open the color picker, or type a hex code.
+      </button>
     </section>
   );
 }
