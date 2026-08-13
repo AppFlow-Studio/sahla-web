@@ -195,7 +195,14 @@ export default function KanbanBoard({ cards }: Props) {
   const stats = useMemo(() => {
     const total = filteredCards.length;
     const live = filteredCards.filter((c) => c.stage === "live").length;
-    const value = live * 300;
+    // Pipeline value = expected MRR of deals still being worked, i.e. every
+    // card that hasn't closed (won) into "live". Live mosques are booked
+    // revenue, not pipeline, so they're excluded — counting only live is what
+    // made this read $0 whenever the board had no live cards. Open deals have
+    // no subscription tier yet, so each is estimated at a flat $300/mo.
+    const OPEN_DEAL_MRR = 300;
+    const openDeals = filteredCards.filter((c) => c.stage !== "live").length;
+    const value = openDeals * OPEN_DEAL_MRR;
     return {
       totalMosques: total,
       liveMosques: live,

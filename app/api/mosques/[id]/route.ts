@@ -54,10 +54,43 @@ export async function PATCH(
       .update(updateData)
       .eq("id", mosqueId)
       .select("onboarding_progress, clerk_org_id")
-      .single();
+      .maybeSingle();
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // No mosques row matched — this id is a pipeline-only lead (a
+    // `pipeline_stages` row that hasn't graduated to a mosque yet). The "Lead
+    // details" modal edits its name/city/state through this endpoint, so
+    // persist the editable lead fields to pipeline_stages instead of throwing
+    // "Cannot coerce the result to a single JSON object" on the missing row.
+    // (pipeline_stages has no `state` column, so state can't be stored on a
+    // lead — it's captured once the lead becomes a mosque.)
+    if (!mosque) {
+      const leadUpdate: Record<string, unknown> = {};
+      if ("name" in updateData) leadUpdate.mosque_name = updateData.name;
+      if ("city" in updateData) leadUpdate.city = updateData.city;
+      if ("country" in updateData) leadUpdate.country = updateData.country;
+      leadUpdate.updated_at = new Date().toISOString();
+
+      const { data: updatedLead, error: leadError } = await supabase
+        .from("pipeline_stages")
+        .update(leadUpdate)
+        .or(`id.eq.${mosqueId},mosque_id.eq.${mosqueId}`)
+        .select("id");
+
+      if (leadError) {
+        return NextResponse.json({ error: leadError.message }, { status: 500 });
+      }
+      if (!updatedLead || updatedLead.length === 0) {
+        return NextResponse.json(
+          { error: "Mosque not found." },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({ success: true });
+    }
+
     currentProgress =
       (mosque?.onboarding_progress as Record<string, boolean>) || {};
 

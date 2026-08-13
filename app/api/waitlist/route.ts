@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { sahlaEmailHtml, escapeHtml } from "@/lib/email/template";
+import {
+  HONEYPOT_FIELD,
+  isAllowedOrigin,
+  isHoneypotTripped,
+  isJsonRequest,
+  verifyHuman,
+} from "@/lib/form-security";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -13,14 +20,42 @@ type DemoBody = {
   city?: string;
   country?: string;
   notes?: string;
+  // Honeypot — real users never see this field; a filled value flags a bot.
+  [HONEYPOT_FIELD]?: string;
 };
 
 export async function POST(req: Request) {
+  // Layer 1: reject anything that isn't the JSON our own form sends.
+  if (!isJsonRequest(req)) {
+    return NextResponse.json(
+      { error: "Unsupported content type." },
+      { status: 415 }
+    );
+  }
+
+  // Layer 2: when an Origin is present it must be one of ours.
+  if (!isAllowedOrigin(req)) {
+    return NextResponse.json({ error: "Request blocked." }, { status: 403 });
+  }
+
   let body: DemoBody;
   try {
     body = (await req.json()) as DemoBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  // Layer 3: honeypot. Bots that autofill the hidden field get a fake success
+  // response — no row written, no email sent — so they don't retry or adapt.
+  if (isHoneypotTripped(body[HONEYPOT_FIELD])) {
+    return NextResponse.json({ ok: true }, { status: 200 });
+  }
+
+  // Layer 4: Vercel BotID attestation. Block only a definitive bot verdict;
+  // provider errors return "unknown" and fall through so a BotID outage never
+  // blocks a real mosque admin.
+  if ((await verifyHuman()) === "bot") {
+    return NextResponse.json({ error: "Request blocked." }, { status: 403 });
   }
 
   const name = (body.name ?? "").trim();
