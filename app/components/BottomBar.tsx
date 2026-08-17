@@ -56,7 +56,7 @@ export default function BottomBar() {
             <h4 className="mb-[18px] text-[12px] font-semibold uppercase tracking-[0.18em] text-sand/45">Legal</h4>
             <div className="flex flex-col">
               <Link href="/privacy" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Privacy Policy</Link>
-              <Link href="/terms" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Terms of Service</Link>
+              <Link href="/terms" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Terms of Use</Link>
             </div>
           </div>
         </div>
