@@ -10,7 +10,7 @@ finishes (via Cal.com's `MEETING_ENDED` webhook). No-shows stay at
 
 1. Waitlist visitor submits the form → row created in `pipeline_stages`
    at stage `lead`. Confirmation email includes a "Book your call" button
-   linking to `https://cal.com/ahmad-hamoudeh-kc7pje/sahla-intro-call`
+   linking to `https://cal.com/sahla/sahla-intro-call`
    with `?name=…&email=…&notes=Waitlist:%20<mosque>` pre-filled.
 2. Visitor books on Cal.com → Cal.com POSTs a `BOOKING_CREATED` webhook
    to the `cal-webhook` edge function.
