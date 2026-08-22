@@ -2,17 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { HexColorPicker } from "react-colorful";
 import { Check, Lock, RotateCcw, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import PageHeader from "../../_components/PageHeader";
 import { useMosque } from "../../_lib/mock-mosque";
 import FontThemePicker from "@/components/FontThemePicker";
@@ -132,41 +125,6 @@ export default function ThemeClient() {
       <div className="grid gap-5 lg:grid-cols-[420px_1fr]">
         {/* Editor */}
         <section className="space-y-5">
-          <ColorEditor
-            label="Primary color"
-            description="Used for the navigation, primary buttons, and headings in your app."
-            value={primary}
-            onChange={setPrimary}
-          />
-          <ColorEditor
-            label="Accent color"
-            description="Used for highlights, badges, and call-to-action emphasis."
-            value={accent}
-            onChange={setAccent}
-          />
-
-          <section className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
-            <header className="mb-3">
-              <h2 className="text-[13.5px] font-semibold text-[#0A261E]">Font</h2>
-              <p className="text-[12px] text-[#0A261E]/55">
-                The typeface for headings and text across your app. Arabic and
-                Qur&apos;an text always use their dedicated font.
-              </p>
-            </header>
-            <FontThemePicker value={fontTheme} onChange={setFontTheme} />
-          </section>
-
-          <section className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
-            <header className="mb-3">
-              <h2 className="text-[13.5px] font-semibold text-[#0A261E]">Home header</h2>
-              <p className="text-[12px] text-[#0A261E]/55">
-                The top of your app&apos;s home screen — a classic greeting + clock,
-                or a live countdown to the next prayer.
-              </p>
-            </header>
-            <HeaderStylePicker value={headerStyle} onChange={setHeaderStyle} />
-          </section>
-
           <div className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
             <header className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -176,6 +134,9 @@ export default function ThemeClient() {
                 </h3>
               </div>
             </header>
+            <p className="mb-3 text-[12px] text-[#0A261E]/55">
+              Pick a palette. Applied to navigation, headings, buttons, and accents throughout your app.
+            </p>
             <div className="grid grid-cols-3 gap-2">
               {PRESETS.map((preset) => {
                 const active =
@@ -219,6 +180,28 @@ export default function ThemeClient() {
             </div>
           </div>
 
+          <section className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
+            <header className="mb-3">
+              <h2 className="text-[13.5px] font-semibold text-[#0A261E]">Font</h2>
+              <p className="text-[12px] text-[#0A261E]/55">
+                The typeface for headings and text across your app. Arabic and
+                Qur&apos;an text always use their dedicated font.
+              </p>
+            </header>
+            <FontThemePicker value={fontTheme} onChange={setFontTheme} />
+          </section>
+
+          <section className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
+            <header className="mb-3">
+              <h2 className="text-[13.5px] font-semibold text-[#0A261E]">Home header</h2>
+              <p className="text-[12px] text-[#0A261E]/55">
+                The top of your app&apos;s home screen — a classic greeting + clock,
+                or a live countdown to the next prayer.
+              </p>
+            </header>
+            <HeaderStylePicker value={headerStyle} onChange={setHeaderStyle} />
+          </section>
+
           <div className="rounded-2xl border border-dashed border-[#0A261E]/15 bg-[var(--mosque-surface,#fffbf2)]/50 p-4">
             <div className="flex items-start gap-3">
               <Lock size={14} className="mt-0.5 text-[#0A261E]/45" />
@@ -260,60 +243,4 @@ export default function ThemeClient() {
   );
 }
 
-function ColorEditor({
-  label,
-  description,
-  value,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <section className="rounded-2xl border border-[#0A261E]/8 bg-white p-5">
-      <header className="mb-3">
-        <h2 className="text-[13.5px] font-semibold text-[#0A261E]">{label}</h2>
-        <p className="text-[12px] text-[#0A261E]/55">{description}</p>
-      </header>
-      <div className="flex items-center gap-3">
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger
-            className="h-12 w-12 rounded-xl border border-[#0A261E]/15 transition-shadow hover:shadow-md"
-            style={{ background: value }}
-            aria-label={`Pick ${label}`}
-          />
-          <PopoverContent className="w-auto p-3" align="start">
-            <HexColorPicker color={value} onChange={onChange} />
-            <Input
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              className="mt-3 h-8 font-mono text-[12px] uppercase"
-              maxLength={7}
-            />
-          </PopoverContent>
-        </Popover>
-        <div className="flex-1">
-          <Input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="font-mono uppercase"
-            maxLength={7}
-          />
-          <p className="mt-1 text-[11px] text-[#0A261E]/45">
-            {hexToRgb(value)}
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function hexToRgb(hex: string): string {
-  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!match) return "—";
-  return `rgb(${parseInt(match[1], 16)}, ${parseInt(match[2], 16)}, ${parseInt(match[3], 16)})`;
-}
 
