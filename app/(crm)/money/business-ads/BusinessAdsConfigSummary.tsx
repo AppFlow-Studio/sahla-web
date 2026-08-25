@@ -224,7 +224,7 @@ export default function BusinessAdsConfigSummary({
         </div>
 
         <div className="bg-[var(--mosque-surface,#fffbf2)] px-6 py-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mosque-accent,#B8922A)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mosque-primary,#0A261E)]">
             5-business projection
           </p>
           <p className="mt-2 font-display text-[24px] leading-none text-[#0A261E]">

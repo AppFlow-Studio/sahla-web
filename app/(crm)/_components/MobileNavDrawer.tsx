@@ -60,7 +60,7 @@ export default function MobileNavDrawer({ open, onOpenChange }: Props) {
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-display text-[15px] leading-tight text-[var(--mosque-primary-fg,#fffbf2)]">
-                  {mosque.name}
+                  {mosque.appName || mosque.name}
                 </p>
                 <p className="text-[11px] leading-tight text-[var(--mosque-primary-fg,#fffbf2)]/40">
                   {mosque.city}, {mosque.state}

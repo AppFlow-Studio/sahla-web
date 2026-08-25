@@ -131,10 +131,10 @@ export default function AppPreviewPanel({
       <style>{fontLink}</style>
       <div className="relative w-full h-full" style={{ background: bg }}>
         {screen === "home" && <HomeScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} headingFont={HEADING_FONT[fontTheme]} headerStyle={headerStyle} programs={programs} donationProject={donationProject} donationGoal={donationGoal} />}
-        {screen === "discover" && <DiscoverScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} programCategories={programCategories} programs={programs} donationProject={donationProject} donationGoal={donationGoal} />}
+        {screen === "discover" && <DiscoverScreen brandColor={brandColor} accent={accent} bg={bg} programCategories={programCategories} programs={programs} donationProject={donationProject} donationGoal={donationGoal} />}
         {screen === "watch" && <WatchScreen brandColor={brandColor} accent={accent} bg={bg} />}
-        {screen === "prayer" && <PrayerScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} donationProject={donationProject} donationGoal={donationGoal} />}
-        {screen === "profile" && <ProfileScreen brandColor={brandColor} accent={accent} bg={bg} appName={appName} donationProject={donationProject} donationGoal={donationGoal} />}
+        {screen === "prayer" && <PrayerScreen brandColor={brandColor} accent={accent} bg={bg} donationProject={donationProject} donationGoal={donationGoal} />}
+        {screen === "profile" && <ProfileScreen brandColor={brandColor} accent={accent} bg={bg} donationProject={donationProject} donationGoal={donationGoal} />}
 
         {/* ── Tab bar — Figma: 402×101, padding 16px 24px 24px, gap 8px ── */}
         {!homeOnly && (
@@ -349,7 +349,7 @@ function HomeScreen({ brandColor, accent, bg, appName, headingFont = "'Playfair 
       <div style={{ background: bg, borderRadius: "48px 48px 0 0", marginTop: 0, position: "relative", zIndex: 1, paddingTop: 12, color: brandColor }}>
 
         {/* Donate banner — Figma: h64, padding 14px 18px, bg brand, radius 50, inset shadow */}
-        <DonateBanner brandColor={brandColor} accent={accent} appName={appName} filledButton projectName={donationProject} goalAmount={donationGoal} />
+        <DonateBanner brandColor={brandColor} accent={accent} filledButton projectName={donationProject} goalAmount={donationGoal} />
 
         {/* Today's Events header — SF Pro 590 13px, gap 170 */}
         <SectionHeader title="TODAY'S EVENTS" right="MAR 9, 2026" accent={accent} divider />
@@ -512,7 +512,7 @@ function HomeScreen({ brandColor, accent, bg, appName, headingFont = "'Playfair 
 /* ══════════════════════════════════════════════════════════════════
    DISCOVER SCREEN
    ══════════════════════════════════════════════════════════════════ */
-function DiscoverScreen({ brandColor, accent, bg, appName, programCategories = [], programs = [], donationProject = "", donationGoal = 0 }: { brandColor: string; accent: string; bg: string; appName: string; programCategories?: PreviewCategory[]; programs?: PreviewProgram[]; donationProject?: string; donationGoal?: number }) {
+function DiscoverScreen({ brandColor, accent, bg, programCategories = [], programs = [], donationProject = "", donationGoal = 0 }: { brandColor: string; accent: string; bg: string; programCategories?: PreviewCategory[]; programs?: PreviewProgram[]; donationProject?: string; donationGoal?: number }) {
   const sf = "'SF Pro', -apple-system, system-ui, sans-serif";
   /* Figma: container bg #0A261E radius 48, cream rect starts at y=39 */
   return (
@@ -569,7 +569,7 @@ function DiscoverScreen({ brandColor, accent, bg, appName, programCategories = [
 
         {/* Donate banner — Figma: y=1145, left 24, right 20 */}
         <div style={{ padding: "14px 4px 0" }}>
-          <DonateBanner brandColor={brandColor} accent={accent} appName={appName} filledButton projectName={donationProject} goalAmount={donationGoal} />
+          <DonateBanner brandColor={brandColor} accent={accent} filledButton projectName={donationProject} goalAmount={donationGoal} />
         </div>
 
         <div style={{ height: 110 }} />
@@ -581,7 +581,7 @@ function DiscoverScreen({ brandColor, accent, bg, appName, programCategories = [
 /* ══════════════════════════════════════════════════════════════════
    PRAYER SCREEN
    ══════════════════════════════════════════════════════════════════ */
-function PrayerScreen({ brandColor, accent, bg, appName, donationProject = "", donationGoal = 0 }: { brandColor: string; accent: string; bg: string; appName: string; donationProject?: string; donationGoal?: number }) {
+function PrayerScreen({ brandColor, accent, bg, donationProject = "", donationGoal = 0 }: { brandColor: string; accent: string; bg: string; donationProject?: string; donationGoal?: number }) {
   const sf = "'SF Pro', -apple-system, system-ui, sans-serif";
   const prayers = [
     { name: "Fajr", athan: "5:50 AM", iqamah: "6:10 AM", passed: true, icon: "sunrise" as const },
@@ -783,7 +783,7 @@ function PrayerScreen({ brandColor, accent, bg, appName, donationProject = "", d
 
       {/* Donate banner — Figma: y=1485, bg #071F18, transparent button */}
       <div style={{ margin: "6px 4px 0" }}>
-        <DonateBanner brandColor={darkenHex(brandColor, 0.3)} accent={accent} appName={appName} projectName={donationProject} goalAmount={donationGoal} />
+        <DonateBanner brandColor={darkenHex(brandColor, 0.3)} accent={accent} projectName={donationProject} goalAmount={donationGoal} />
       </div>
 
       {/* Community Partners — Figma: y=1586, bg #071F18 cards */}
@@ -913,7 +913,7 @@ function WatchScreen({ brandColor, accent, bg }: { brandColor: string; accent: s
 /* ══════════════════════════════════════════════════════════════════
    PROFILE SCREEN
    ══════════════════════════════════════════════════════════════════ */
-function ProfileScreen({ brandColor, accent, bg, appName, donationProject = "", donationGoal = 0 }: { brandColor: string; accent: string; bg: string; appName: string; donationProject?: string; donationGoal?: number }) {
+function ProfileScreen({ brandColor, accent, bg, donationProject = "", donationGoal = 0 }: { brandColor: string; accent: string; bg: string; donationProject?: string; donationGoal?: number }) {
   const sf = "'SF Pro', -apple-system, system-ui, sans-serif";
   return (
     <div className="w-full h-full overflow-y-auto" style={{ background: brandColor, scrollbarWidth: "none" }}>
@@ -968,7 +968,7 @@ function ProfileScreen({ brandColor, accent, bg, appName, donationProject = "", 
           <ProfileRow icon={<InvoiceIcon size={14} color={brandColor} />} label="Payment History" />
           <ProfileRow icon={<CreditCardIcon size={14} color={brandColor} />} label="Payment Methods" last />
         </ProfileSection>
-        <DonateBanner brandColor={brandColor} accent={accent} appName={appName} filledButton projectName={donationProject} goalAmount={donationGoal} />
+        <DonateBanner brandColor={brandColor} accent={accent} filledButton projectName={donationProject} goalAmount={donationGoal} />
         <ProfileSection title="NOTIFICATIONS">
           <div className="flex items-center justify-between" style={{
             background: hexToRgba(accent, 0.2), borderRadius: 14,
@@ -1028,9 +1028,9 @@ function ProfileRow({ icon, label, last, dashed }: { icon: React.ReactNode; labe
   );
 }
 
-function DonateBanner({ brandColor, accent, appName, filledButton, projectName = "", goalAmount = 0 }: { brandColor: string; accent: string; appName: string; filledButton?: boolean; projectName?: string; goalAmount?: number }) {
+function DonateBanner({ brandColor, accent, filledButton, projectName = "", goalAmount = 0 }: { brandColor: string; accent: string; filledButton?: boolean; projectName?: string; goalAmount?: number }) {
   const hasGoal = goalAmount > 0;
-  const title = hasGoal && projectName.trim() ? projectName.trim() : `Support ${appName}`;
+  const title = hasGoal && projectName.trim() ? projectName.trim() : "Support Your Masjid";
   // No live donation totals in the onboarding preview — show the goal at 0% raised.
   const raised = 0;
   const pct = hasGoal ? Math.min(100, Math.round((raised / goalAmount) * 100)) : 0;

@@ -284,7 +284,7 @@ function OverviewTab({
 }) {
   return (
     <div className="rounded-2xl border border-[#0A261E]/8 bg-white p-6">
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mosque-accent,#B8922A)]">
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mosque-primary,#0A261E)]">
         Description
       </h2>
       <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#0A261E]/80">
