@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Plus, Upload, Trash2, Loader2 } from "lucide-react";
+import { Calendar, Plus, Upload, Trash2, Pencil, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import CSVImport from "../../components/CSVImport";
 import TimePicker, { formatTimeLabel } from "../../components/TimePicker";
+import CoverImageUpload from "../../components/CoverImageUpload";
 import { Dropdown } from "@/app/(admin)/components/Dropdown";
 import { cn } from "@/lib/utils";
 import { INPUT_CLASS, LABEL_CLASS, BTN_PRIMARY_SM, BTN_GHOST_SM } from "@/lib/ui-classes";
@@ -16,6 +17,7 @@ type ContentItem = {
   content_id: string;
   name: string;
   description: string | null;
+  image: string | null;
   speakers: string[];
   start_date: string | null;
   end_date: string | null;
@@ -65,13 +67,20 @@ export default function EventsPanel({
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showCSV, setShowCSV] = useState(false);
+  // content_id of the event being edited; null while adding a new one.
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [image, setImage] = useState<string | null>(null);
   const [selectedSpeaker, setSelectedSpeaker] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [startTime, setStartTime] = useState("");
+  // One-time events finish on the day they start, so they carry a length in
+  // hours instead of an end date.
+  const [isOneTime, setIsOneTime] = useState(false);
+  const [durationHours, setDurationHours] = useState("");
   const [gender, setGender] = useState("All");
   const [isKids, setIsKids] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
@@ -85,40 +94,101 @@ export default function EventsPanel({
     [speakers]
   );
 
+  // Preview of when a one-time event wraps up. Purely informational — the
+  // length itself has nowhere to live on content_items, so only the same-day
+  // end date is persisted.
+  const oneTimeEndLabel = useMemo(() => {
+    const hours = parseFloat(durationHours);
+    if (!startTime || !Number.isFinite(hours) || hours <= 0) return null;
+    const [h, m] = startTime.split(":").map(Number);
+    const total = h * 60 + m + Math.round(hours * 60);
+    if (total >= 24 * 60) return "Runs past midnight — set an end date instead";
+    const end = `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(
+      total % 60
+    ).padStart(2, "0")}`;
+    return `Ends around ${formatTimeLabel(end) ?? end}, same day`;
+  }, [startTime, durationHours]);
+
   function resetForm() {
-    setName(""); setDescription(""); setSelectedSpeaker(""); setStartDate("");
-    setEndDate(""); setStartTime(""); setGender("All"); setIsKids(false); setIsPaid(false); setPrice("");
+    setName(""); setDescription(""); setImage(null); setSelectedSpeaker(""); setStartDate("");
+    setEndDate(""); setStartTime(""); setIsOneTime(false); setDurationHours("");
+    setGender("All"); setIsKids(false); setIsPaid(false); setPrice("");
+    setEditingId(null);
     setShowForm(false);
   }
 
-  async function addEvent() {
+  function startEdit(event: ContentItem) {
+    setEditingId(event.content_id);
+    setName(event.name ?? "");
+    setDescription(event.description ?? "");
+    setImage(event.image ?? null);
+    setSelectedSpeaker(event.speakers?.[0] ?? "");
+    setStartDate(event.start_date ?? "");
+    setEndDate(event.end_date ?? "");
+    // Times come back as HH:MM:SS; the picker works in HH:MM.
+    setStartTime(event.start_time ? event.start_time.slice(0, 5) : "");
+    // No end date, or one that matches the start, means it ran a single day.
+    setIsOneTime(!event.end_date || event.end_date === event.start_date);
+    setDurationHours("");
+    setGender(event.gender ?? "All");
+    setIsKids(event.is_kids);
+    setIsPaid(event.is_paid);
+    setPrice(event.is_paid ? String(event.price ?? "") : "");
+    setShowForm(true);
+  }
+
+  async function saveEvent() {
     if (!name.trim()) { showToast("Event name is required", "error"); return; }
     setSaving(true);
+    const fields = {
+      name,
+      description: description || null,
+      image,
+      speakers: selectedSpeaker ? [selectedSpeaker] : [],
+      start_date: startDate || null,
+      end_date: isOneTime ? startDate || null : endDate || null,
+      start_time: startTime || null,
+      gender,
+      is_kids: isKids,
+      is_paid: isPaid,
+      price: isPaid ? parseFloat(price) || 0 : 0,
+    };
     try {
+      if (editingId) {
+        const res = await fetch(
+          `/api/mosques/${mosqueId}/content?contentId=${editingId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(fields),
+          }
+        );
+        if (!res.ok) throw new Error("Failed to save");
+        const updated = await res.json();
+        setEvents((prev) =>
+          prev.map((e) => (e.content_id === editingId ? updated : e))
+        );
+        resetForm();
+        showToast("Event updated", "success");
+        return;
+      }
+
       const res = await fetch(`/api/mosques/${mosqueId}/content`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "event",
-          name,
-          description: description || null,
-          speakers: selectedSpeaker ? [selectedSpeaker] : [],
-          start_date: startDate || null,
-          end_date: endDate || null,
-          start_time: startTime || null,
-          gender,
-          is_kids: isKids,
-          is_paid: isPaid,
-          price: isPaid ? parseFloat(price) || 0 : 0,
-          markComplete: true,
-        }),
+        body: JSON.stringify({ type: "event", ...fields, markComplete: true }),
       });
       if (!res.ok) throw new Error("Failed to add");
       const newItem = await res.json();
       setEvents((prev) => [newItem, ...prev]);
       resetForm();
       showToast("Event added", "success");
-    } catch { showToast("Failed to add event", "error"); }
+      // The POST marks the `events` task complete server-side; refresh so the
+      // sidebar checkmark lands now instead of on the next navigation.
+      router.refresh();
+    } catch {
+      showToast(editingId ? "Failed to save event" : "Failed to add event", "error");
+    }
     finally { setSaving(false); }
   }
 
@@ -148,6 +218,14 @@ export default function EventsPanel({
                 transition={{ duration: 0.2 }}
                 className="group flex items-start gap-4 rounded-xl border border-stone-200 bg-white px-5 py-4 shadow-sm transition-colors hover:bg-stone-50/60"
               >
+                {event.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={event.image}
+                    alt=""
+                    className="h-14 w-14 shrink-0 rounded-lg border border-stone-200 object-cover"
+                  />
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold text-stone-900">{event.name}</p>
                   {event.description && (
@@ -181,12 +259,22 @@ export default function EventsPanel({
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => deleteEvent(event.content_id)}
-                  className="rounded-md p-1.5 text-stone-300 opacity-0 transition-all hover:bg-stone-100 hover:text-red-500 group-hover:opacity-100"
-                >
-                  <Trash2 size={15} />
-                </button>
+                <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                  <button
+                    onClick={() => startEdit(event)}
+                    aria-label={`Edit ${event.name}`}
+                    className="rounded-md p-1.5 text-stone-300 transition-colors hover:bg-stone-100 hover:text-stone-700"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    onClick={() => deleteEvent(event.content_id)}
+                    aria-label={`Remove ${event.name}`}
+                    className="rounded-md p-1.5 text-stone-300 transition-colors hover:bg-stone-100 hover:text-red-500"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </motion.div>
             ))}
           </AnimatePresence>
@@ -212,7 +300,9 @@ export default function EventsPanel({
             className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm"
           >
             <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
-              <p className="text-[14px] font-semibold text-stone-900">New Event</p>
+              <p className="text-[14px] font-semibold text-stone-900">
+                {editingId ? "Edit Event" : "New Event"}
+              </p>
             </div>
             <div className="space-y-4 px-6 py-5">
               <div>
@@ -261,6 +351,15 @@ export default function EventsPanel({
                   className="w-full resize-none rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none transition-colors placeholder:text-stone-400 hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
                 />
               </div>
+              <div>
+                <label className={LABEL_CLASS}>Cover Image</label>
+                <CoverImageUpload
+                  value={image}
+                  mosqueId={mosqueId}
+                  disabled={saving}
+                  onChange={setImage}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={LABEL_CLASS}>Speaker</label>
@@ -277,6 +376,15 @@ export default function EventsPanel({
                   <TimePicker value={startTime} onChange={setStartTime} />
                 </div>
               </div>
+              <label className="flex items-center gap-2 text-[12px] text-stone-600">
+                <input
+                  type="checkbox"
+                  checked={isOneTime}
+                  onChange={(e) => setIsOneTime(e.target.checked)}
+                  className="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400"
+                />
+                One-time event — finishes the same day it starts
+              </label>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={LABEL_CLASS}>Start Date</label>
@@ -288,15 +396,39 @@ export default function EventsPanel({
                   />
                 </div>
                 <div>
-                  <label className={LABEL_CLASS}>End Date</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className={INPUT_CLASS}
-                  />
+                  {isOneTime ? (
+                    <>
+                      <label className={LABEL_CLASS}>Length (hours)</label>
+                      <input
+                        type="number"
+                        min="0.5"
+                        max="24"
+                        step="0.5"
+                        value={durationHours}
+                        onChange={(e) => setDurationHours(e.target.value)}
+                        placeholder="e.g., 3"
+                        className={INPUT_CLASS}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <label className={LABEL_CLASS}>End Date</label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className={INPUT_CLASS}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
+              {isOneTime && (
+                <p className="-mt-2 text-[11px] text-stone-400">
+                  {oneTimeEndLabel ??
+                    "The event is saved as ending on its start date. Add a start time and length to see when it wraps up."}
+                </p>
+              )}
               <div className="flex flex-wrap items-center gap-3">
                 <div>
                   <label className={LABEL_CLASS}>Gender</label>
@@ -338,9 +470,11 @@ export default function EventsPanel({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={addEvent} disabled={saving} className={BTN_PRIMARY_SM}>
+                <button onClick={saveEvent} disabled={saving} className={BTN_PRIMARY_SM}>
                   {saving && <Loader2 size={13} className="animate-spin" />}
-                  {saving ? "Adding..." : "Add Event"}
+                  {saving
+                    ? editingId ? "Saving..." : "Adding..."
+                    : editingId ? "Save Changes" : "Add Event"}
                 </button>
                 <button onClick={resetForm} className={BTN_GHOST_SM}>
                   Cancel
