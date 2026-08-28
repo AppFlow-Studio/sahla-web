@@ -16,7 +16,14 @@ export const ACCOUNT_INCLUDES = [
 ] as const;
 
 export type MosqueStripeStatus = {
-  status: "not_connected" | "pending" | "connected" | "issues";
+  /**
+   * - not_connected — no Stripe account linked yet
+   * - pending       — account exists, Stripe is still waiting on the admin
+   * - reviewing     — everything submitted; Stripe is verifying it
+   * - connected     — charges enabled
+   * - issues        — Stripe rejected something the admin must fix
+   */
+  status: "not_connected" | "pending" | "reviewing" | "connected" | "issues";
   charges_enabled: boolean;
   payouts_enabled: boolean;
   requirements: {
@@ -52,9 +59,13 @@ export function mapAccountStatus(
     if (entry.errors.length > 0) past_due.push(entry.description);
   }
 
-  let status: "pending" | "connected" | "issues";
+  let status: "pending" | "reviewing" | "connected" | "issues";
   if (charges_enabled) status = "connected";
   else if (past_due.length > 0) status = "issues";
+  // Nothing is awaiting the admin, yet charges still aren't live: Stripe has
+  // everything and is verifying it. That's a wait, not an unfinished form, so
+  // it gets its own state instead of nagging them to "complete setup".
+  else if (currently_due.length === 0) status = "reviewing";
   else status = "pending";
 
   return {
