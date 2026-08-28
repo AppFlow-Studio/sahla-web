@@ -6,6 +6,12 @@ export type Stage =
   | "demo"
   | "contract"
   | "onboarding"
+  /**
+   * Paid and finished onboarding, app not shipped yet — the window where the
+   * work is Sahla's (store submission + review), not the mosque's. Mirrors
+   * `mosques.onboarding_status = "ready"`.
+   */
+  | "building"
   | "live";
 
 export type Column = {
@@ -33,7 +39,17 @@ export type KanbanCard = {
   stage: Stage;
   /** 0–100 for onboarding progress bar; omit or null when not onboarding */
   onboardingProgress?: number | null;
+  /** Latest store build per platform — surfaced on Building cards. */
+  builds?: StoreBuild[] | null;
   updatedAt: string;
+};
+
+/** One row of `app_builds`, trimmed to what the board renders. */
+export type StoreBuild = {
+  platform: string;
+  status: string | null;
+  version: string | null;
+  onTestflight?: boolean | null;
 };
 
 /** Stage dots match MasjidCard left accent per column */
@@ -43,5 +59,6 @@ export const defaultColumns: Column[] = [
   { id: "demo", title: "Demo", dotClass: "bg-violet-500" },
   { id: "contract", title: "Contract", dotClass: "bg-amber-500" },
   { id: "onboarding", title: "Onboarding", dotClass: "bg-cyan-600" },
+  { id: "building", title: "Building", dotClass: "bg-indigo-500" },
   { id: "live", title: "Live", dotClass: "bg-lime-500" },
 ];

@@ -9,6 +9,7 @@ const VALID_STAGES = new Set<Stage>([
   "demo",
   "contract",
   "onboarding",
+  "building",
   "live",
 ]);
 
@@ -46,7 +47,10 @@ export async function POST(req: Request) {
   }
 
   // Validation gates only apply when there's a linked mosque record
-  if (pipelineRow.mosque_id && (newStage === "onboarding" || newStage === "live")) {
+  if (
+    pipelineRow.mosque_id &&
+    (newStage === "onboarding" || newStage === "building" || newStage === "live")
+  ) {
     const { data: mosqueRow, error: mosqueReadError } = await supabase
       .from("mosques")
       .select("id, app_name, onboarding_status, subscription_status")
@@ -64,13 +68,19 @@ export async function POST(req: Request) {
         }
       }
 
-      if (newStage === "live") {
+      // Building and Live both mean "they've paid", so both need a live
+      // subscription behind them.
+      if (newStage === "live" || newStage === "building") {
         const subscriptionStatus = (mosqueRow.subscription_status ?? "").toLowerCase();
         const isActiveSubscription =
           subscriptionStatus === "active" || subscriptionStatus === "trialing";
         if (!isActiveSubscription) {
           return NextResponse.json(
-            { error: "Cannot move to Live: subscription is not active." },
+            {
+              error: `Cannot move to ${
+                newStage === "live" ? "Live" : "Building"
+              }: subscription is not active.`,
+            },
             { status: 422 }
           );
         }
@@ -93,8 +103,15 @@ export async function POST(req: Request) {
   }
 
   // Update mosque onboarding status when linked
-  if (pipelineRow.mosque_id && (newStage === "onboarding" || newStage === "live")) {
-    const onboardingStatus = newStage === "live" ? "live" : "in_progress";
+  // Keep the mosque lifecycle in step with the board. Building maps to
+  // "ready" — paid and set up, waiting on the app build.
+  const STAGE_TO_ONBOARDING_STATUS: Partial<Record<Stage, string>> = {
+    onboarding: "in_progress",
+    building: "ready",
+    live: "live",
+  };
+  const onboardingStatus = STAGE_TO_ONBOARDING_STATUS[newStage];
+  if (pipelineRow.mosque_id && onboardingStatus) {
     const { error: mosqueUpdateError } = await supabase
       .from("mosques")
       .update({ onboarding_status: onboardingStatus })

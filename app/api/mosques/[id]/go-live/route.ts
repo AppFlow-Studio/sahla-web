@@ -125,6 +125,13 @@ export async function POST(
       .update({ onboarding_progress: updatedProgress })
       .eq("id", mosqueId);
 
+    // Advance the pipeline board out of Onboarding — they're done; the app
+    // build is on us now. Mirrors the webhook path.
+    await supabase
+      .from("pipeline_stages")
+      .update({ stage: "building", updated_at: new Date().toISOString() })
+      .eq("mosque_id", mosqueId);
+
     return NextResponse.json({
       checkoutUrl: `${appUrl}/launching?payment=success&dev_bypass=1`,
     });

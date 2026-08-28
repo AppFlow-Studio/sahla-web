@@ -1,5 +1,5 @@
 import KanbanBoard from "@/app/components/kanban/KanbanBoard";
-import type { KanbanCard, Stage } from "@/app/components/kanban/types";
+import type { KanbanCard, Stage, StoreBuild } from "@/app/components/kanban/types";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +12,7 @@ export default async function PipelinePage() {
     "demo",
     "contract",
     "onboarding",
+    "building",
     "live",
   ]);
   const normalizeStage = (stage: string | null | undefined): Stage => {
@@ -93,6 +94,38 @@ export default async function PipelinePage() {
 
   const dedupedRows = [...latestByKey.values()];
 
+  // Building cards show where each app actually is in the stores, so pull the
+  // build rows for the mosques sitting in that column.
+  const buildingMosqueIds = dedupedRows
+    .filter((row) => normalizeStage(row.stage) === "building")
+    .map((row) => row.mosque_id ?? unwrapMosque(row.mosques)?.id)
+    .filter((id): id is string => !!id);
+
+  const buildsByMosque = new Map<string, StoreBuild[]>();
+  if (buildingMosqueIds.length > 0) {
+    const { data: buildRows } = await supabase
+      .from("app_builds")
+      .select("mosque_id, platform, status, current_version, on_testflight")
+      .in("mosque_id", buildingMosqueIds);
+
+    for (const b of (buildRows ?? []) as {
+      mosque_id: string;
+      platform: string;
+      status: string | null;
+      current_version: string | null;
+      on_testflight: boolean | null;
+    }[]) {
+      const list = buildsByMosque.get(b.mosque_id) ?? [];
+      list.push({
+        platform: b.platform,
+        status: b.status,
+        version: b.current_version,
+        onTestflight: b.on_testflight,
+      });
+      buildsByMosque.set(b.mosque_id, list);
+    }
+  }
+
   const cards: KanbanCard[] = dedupedRows.map((row) => {
     const mosque = unwrapMosque(row.mosques);
     const mosqueId = row.mosque_id ?? mosque?.id ?? "";
@@ -110,6 +143,7 @@ export default async function PipelinePage() {
         typeof mosque?.onboarding_progress === "number"
           ? mosque.onboarding_progress
           : null,
+      builds: mosqueId ? buildsByMosque.get(mosqueId) ?? null : null,
       updatedAt: row.updated_at ?? new Date(0).toISOString(),
     };
   });

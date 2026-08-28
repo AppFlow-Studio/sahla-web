@@ -475,6 +475,13 @@ async function handleSaasCheckoutCompleted(session: Stripe.Checkout.Session) {
       .eq("id", mosqueId);
   }
 
+  // Move the pipeline card out of Onboarding into Building: the mosque is
+  // finished, and what's left (store submission + review) is Sahla's work.
+  await supabase
+    .from("pipeline_stages")
+    .update({ stage: "building", updated_at: new Date().toISOString() })
+    .eq("mosque_id", mosqueId);
+
   await logActivity(mosqueId, "mosque_ready_for_launch", "subscription", subscriptionId, {
     tier: tier || "unknown",
     amount: subscription.items.data[0]?.price?.unit_amount
