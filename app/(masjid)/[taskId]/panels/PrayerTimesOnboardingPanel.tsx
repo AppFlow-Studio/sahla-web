@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Settings, MapPin, Check, CheckCircle2, Loader2, ChevronDown, ChevronLeft, RefreshCcw, AlertTriangle } from "lucide-react";
+import AddressAutocomplete, { type SelectedPlace } from "../../components/AddressAutocomplete";
+import { DEFAULT_TIMEZONE } from "@/lib/prayer/timezone";
 import {
   CALCULATION_METHODS,
   SCHOOLS,
@@ -41,6 +43,7 @@ type MosqueData = {
   latitude_adjustment_method: number | null;
   prayer_tune: string | null;
   shafaq: string | null;
+  timezone: string | null;
 };
 
 const DEFAULT_OFFSETS: Record<PrayerName, number> = {
@@ -158,6 +161,9 @@ export default function PrayerTimesOnboardingPanel({
   const [latAdjMethod, setLatAdjMethod] = useState(mosque.latitude_adjustment_method ?? -1);
   const [prayerTune, setPrayerTune] = useState(mosque.prayer_tune ?? "");
   const [shafaq, setShafaq] = useState(mosque.shafaq ?? "general");
+  // AlAdhan resolves the address to a real IANA zone; every "today" lookup for
+  // this mosque is computed in it, so it's saved alongside the other settings.
+  const [timezone, setTimezone] = useState(mosque.timezone || DEFAULT_TIMEZONE);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [previewTimings, setPreviewTimings] = useState<PreviewTimings | null>(null);
   const [loading, setLoading] = useState(false);
@@ -229,6 +235,16 @@ export default function PrayerTimesOnboardingPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Google Places hands back structured parts; AlAdhan geocodes the whole
+  // string, so keep the full formatted address in the field — a street-only
+  // value is ambiguous across cities.
+  function handleAddressSelect(place: SelectedPlace) {
+    setAddress(
+      place.formattedAddress ||
+        [place.address, place.city, place.state].filter(Boolean).join(", ")
+    );
+  }
+
   async function fetchDefaults() {
     if (!address.trim()) {
       showToast("Address is required", "error");
@@ -244,6 +260,7 @@ export default function PrayerTimesOnboardingPanel({
       // Pre-fill settings from AlAdhan meta defaults
       if (data.meta) {
         const meta = data.meta;
+        if (typeof meta.timezone === "string" && meta.timezone) setTimezone(meta.timezone);
         if (meta.method?.id != null) setMethod(meta.method.id);
         if (meta.school === "HANAFI") setSchool(1);
         else if (meta.school === "STANDARD") setSchool(0);
@@ -340,6 +357,7 @@ export default function PrayerTimesOnboardingPanel({
           latitudeAdjustmentMethod: latAdjMethod >= 0 ? latAdjMethod : null,
           prayerTune: prayerTune.trim() || null,
           shafaq,
+          timezone,
         }),
       });
       if (!configRes.ok) throw new Error("Failed to save config");
@@ -471,13 +489,13 @@ export default function PrayerTimesOnboardingPanel({
                 </div>
                 <div className="px-6 py-5">
                   <div className="relative">
-                    <MapPin size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-                    <input
-                      type="text"
+                    <MapPin size={16} className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-stone-400" />
+                    <AddressAutocomplete
                       value={address}
-                      onChange={(e) => setAddress(e.target.value)}
+                      onChange={setAddress}
+                      onSelect={handleAddressSelect}
                       placeholder="e.g., 123 Main St, New York, NY 11201"
-                      className="h-11 w-full rounded-lg border border-stone-200 bg-white pl-10 pr-4 text-sm text-stone-900 shadow-sm outline-none transition-colors placeholder:text-stone-400 hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
+                      className="h-11 w-full rounded-lg border border-stone-200 bg-white pl-10 pr-9 text-sm text-stone-900 shadow-sm outline-none transition-colors placeholder:text-stone-400 hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
                     />
                   </div>
                 </div>
@@ -759,7 +777,8 @@ export default function PrayerTimesOnboardingPanel({
                     ))}
                   </div>
                   <p className="mt-4 text-[11px] text-stone-400">
-                    Prayer times will update automatically each day based on your configuration.
+                    Shown in {timezone.replace(/_/g, " ")} — detected from your address. Prayer
+                    times will update automatically each day based on your configuration.
                   </p>
                 </div>
               </div>

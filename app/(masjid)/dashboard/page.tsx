@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { ONBOARDING_CATEGORIES, ALL_TASKS } from "../components/onboarding-tasks";
 import { getMosqueOnboardingData } from "../data";
 import OnboardingDashboardClient from "../OnboardingDashboardClient";
+import LaunchedDashboard from "../components/LaunchedDashboard";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { getPlanPricing } from "@/lib/pricing";
 
 export default async function OnboardingDashboard() {
   const session = await auth();
@@ -39,6 +41,22 @@ export default async function OnboardingDashboard() {
       .eq("mosque_id", mosque.id)
       .maybeSingle();
     crmAvailable = !!flags?.has_crm_access;
+  }
+
+  // A shipped mosque without CRM access has nowhere else to go — the (crm)
+  // routes bounce them out. Show what they actually have (a live app) and the
+  // upgrade path, rather than an onboarding checklist they've already finished.
+  const hasShipped = onboardingStatus === "ready" || onboardingStatus === "live";
+  if (hasShipped && !crmAvailable && mosque?.id) {
+    const pricing = await getPlanPricing().catch(() => null);
+    return (
+      <LaunchedDashboard
+        mosqueName={mosqueName}
+        mosqueId={mosque.id as string}
+        isLive={onboardingStatus === "live"}
+        priceLabel={pricing?.core_crm.formatted ?? null}
+      />
+    );
   }
 
   return (

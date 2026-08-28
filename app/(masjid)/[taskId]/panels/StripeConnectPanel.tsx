@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { CheckCircle2, AlertCircle, AlertTriangle, Plus, Loader2 } from "lucide-react";
+import { useCallback, useState, useEffect, useRef } from "react";
+import { CheckCircle2, AlertCircle, AlertTriangle, Plus, Loader2, RefreshCcw } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import { humanizeRequirement } from "@/lib/stripe-requirements";
 
 type StripeStatus = {
-  status: "not_connected" | "pending" | "connected" | "issues";
+  status: "not_connected" | "pending" | "reviewing" | "connected" | "issues";
   charges_enabled?: boolean;
   payouts_enabled?: boolean;
   requirements?: {
@@ -17,6 +17,12 @@ type StripeStatus = {
     name: string | null;
   };
 };
+
+// While Stripe verifies, re-check on a timer so the admin doesn't have to
+// refresh. Capped so an account stuck in review doesn't poll forever — after
+// that they can still check by hand.
+const REVIEW_POLL_MS = 10_000;
+const REVIEW_POLL_LIMIT = 30; // ~5 minutes
 
 const BTN_STRIPE = "flex w-full items-center justify-center gap-2 rounded-xl bg-[#635BFF] py-3 text-[14px] font-semibold text-white shadow-sm transition-all hover:bg-[#5851DB] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40";
 
@@ -34,6 +40,40 @@ export default function StripeConnectPanel({
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [pollCount, setPollCount] = useState(0);
+  // Mirrors `status` so the memoised refresh can compare against the current
+  // value without re-creating itself (and restarting the poll) on every change.
+  const statusRef = useRef(initialStatus.status);
+  useEffect(() => {
+    statusRef.current = status.status;
+  }, [status.status]);
+
+  /**
+   * Re-reads the live account status. `silent` skips the success toast so the
+   * background poll doesn't announce every no-op check.
+   */
+  const refreshStatus = useCallback(
+    async (silent = false) => {
+      if (!silent) setChecking(true);
+      try {
+        const res = await fetch(`/api/mosques/${mosqueId}/stripe/status`);
+        if (!res.ok) return;
+        const data = (await res.json()) as StripeStatus;
+        const justConnected =
+          data.status === "connected" && statusRef.current !== "connected";
+        setLastChecked(new Date());
+        setStatus(data);
+        if (justConnected) showToast("Stripe account connected!", "success");
+      } catch {
+        // Leave the current status in place; the next check can recover.
+      } finally {
+        if (!silent) setChecking(false);
+      }
+    },
+    [mosqueId, showToast]
+  );
 
   // Handle return from Stripe
   useEffect(() => {
@@ -41,19 +81,20 @@ export default function StripeConnectPanel({
       if (stripeReturn === "refresh") {
         showToast("Stripe session expired, checking status...", "error");
       }
-      fetch(`/api/mosques/${mosqueId}/stripe/status`)
-        .then((r) => r.ok ? r.json() : null)
-        .then((data) => {
-          if (data) {
-            setStatus(data);
-            if (data.status === "connected") {
-              showToast("Stripe account connected!", "success");
-            }
-          }
-        })
-        .catch(() => {});
+      void refreshStatus(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Poll while Stripe is verifying so the panel flips to Connected on its own.
+  useEffect(() => {
+    if (status.status !== "reviewing" || pollCount >= REVIEW_POLL_LIMIT) return;
+    const timer = setTimeout(() => {
+      setPollCount((n) => n + 1);
+      void refreshStatus(true);
+    }, REVIEW_POLL_MS);
+    return () => clearTimeout(timer);
+  }, [status.status, pollCount, refreshStatus]);
 
   async function handleConnect() {
     setConnecting(true);
@@ -182,6 +223,81 @@ export default function StripeConnectPanel({
           {connecting && <Loader2 size={14} className="animate-spin" />}
           {connecting ? "Redirecting..." : "Continue Setup on Stripe"}
         </button>
+      </div>
+    );
+  }
+
+  // ─── Reviewing ───
+  if (status.status === "reviewing") {
+    const pollingStopped = pollCount >= REVIEW_POLL_LIMIT;
+    return (
+      <div className="space-y-5">
+        <div className="overflow-hidden rounded-xl border border-blue-200 bg-blue-50 shadow-sm">
+          <div className="px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-200">
+                <Loader2 size={18} className="animate-spin text-blue-700" />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-blue-900">
+                  Stripe is reviewing your information
+                </p>
+                <p className="mt-0.5 text-[12px] text-blue-700">
+                  Everything Stripe asked for has been submitted. Verification is usually
+                  done within a few minutes, but it can take up to 24 hours.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2 border-t border-blue-200/60 pt-4">
+              <div className="flex items-center gap-2 text-[12px] text-blue-800">
+                <CheckCircle2 size={14} className="shrink-0 text-blue-600" />
+                Details submitted to Stripe
+              </div>
+              <div className="flex items-center gap-2 text-[12px] font-medium text-blue-900">
+                <Loader2 size={14} className="shrink-0 animate-spin text-blue-600" />
+                Stripe is verifying your account
+              </div>
+              <div className="flex items-center gap-2 text-[12px] text-blue-700/60">
+                <span className="ms-[3px] h-2 w-2 shrink-0 rounded-full border border-blue-300" />
+                Payments enabled
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-stone-200 bg-white px-6 py-5 text-[12px] text-stone-500 shadow-sm">
+          <p>
+            You don&apos;t need to wait here — carry on with the rest of onboarding. This
+            step marks itself complete as soon as Stripe approves the account, and Stripe
+            emails you if they need anything else.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => void refreshStatus()}
+            disabled={checking}
+            className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-[12px] font-medium text-stone-600 shadow-sm transition-colors hover:bg-stone-50 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {checking ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <RefreshCcw size={13} />
+            )}
+            {checking ? "Checking…" : "Check again"}
+          </button>
+          <span className="text-[11px] text-stone-400">
+            {pollingStopped
+              ? "Automatic checks paused — check again any time."
+              : lastChecked
+                ? `Last checked ${lastChecked.toLocaleTimeString([], {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })} · checking every 10s`
+                : "Checking every 10s"}
+          </span>
+        </div>
       </div>
     );
   }

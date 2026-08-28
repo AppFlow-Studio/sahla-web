@@ -3,6 +3,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { PRAYER_NAMES } from "@/lib/prayer/constants";
 import { parseAlAdhanTime, computeIqamahTime, ALADHAN_KEY_MAP, buildAlAdhanQuery } from "@/lib/prayer/utils";
+import { localDay, localCalendarDate } from "@/lib/prayer/timezone";
 import type { AlAdhanDayData, IqamahConfig } from "@/lib/prayer/types";
 
 export async function POST(
@@ -32,9 +33,11 @@ export async function POST(
     return NextResponse.json({ error: "Mosque address is required" }, { status: 400 });
   }
 
+  // Everything below is anchored to the mosque's own calendar day, not the
+  // server's — see lib/prayer/timezone.ts.
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+  const today = localDay(mosque.timezone, now);
+  const { year, month } = today;
 
   // 2. Fetch month from AlAdhan
   const qs = buildAlAdhanQuery(mosque.address, {
@@ -72,11 +75,8 @@ export async function POST(
 
   // 4. Compute today's prayers
   const prayerData: AlAdhanDayData[] = aladhanJson.data;
-  const dd = String(now.getDate()).padStart(2, "0");
-  const mm = String(month).padStart(2, "0");
-  const target = `${dd}-${mm}-${year}`;
 
-  const todayData = prayerData.find((d) => d.date.gregorian.date === target);
+  const todayData = prayerData.find((d) => d.date.gregorian.date === today.aladhan);
   if (!todayData) {
     return NextResponse.json({ error: "Today's data not found in response" }, { status: 500 });
   }
@@ -87,12 +87,15 @@ export async function POST(
     .select("*")
     .eq("mosque_id", mosqueId);
 
-  // 6. Compute and upsert todays_prayers
-  await supabase.from("todays_prayers").delete().eq("mosque_id", mosqueId);
-
-  // todays_prayers.date is NOT NULL. Use the same calendar day we just
-  // pulled from AlAdhan so the row's date matches the times in it.
-  const todayIsoDate = `${year}-${mm}-${dd}`;
+  // 6. Compute and upsert todays_prayers. Scope the delete to today's row only:
+  // the sync-prayer-times cron keeps a 30-day window in this table, and a
+  // mosque-wide delete would wipe it.
+  const todayIsoDate = today.iso;
+  await supabase
+    .from("todays_prayers")
+    .delete()
+    .eq("mosque_id", mosqueId)
+    .eq("date", todayIsoDate);
 
   const todaysRows = PRAYER_NAMES.map((prayer) => {
     const athanRaw = todayData.timings[ALADHAN_KEY_MAP[prayer]];
@@ -101,7 +104,7 @@ export async function POST(
       (c: IqamahConfig) => c.prayer_name === prayer
     );
     const iqamahTime = config
-      ? computeIqamahTime(athanTime, config as IqamahConfig, now)
+      ? computeIqamahTime(athanTime, config as IqamahConfig, localCalendarDate(mosque.timezone, now))
       : null;
 
     return {

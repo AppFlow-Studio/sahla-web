@@ -7,6 +7,7 @@ import PageTransition from "@/app/components/PageTransition";
 import OnboardingPreviewProvider from "./components/OnboardingPreviewContext";
 import OnboardingPhonePreview from "./components/OnboardingPhonePreview";
 import { getMosqueOnboardingData, getMosquePreviewContent } from "./data";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { normalizeFontTheme } from "@/lib/font-themes";
 import { normalizeHeaderStyle } from "@/lib/header-styles";
 
@@ -38,12 +39,25 @@ export default async function MasjidLayout({
   const devReentry =
     process.env.NODE_ENV !== "production" &&
     process.env.ONBOARDING_ALLOW_REENTRY === "1";
-  if (
-    !isHQ &&
-    !devReentry &&
-    (mosque?.onboarding_status === "ready" ||
-      mosque?.onboarding_status === "live")
-  ) {
+  const hasShipped =
+    mosque?.onboarding_status === "ready" ||
+    mosque?.onboarding_status === "live";
+
+  // Only bounce them to the CRM if their plan actually includes it. A Core-plan
+  // mosque sent to /home gets kicked straight back out by the (crm) layout, so
+  // it stays here and `/dashboard` renders their launched-app view instead.
+  let hasCrmAccess = false;
+  if (hasShipped && mosque?.id) {
+    const supabase = createAdminSupabaseClient();
+    const { data: flags } = await supabase
+      .from("mosque_feature_flags")
+      .select("has_crm_access")
+      .eq("mosque_id", mosque.id)
+      .maybeSingle();
+    hasCrmAccess = !!flags?.has_crm_access;
+  }
+
+  if (!isHQ && !devReentry && hasShipped && hasCrmAccess) {
     redirect("/home");
   }
 
@@ -75,7 +89,11 @@ export default async function MasjidLayout({
     <OnboardingPreviewProvider initial={previewInitial}>
       <div className="flex h-screen bg-[#fffbf2]">
         <LeaveOnboardingBeacon />
-        <OnboardingSidebar mosqueName={mosqueName} progress={progress} />
+        <OnboardingSidebar
+          mosqueName={mosqueName}
+          progress={progress}
+          launched={hasShipped && !hasCrmAccess}
+        />
         <main className="flex-1 overflow-y-auto p-8">
           <ToastProvider>
             <PageTransition>{children}</PageTransition>

@@ -12,6 +12,7 @@ type PipelineCounts = {
   demo: number;
   contract: number;
   onboarding: number;
+  building: number;
   live: number;
 };
 
@@ -336,6 +337,7 @@ const PIPELINE_STAGES: { key: keyof PipelineCounts; label: string; color: string
   { key: "demo", label: "Demo", color: "bg-sky-400" },
   { key: "contract", label: "Contract", color: "bg-violet-400" },
   { key: "onboarding", label: "Onboarding", color: "bg-cyan-400" },
+  { key: "building", label: "Building", color: "bg-indigo-500" },
   { key: "live", label: "Live", color: "bg-emerald-500" },
 ];
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,10 @@ type DropdownProps = {
  * - Floating panel with rounded-[14px], border, soft shadow
  * - List items with subtle hover background
  * - Active option bold + tinted
+ *
+ * The panel is portaled to <body> and positioned with `fixed` coordinates taken
+ * from the trigger. Rendering it inline would let any ancestor with
+ * `overflow-hidden` clip it — which is most of the onboarding cards.
  */
 export function Dropdown({
   value,
@@ -39,12 +44,36 @@ export function Dropdown({
   renderTrigger,
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
-  const [placement, setPlacement] = useState<"bottom" | "top">("bottom");
+  const [position, setPosition] = useState<{
+    placement: "bottom" | "top";
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const measure = useCallback(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const estimatedPanelHeight = Math.min(options.length * 36 + 16, 300);
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const placement =
+      spaceBelow < estimatedPanelHeight && rect.top > spaceBelow ? "top" : "bottom";
+    setPosition({
+      placement,
+      // 6px gap matches the old mt-1.5 / mb-1.5.
+      top: placement === "bottom" ? rect.bottom + 6 : rect.top - 6,
+      left: align === "right" ? rect.right : rect.left,
+      width: rect.width,
+    });
+  }, [align, options.length]);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     }
     function escHandler(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -57,20 +86,21 @@ export function Dropdown({
     };
   }, []);
 
+  // A fixed panel doesn't travel with the page, so track the trigger while open.
+  useEffect(() => {
+    if (!open) return;
+    const onMove = () => measure();
+    window.addEventListener("scroll", onMove, true);
+    window.addEventListener("resize", onMove);
+    return () => {
+      window.removeEventListener("scroll", onMove, true);
+      window.removeEventListener("resize", onMove);
+    };
+  }, [open, measure]);
+
   function handleToggle() {
-    setOpen((wasOpen) => {
-      if (!wasOpen && ref.current) {
-        // Decide placement based on available space below trigger.
-        const rect = ref.current.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const spaceAbove = rect.top;
-        const estimatedPanelHeight = Math.min(options.length * 36 + 16, 300);
-        setPlacement(
-          spaceBelow < estimatedPanelHeight && spaceAbove > spaceBelow ? "top" : "bottom"
-        );
-      }
-      return !wasOpen;
-    });
+    if (!open) measure();
+    setOpen((wasOpen) => !wasOpen);
   }
 
   const selected = options.find((o) => o.value === value);
@@ -113,15 +143,19 @@ export function Dropdown({
         </button>
       )}
 
-      {open && (
+      {open && position && typeof document !== "undefined" && createPortal(
         <div
-          className={cn(
-            "absolute z-30 overflow-hidden rounded-[14px] border border-stone-200 bg-white",
-            placement === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5",
-            align === "right" ? "right-0" : "left-0",
-            className?.includes("w-full") && "w-full"
-          )}
+          ref={panelRef}
+          className="fixed z-50 overflow-hidden rounded-[14px] border border-stone-200 bg-white"
           style={{
+            top: position.placement === "bottom" ? position.top : undefined,
+            bottom:
+              position.placement === "top"
+                ? window.innerHeight - position.top
+                : undefined,
+            left: align === "right" ? undefined : position.left,
+            right: align === "right" ? window.innerWidth - position.left : undefined,
+            width: className?.includes("w-full") ? position.width : undefined,
             minWidth: minWidth || undefined,
             boxShadow: "0 8px 28px rgba(0,0,0,0.12)",
           }}
@@ -147,7 +181,8 @@ export function Dropdown({
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

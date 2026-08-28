@@ -8,7 +8,7 @@ const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 
 // Columns the profile mapper reads from a mosques row.
 const MOSQUE_COLUMNS =
-  "id, name, city, state, app_name, address, phone, email, timezone, brand_color, accent_color, font_theme, header_style, logo_url, subscription_tier, onboarding_status, onboarding_progress";
+  "id, name, city, state, app_name, address, phone, email, timezone, brand_color, accent_color, font_theme, header_style, logo_url, subscription_tier, onboarding_status, onboarding_progress, created_at";
 
 /**
  * Mosque profile shipped from the server layout down to the client tree.
@@ -43,6 +43,10 @@ export type MosqueProfile = {
   logoUrl: string | null;
   logoInitials: string;
   onboardingStatus: string;
+  /** Raw onboarding_progress map — drives the CRM's setup-progress card. */
+  onboardingProgress: Record<string, boolean>;
+  /** Mosque row creation date, shown as "Started" on that card. */
+  createdAt: string | null;
   hasCrmAccess: boolean;
   /** Whether this mosque admin has already dismissed the welcome tour. */
   tourDismissed: boolean;
@@ -88,6 +92,8 @@ const HQ_PLACEHOLDER: MosqueProfile = {
   logoUrl: null,
   logoInitials: "SH",
   onboardingStatus: "live",
+  onboardingProgress: {},
+  createdAt: null,
   hasCrmAccess: true,
   tourDismissed: false,
   donationsConfig: null,
@@ -120,6 +126,7 @@ type MosqueRow = {
   subscription_tier: string | null;
   onboarding_status: string | null;
   onboarding_progress: Record<string, unknown> | null;
+  created_at: string | null;
 };
 
 /** Map a mosques row + feature flag into the client-facing MosqueProfile. */
@@ -167,6 +174,10 @@ function toProfile(
     logoUrl: mosque.logo_url ?? null,
     logoInitials: initialsFrom(mosque.name ?? "Mosque"),
     onboardingStatus: mosque.onboarding_status ?? "in_progress",
+    onboardingProgress: Object.fromEntries(
+      Object.entries(progress).filter(([, v]) => typeof v === "boolean")
+    ) as Record<string, boolean>,
+    createdAt: mosque.created_at ?? null,
     hasCrmAccess,
     tourDismissed: progress.crm_tour_dismissed === true,
     donationsConfig,

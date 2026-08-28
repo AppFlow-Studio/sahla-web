@@ -93,6 +93,86 @@ export async function POST(
   return NextResponse.json(data);
 }
 
+// Fields an onboarding admin may edit on an existing item. `type` is
+// deliberately absent — a program can't become an event, since that would
+// change which onboarding task the row counts toward.
+const EDITABLE_FIELDS = [
+  "name",
+  "description",
+  "image",
+  "speakers",
+  "days",
+  "start_date",
+  "end_date",
+  "start_time",
+  "gender",
+  "is_paid",
+  "price",
+  "is_kids",
+] as const;
+
+// PATCH ?contentId=xxx — update one item in place.
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session.userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id: mosqueId } = await params;
+  const contentId = new URL(request.url).searchParams.get("contentId");
+  if (!contentId) {
+    return NextResponse.json({ error: "Content ID required" }, { status: 400 });
+  }
+
+  const body = (await request.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
+  if (!body) {
+    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  }
+
+  const updates: Record<string, unknown> = {};
+  for (const field of EDITABLE_FIELDS) {
+    if (field in body) updates[field] = body[field];
+  }
+
+  if (typeof updates.name === "string") {
+    if (!updates.name.trim()) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    }
+    updates.name = updates.name.trim();
+  }
+  // Keep price consistent with the paid flag, matching the insert path.
+  if (updates.is_paid === false) updates.price = 0;
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
+
+  const supabase = createAdminSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("content_items")
+    .update(updates)
+    .eq("content_id", contentId)
+    .eq("mosque_id", mosqueId)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  if (!data) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  return NextResponse.json(data);
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
