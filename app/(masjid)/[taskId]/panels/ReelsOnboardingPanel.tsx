@@ -200,6 +200,9 @@ export default function ReelsOnboardingPanel({
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       showToast("Reel uploaded", "success");
+      // `reels` completes off the row count (see data.ts reconciliation), which
+      // only re-evaluates on a server read.
+      router.refresh();
     } catch (err) {
       showToast(
         err instanceof Error ? err.message : "Couldn't upload reel",
