@@ -10,6 +10,33 @@ const CORS = {
 
 const PRAYER_NAMES = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 const WINDOW_DAYS = 30;
+const DEFAULT_TIMEZONE = "America/New_York";
+
+/**
+ * 'YYYY-MM-DD' right now in an IANA zone. Al Adhan returns each day's timings
+ * in mosque-local time, and this function runs on a UTC clock, so the window
+ * has to be anchored per mosque — otherwise every US mosque's evening counts as
+ * the next day and the cleanup below deletes the times they are still using.
+ * Mirrors lib/prayer/timezone.ts (edge functions can't import from lib/).
+ */
+function localDateIn(tz: string | null): string {
+  const zone = tz || DEFAULT_TIMEZONE;
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: zone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: DEFAULT_TIMEZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  }
+}
 
 type AlAdhanDay = {
   timings: Record<string, string>;
@@ -49,7 +76,7 @@ Deno.serve(async (req: Request) => {
     // Fetch mosques
     let query = supabase
       .from("mosques")
-      .select("id, city, state, calculation_method, school");
+      .select("id, city, state, calculation_method, school, timezone");
     if (filterMosqueId) {
       query = query.eq("id", filterMosqueId);
     }
@@ -65,33 +92,35 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const now = new Date();
-    const todayStr = now.toISOString().split("T")[0];
-    const endDate = new Date(now);
-    endDate.setDate(endDate.getDate() + WINDOW_DAYS - 1);
-    const endStr = endDate.toISOString().split("T")[0];
-
-    // Figure out which calendar months we need to cover the 30-day window
-    const monthsNeeded: { year: number; month: number }[] = [];
-    const cursor = new Date(now);
-    while (cursor <= endDate) {
-      const y = cursor.getFullYear();
-      const m = cursor.getMonth() + 1;
-      if (!monthsNeeded.find((e) => e.year === y && e.month === m)) {
-        monthsNeeded.push({ year: y, month: m });
-      }
-      cursor.setDate(cursor.getDate() + 15);
-    }
-    // Ensure the end month is included
-    const ey = endDate.getFullYear();
-    const em = endDate.getMonth() + 1;
-    if (!monthsNeeded.find((e) => e.year === ey && e.month === em)) {
-      monthsNeeded.push({ year: ey, month: em });
-    }
-
     let totalUpserted = 0;
+    const windows: { from: string; to: string }[] = [];
 
     for (const mosque of mosques) {
+      // Window start/end are this mosque's own calendar days.
+      const todayStr = localDateIn(mosque.timezone);
+      const startDate = new Date(`${todayStr}T12:00:00Z`);
+      const endDate = new Date(startDate);
+      endDate.setUTCDate(endDate.getUTCDate() + WINDOW_DAYS - 1);
+      const endStr = endDate.toISOString().split("T")[0];
+      windows.push({ from: todayStr, to: endStr });
+
+      // Which calendar months the window spans.
+      const monthsNeeded: { year: number; month: number }[] = [];
+      const cursor = new Date(startDate);
+      while (cursor <= endDate) {
+        const y = cursor.getUTCFullYear();
+        const m = cursor.getUTCMonth() + 1;
+        if (!monthsNeeded.find((e) => e.year === y && e.month === m)) {
+          monthsNeeded.push({ year: y, month: m });
+        }
+        cursor.setUTCDate(cursor.getUTCDate() + 15);
+      }
+      const ey = endDate.getUTCFullYear();
+      const em = endDate.getUTCMonth() + 1;
+      if (!monthsNeeded.find((e) => e.year === ey && e.month === em)) {
+        monthsNeeded.push({ year: ey, month: em });
+      }
+
       const city = mosque.city || "New York";
       const country = "US";
       const method = mosque.calculation_method ?? 2;
@@ -155,17 +184,21 @@ Deno.serve(async (req: Request) => {
           totalUpserted += batch.length;
         }
       }
-    }
 
-    // Clean up old rows (before today)
-    await supabase.from("todays_prayers").delete().lt("date", todayStr);
+      // Clean up rows before this mosque's own today.
+      await supabase
+        .from("todays_prayers")
+        .delete()
+        .eq("mosque_id", mosque.id)
+        .lt("date", todayStr);
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         mosques_synced: mosques.length,
         rows_upserted: totalUpserted,
-        window: { from: todayStr, to: endStr },
+        windows,
       }),
       { status: 200, headers: { ...CORS, "Content-Type": "application/json" } },
     );
