@@ -17,6 +17,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import StatCard from "../_components/StatCard";
+import OnboardingProgressCard from "../_components/OnboardingProgressCard";
 import PageHeader from "../_components/PageHeader";
 import { useDonations } from "../_hooks/useDonations";
 import { useMembers } from "../_hooks/useMembers";
@@ -128,6 +129,8 @@ export default function HomeClient() {
         title="Here's how the community is doing"
         description="A live snapshot of donations, members, and what's next on the calendar."
       />
+
+      <OnboardingProgressCard />
 
       {/* KPI strip */}
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">

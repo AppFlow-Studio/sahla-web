@@ -3,6 +3,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { fetchAthanByPrayer } from "@/lib/prayer/athan-server";
 import { fixedIqamahBeforeAthan } from "@/lib/prayer/utils";
+import { isValidTimeZone } from "@/lib/prayer/timezone";
 import type { IqamahConfig } from "@/lib/prayer/types";
 
 const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -52,6 +53,7 @@ export async function POST(
     latitudeAdjustmentMethod,
     prayerTune,
     shafaq,
+    timezone,
   }: {
     configs: IqamahConfig[];
     calculationMethod: number;
@@ -61,6 +63,7 @@ export async function POST(
     latitudeAdjustmentMethod?: number | null;
     prayerTune?: string | null;
     shafaq?: string;
+    timezone?: string;
   } = body;
 
   if (!configs || !Array.isArray(configs) || configs.length !== 5) {
@@ -96,6 +99,10 @@ export async function POST(
   if (latitudeAdjustmentMethod !== undefined) updateFields.latitude_adjustment_method = latitudeAdjustmentMethod;
   if (prayerTune !== undefined) updateFields.prayer_tune = prayerTune;
   if (shafaq !== undefined) updateFields.shafaq = shafaq;
+  // The wizard sends the zone AlAdhan resolved from the address. Ignore
+  // anything that isn't a real IANA name rather than writing a value that
+  // would break every later "today" lookup.
+  if (isValidTimeZone(timezone)) updateFields.timezone = timezone;
 
   const { data: mosqueData, error: mosqueError } = await supabase
     .from("mosques")

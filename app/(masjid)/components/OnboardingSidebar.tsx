@@ -58,9 +58,17 @@ function pingLeaveNotify() {
 export default function OnboardingSidebar({
   mosqueName,
   progress,
+  launched = false,
 }: {
   mosqueName: string;
   progress: Record<string, boolean>;
+  /**
+   * True for a mosque whose app has shipped but has no CRM — this stays their
+   * home, so the header reads as "live" rather than a setup checklist they're
+   * still working through. The task links remain: without a CRM these panels
+   * are their only web-side editor.
+   */
+  launched?: boolean;
 }) {
   const pathname = usePathname();
   const { signOut } = useClerk();
@@ -85,20 +93,31 @@ export default function OnboardingSidebar({
           Back to Sahla
         </Link>
         <p className="font-display text-xl text-[#E8D5B0]">{mosqueName}</p>
-        <p className="mt-0.5 text-[12px] text-sidebar-text-muted">App Onboarding</p>
-        <div className="mt-4 flex items-center gap-3">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-sidebar-active-bg">
-            <motion.div
-              className="h-full rounded-full bg-emerald-400"
-              initial={{ width: 0 }}
-              animate={{ width: `${overallPct}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
+        <p className="mt-0.5 text-[12px] text-sidebar-text-muted">
+          {launched ? "Sahla Core" : "App Onboarding"}
+        </p>
+        {launched ? (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-400/10 px-2.5 py-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <span className="text-[11px] font-medium text-emerald-300">
+              App is live
+            </span>
           </div>
-          <span className="text-[11px] font-medium tabular-nums text-sidebar-text-muted">
-            {completedTasks}/{totalTasks}
-          </span>
-        </div>
+        ) : (
+          <div className="mt-4 flex items-center gap-3">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-sidebar-active-bg">
+              <motion.div
+                className="h-full rounded-full bg-emerald-400"
+                initial={{ width: 0 }}
+                animate={{ width: `${overallPct}%` }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              />
+            </div>
+            <span className="text-[11px] font-medium tabular-nums text-sidebar-text-muted">
+              {completedTasks}/{totalTasks}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Task List */}

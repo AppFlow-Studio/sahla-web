@@ -90,13 +90,14 @@ export default async function OverviewPage() {
   }
 
   /* pipeline stage counts */
-  type Stage = "lead" | "contacted" | "demo" | "contract" | "onboarding" | "live";
+  type Stage = "lead" | "contacted" | "demo" | "contract" | "onboarding" | "building" | "live";
   const pipelineCounts: Record<Stage, number> = {
     lead: 0,
     contacted: 0,
     demo: 0,
     contract: 0,
     onboarding: 0,
+    building: 0,
     live: 0,
   };
   for (const row of pipelineRows ?? []) {

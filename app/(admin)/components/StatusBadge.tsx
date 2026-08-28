@@ -6,6 +6,7 @@ const STAGE_STYLES: Record<string, StageStyle> = {
   demo:       { bg: "#fffbeb", border: "#fde68a", color: "#b45309", dot: "#f59e0b" },
   contract:   { bg: "#f5f3ff", border: "#ddd6fe", color: "#6d28d9", dot: "#8b5cf6" },
   onboarding: { bg: "#f0fdfa", border: "#99f6e4", color: "#0f766e", dot: "#14b8a6" },
+  building:   { bg: "#eef2ff", border: "#c7d2fe", color: "#4338ca", dot: "#6366f1" },
   live:       { bg: "#ecfdf5", border: "#a7f3d0", color: "#047857", dot: "#10b981" },
 };
 

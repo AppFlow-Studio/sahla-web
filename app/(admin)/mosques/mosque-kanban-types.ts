@@ -4,6 +4,7 @@ export type Stage =
   | "demo"
   | "contract"
   | "onboarding"
+  | "building"
   | "live";
 
 export const STAGES: Stage[] = [
@@ -12,6 +13,7 @@ export const STAGES: Stage[] = [
   "demo",
   "contract",
   "onboarding",
+  "building",
   "live",
 ];
 
@@ -21,6 +23,7 @@ export const STAGE_LABELS: Record<Stage, string> = {
   demo: "Demo",
   contract: "Contract",
   onboarding: "Onboarding",
+  building: "Building",
   live: "Live",
 };
 

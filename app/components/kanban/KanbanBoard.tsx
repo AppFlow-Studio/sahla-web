@@ -35,6 +35,7 @@ const VALID_STAGES = new Set<Stage>([
   "demo",
   "contract",
   "onboarding",
+  "building",
   "live",
 ]);
 
@@ -59,10 +60,11 @@ const STAGE_DROP_BORDER_CLASS: Record<Stage, string> = {
   demo: "border-violet-500",
   contract: "border-amber-500",
   onboarding: "border-cyan-600",
+  building: "border-indigo-500",
   live: "border-lime-500",
 };
 
-const STAGE_ORDER: Stage[] = ["lead", "contacted", "demo", "contract", "onboarding", "live"];
+const STAGE_ORDER: Stage[] = ["lead", "contacted", "demo", "contract", "onboarding", "building", "live"];
 
 function DraggableMasjidCard({ card, onMoveNext, onNoteAdded, onContactEdited, onCreateAccount, onDelete }: { card: KanbanCard; onMoveNext: () => void; onNoteAdded: (note: string) => void; onContactEdited: (name: string, email: string) => void; onCreateAccount?: () => void; onDelete?: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -201,7 +203,9 @@ export default function KanbanBoard({ cards }: Props) {
     // made this read $0 whenever the board had no live cards. Open deals have
     // no subscription tier yet, so each is estimated at a flat $300/mo.
     const OPEN_DEAL_MRR = 300;
-    const openDeals = filteredCards.filter((c) => c.stage !== "live").length;
+    const openDeals = filteredCards.filter(
+      (c) => c.stage !== "live" && c.stage !== "building"
+    ).length;
     const value = openDeals * OPEN_DEAL_MRR;
     return {
       totalMosques: total,
@@ -225,6 +229,7 @@ export default function KanbanBoard({ cards }: Props) {
       demo: [],
       contract: [],
       onboarding: [],
+      building: [],
       live: [],
     };
     const stages: Stage[] = [
@@ -233,6 +238,7 @@ export default function KanbanBoard({ cards }: Props) {
       "demo",
       "contract",
       "onboarding",
+      "building",
       "live",
     ];
     for (const card of filteredCards) {

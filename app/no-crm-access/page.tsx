@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Check, ArrowRight, MessageSquareText, ExternalLink, LayoutDashboard } from "lucide-react";
 import { getPlanPricing } from "@/lib/pricing";
+import { getCurrentMosque } from "@/app/(crm)/_lib/getCurrentMosque";
+import BillingPortalButton from "@/app/components/BillingPortalButton";
 
 const FEATURES = [
   "Members directory with last-active + push status",
@@ -13,6 +15,14 @@ const FEATURES = [
 
 export default async function NoCrmAccessPage() {
   const pricing = await getPlanPricing();
+  // This page is the (crm) layout's redirect target for the "no-access" case,
+  // which carries the mosque profile — use it to open their real billing
+  // portal instead of a generic Stripe link.
+  const current = await getCurrentMosque();
+  const mosqueId =
+    current.kind === "no-access" || current.kind === "ok"
+      ? current.mosque.id
+      : null;
   return (
     <div className="min-h-screen bg-[#fffbf2] text-[#0A261E]">
       <div
@@ -63,15 +73,23 @@ export default async function NoCrmAccessPage() {
             </ul>
 
             <div className="mt-8 flex flex-col gap-3 md:flex-row">
-              <a
-                href="https://billing.stripe.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#0A261E] px-4 py-3 text-[13px] font-semibold text-[#fffbf2] transition-opacity hover:opacity-90"
-              >
-                Upgrade in Stripe
-                <ExternalLink size={13} />
-              </a>
+              {mosqueId ? (
+                <div className="flex-1">
+                  <BillingPortalButton
+                    mosqueId={mosqueId}
+                    label="Upgrade in Stripe"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#0A261E] px-4 py-3 text-[13px] font-semibold text-[#fffbf2] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+              ) : (
+                <a
+                  href="mailto:support@sahla.co?subject=Adding%20the%20CRM%20to%20our%20plan"
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#0A261E] px-4 py-3 text-[13px] font-semibold text-[#fffbf2] transition-opacity hover:opacity-90"
+                >
+                  Contact us to upgrade
+                  <ExternalLink size={13} />
+                </a>
+              )}
               <Link
                 href="/dashboard"
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-[#0A261E]/12 bg-white px-4 py-3 text-[13px] font-semibold text-[#0A261E] transition-colors hover:bg-[#fffbf2]"

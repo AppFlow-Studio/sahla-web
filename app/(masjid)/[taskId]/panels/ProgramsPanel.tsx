@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, Plus, Upload, Trash2, Loader2 } from "lucide-react";
+import { BookOpen, Plus, Upload, Trash2, Pencil, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
 import CSVImport from "../../components/CSVImport";
 import TimePicker, { formatTimeLabel } from "../../components/TimePicker";
+import CoverImageUpload from "../../components/CoverImageUpload";
 import { usePreview } from "../../components/OnboardingPreviewContext";
 import { Dropdown } from "@/app/(admin)/components/Dropdown";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ type ContentItem = {
   content_id: string;
   name: string;
   description: string | null;
+  image: string | null;
   speakers: string[];
   days: string[];
   start_time: string | null;
@@ -76,9 +78,12 @@ export default function ProgramsPanel({
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showCSV, setShowCSV] = useState(false);
+  // content_id of the program being edited; null while adding a new one.
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [image, setImage] = useState<string | null>(null);
   const [selectedSpeaker, setSelectedSpeaker] = useState("");
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -116,10 +121,28 @@ export default function ProgramsPanel({
   );
 
   function resetForm() {
-    setName(""); setDescription(""); setSelectedSpeaker(""); setSelectedDays([]);
+    setName(""); setDescription(""); setImage(null); setSelectedSpeaker(""); setSelectedDays([]);
     setSelectedCategories([]);
     setStartTime(""); setGender("All"); setIsKids(false); setIsPaid(false); setPrice("");
+    setEditingId(null);
     setShowForm(false);
+  }
+
+  function startEdit(prog: ContentItem) {
+    setEditingId(prog.content_id);
+    setName(prog.name ?? "");
+    setDescription(prog.description ?? "");
+    setImage(prog.image ?? null);
+    setSelectedSpeaker(prog.speakers?.[0] ?? "");
+    setSelectedDays(prog.days ?? []);
+    setSelectedCategories(assignments[prog.content_id] ?? []);
+    // Times come back as HH:MM:SS; the picker works in HH:MM.
+    setStartTime(prog.start_time ? prog.start_time.slice(0, 5) : "");
+    setGender(prog.gender ?? "All");
+    setIsKids(prog.is_kids);
+    setIsPaid(prog.is_paid);
+    setPrice(prog.is_paid ? String(prog.price ?? "") : "");
+    setShowForm(true);
   }
 
   function toggleDay(day: string) {
@@ -134,57 +157,88 @@ export default function ProgramsPanel({
     );
   }
 
-  async function addProgram() {
+  /**
+   * Replaces a program's category set. The assignments route does the same
+   * replace whether the program is new or existing, so both paths share it.
+   */
+  async function saveCategories(contentId: string, verb: "added" | "updated") {
+    const assignRes = await fetch(
+      `/api/mosques/${mosqueId}/program-categories/assignments`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentId, categoryIds: selectedCategories }),
+      }
+    );
+    if (assignRes.ok) {
+      const { categoryIds } = (await assignRes.json()) as {
+        categoryIds: string[];
+      };
+      setAssignments((prev) => ({ ...prev, [contentId]: categoryIds }));
+    } else {
+      showToast(`Program ${verb}, but categories didn't save`, "error");
+    }
+  }
+
+  async function saveProgram() {
     if (!name.trim()) { showToast("Program name is required", "error"); return; }
     setSaving(true);
+    const fields = {
+      name,
+      description: description || null,
+      image,
+      speakers: selectedSpeaker ? [selectedSpeaker] : [],
+      days: selectedDays,
+      start_time: startTime || null,
+      gender,
+      is_kids: isKids,
+      is_paid: isPaid,
+      price: isPaid ? parseFloat(price) || 0 : 0,
+    };
     try {
+      if (editingId) {
+        const res = await fetch(
+          `/api/mosques/${mosqueId}/content?contentId=${editingId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(fields),
+          }
+        );
+        if (!res.ok) throw new Error("Failed to save");
+        const updated = await res.json();
+        // Always re-send: an edit can also clear every category.
+        await saveCategories(editingId, "updated");
+        setPrograms((prev) =>
+          prev.map((p) => (p.content_id === editingId ? updated : p))
+        );
+        resetForm();
+        showToast("Program updated", "success");
+        return;
+      }
+
       const res = await fetch(`/api/mosques/${mosqueId}/content`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "program",
-          name,
-          description: description || null,
-          speakers: selectedSpeaker ? [selectedSpeaker] : [],
-          days: selectedDays,
-          start_time: startTime || null,
-          gender,
-          is_kids: isKids,
-          is_paid: isPaid,
-          price: isPaid ? parseFloat(price) || 0 : 0,
-          markComplete: true,
-        }),
+        body: JSON.stringify({ type: "program", ...fields, markComplete: true }),
       });
       if (!res.ok) throw new Error("Failed to add");
       const newItem = await res.json();
 
       // Sort the new program into the chosen categories.
       if (selectedCategories.length > 0) {
-        const assignRes = await fetch(
-          `/api/mosques/${mosqueId}/program-categories/assignments`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contentId: newItem.content_id,
-              categoryIds: selectedCategories,
-            }),
-          }
-        );
-        if (assignRes.ok) {
-          const { categoryIds } = (await assignRes.json()) as {
-            categoryIds: string[];
-          };
-          setAssignments((prev) => ({ ...prev, [newItem.content_id]: categoryIds }));
-        } else {
-          showToast("Program added, but categories didn't save", "error");
-        }
+        await saveCategories(newItem.content_id, "added");
       }
 
       setPrograms((prev) => [newItem, ...prev]);
       resetForm();
       showToast("Program added", "success");
-    } catch { showToast("Failed to add program", "error"); }
+      // The POST marks the `programs` task complete server-side; refresh so the
+      // sidebar checkmark lands now instead of on the next navigation.
+      router.refresh();
+    } catch {
+      showToast(editingId ? "Failed to save program" : "Failed to add program", "error");
+    }
     finally { setSaving(false); }
   }
 
@@ -219,6 +273,14 @@ export default function ProgramsPanel({
                 transition={{ duration: 0.2 }}
                 className="group flex items-start gap-4 rounded-xl border border-stone-200 bg-white px-5 py-4 shadow-sm transition-colors hover:bg-stone-50/60"
               >
+                {prog.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={prog.image}
+                    alt=""
+                    className="h-14 w-14 shrink-0 rounded-lg border border-stone-200 object-cover"
+                  />
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold text-stone-900">{prog.name}</p>
                   {prog.description && (
@@ -264,12 +326,22 @@ export default function ProgramsPanel({
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => deleteProgram(prog.content_id)}
-                  className="rounded-md p-1.5 text-stone-300 opacity-0 transition-all hover:bg-stone-100 hover:text-red-500 group-hover:opacity-100"
-                >
-                  <Trash2 size={15} />
-                </button>
+                <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                  <button
+                    onClick={() => startEdit(prog)}
+                    aria-label={`Edit ${prog.name}`}
+                    className="rounded-md p-1.5 text-stone-300 transition-colors hover:bg-stone-100 hover:text-stone-700"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    onClick={() => deleteProgram(prog.content_id)}
+                    aria-label={`Remove ${prog.name}`}
+                    className="rounded-md p-1.5 text-stone-300 transition-colors hover:bg-stone-100 hover:text-red-500"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </motion.div>
             ))}
           </AnimatePresence>
@@ -295,7 +367,9 @@ export default function ProgramsPanel({
             className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm"
           >
             <div className="border-b border-stone-100 bg-stone-50/60 px-6 py-4">
-              <p className="text-[14px] font-semibold text-stone-900">New Program</p>
+              <p className="text-[14px] font-semibold text-stone-900">
+                {editingId ? "Edit Program" : "New Program"}
+              </p>
             </div>
             <div className="space-y-4 px-6 py-5">
               <div>
@@ -342,6 +416,15 @@ export default function ProgramsPanel({
                   placeholder="Brief description (optional)"
                   rows={2}
                   className="w-full resize-none rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none transition-colors placeholder:text-stone-400 hover:border-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>Cover Image</label>
+                <CoverImageUpload
+                  value={image}
+                  mosqueId={mosqueId}
+                  disabled={saving}
+                  onChange={setImage}
                 />
               </div>
               <div>
@@ -462,9 +545,11 @@ export default function ProgramsPanel({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={addProgram} disabled={saving} className={BTN_PRIMARY_SM}>
+                <button onClick={saveProgram} disabled={saving} className={BTN_PRIMARY_SM}>
                   {saving && <Loader2 size={13} className="animate-spin" />}
-                  {saving ? "Adding..." : "Add Program"}
+                  {saving
+                    ? editingId ? "Saving..." : "Adding..."
+                    : editingId ? "Save Changes" : "Add Program"}
                 </button>
                 <button onClick={resetForm} className={BTN_GHOST_SM}>
                   Cancel

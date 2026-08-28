@@ -108,22 +108,29 @@ export const proxy = clerkMiddleware(async (auth, req) => {
       url.pathname = ADMIN_LANDING;
       return NextResponse.redirect(url);
     }
-    // For mosque admins: route to /home if onboarding has shipped (ready/live),
-    // otherwise drop them in the onboarding dashboard. Single DB hit so the
-    // OrganizationSwitcher → /launch → final-destination chain is one hop.
+    // For mosque admins: route to /home only when onboarding has shipped AND
+    // the plan includes the CRM. Core-plan mosques land on /dashboard, which
+    // renders their launched-app view — sending them to /home would just bounce
+    // through the (crm) layout to /no-crm-access.
     let landing: string = MASJID_LANDING;
     try {
       const supabase = createAdminSupabaseClient();
       const { data: mosque } = await supabase
         .from("mosques")
-        .select("onboarding_status")
+        .select("id, onboarding_status")
         .eq("clerk_org_id", session.orgId)
         .maybeSingle();
       if (
-        mosque?.onboarding_status === "ready" ||
-        mosque?.onboarding_status === "live"
+        mosque?.id &&
+        (mosque.onboarding_status === "ready" ||
+          mosque.onboarding_status === "live")
       ) {
-        landing = "/home";
+        const { data: flags } = await supabase
+          .from("mosque_feature_flags")
+          .select("has_crm_access")
+          .eq("mosque_id", mosque.id)
+          .maybeSingle();
+        if (flags?.has_crm_access) landing = "/home";
       }
     } catch {
       // Fall back to /dashboard if the lookup fails; the masjid layout has

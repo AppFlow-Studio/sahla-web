@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import type { KanbanCard as KanbanCardModel, Stage } from "./types";
+import type { KanbanCard as KanbanCardModel, Stage, StoreBuild } from "./types";
 import EditContactModal from "./EditContactModal";
 import MosqueDetailsModal from "./MosqueDetailsModal";
 
@@ -110,8 +110,48 @@ const stageBorderClass: Record<Stage, string> = {
   demo: "border-l-violet-500",
   contract: "border-l-amber-500",
   onboarding: "border-l-cyan-600",
+  building: "border-l-indigo-500",
   live: "border-l-lime-500",
 };
+
+const PLATFORM_LABEL: Record<string, string> = { ios: "iOS", android: "Android" };
+
+/**
+ * Colour by how far along the store build is: red for a failure that needs
+ * attention, emerald once it's shipped, indigo while it's in flight.
+ */
+function buildChipClasses(status: string | null): string {
+  const s = (status ?? "").toLowerCase();
+  if (s.includes("reject") || s.includes("fail") || s.includes("error")) {
+    return "border border-red-200 bg-red-50 text-red-600";
+  }
+  if (s.includes("live") || s.includes("ready") || s.includes("approved")) {
+    return "border border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  return "border border-indigo-200 bg-indigo-50 text-indigo-700";
+}
+
+function BuildChips({ builds }: { builds: StoreBuild[] }) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+      {builds.slice(0, 2).map((b) => {
+        const label = PLATFORM_LABEL[b.platform?.toLowerCase()] ?? b.platform;
+        const status = b.onTestflight && b.platform?.toLowerCase() === "ios"
+          ? "TestFlight"
+          : (b.status ?? "unknown").replace(/_/g, " ");
+        return (
+          <span
+            key={b.platform}
+            className={`truncate rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${buildChipClasses(b.status)}`}
+          >
+            {label}
+            {b.version ? ` ${b.version}` : ""} · {status}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 function badgeClasses(iso: string): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -401,7 +441,15 @@ export default function MasjidCard({ card, onMoveNext, onNoteAdded, onContactEdi
           <hr className="mt-auto w-full shrink-0 border-t border-green/20" />
 
           <div className="mt-3 flex shrink-0 items-center justify-between gap-3">
-            {referredBy ? (
+            {card.stage === "building" ? (
+              card.builds && card.builds.length > 0 ? (
+                <BuildChips builds={card.builds} />
+              ) : (
+                <p className="min-w-0 flex-1 text-[11px] font-medium text-amber-500">
+                  No store build yet
+                </p>
+              )
+            ) : referredBy ? (
               <p className="line-clamp-2 min-w-0 flex-1 text-[11px] leading-snug text-green/[0.52]">
                 {referredBy}
               </p>
