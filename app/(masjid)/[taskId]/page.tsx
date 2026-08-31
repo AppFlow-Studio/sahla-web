@@ -6,7 +6,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { ALL_TASKS, ONBOARDING_CATEGORIES } from "../components/onboarding-tasks";
 import { getMosqueOnboardingData } from "../data";
 import TaskPageTransition from "./TaskPageTransition";
-import { createStripeClient, ACCOUNT_INCLUDES, mapAccountStatus } from "@/lib/stripe";
+import { createStripeClient, ACCOUNT_INCLUDES, mapAccountStatus, reconcileSaasSubscription } from "@/lib/stripe";
 import { markOnboardingStep } from "@/lib/supabase/onboarding";
 
 // Lazy-load panels — only the active panel is compiled/loaded per request.
@@ -241,6 +241,27 @@ export default async function TaskPage({
 
   let goLiveData = null;
   if (taskId === "go_live") {
+    // Self-heal before rendering: if Stripe says they already have an active
+    // subscription, payment is done and onboarding is complete — regardless of
+    // whether the webhook ever arrived. Showing the plan picker to a mosque
+    // that already pays is worse than a slower page.
+    const mosqueRow = mosque as Record<string, unknown>;
+    if (
+      mosqueRow.saas_stripe_customer_id &&
+      mosqueRow.onboarding_status !== "ready" &&
+      mosqueRow.onboarding_status !== "live"
+    ) {
+      const synced = await reconcileSaasSubscription(createAdminSupabaseClient(), {
+        id: mosqueRow.id as string,
+        saas_stripe_customer_id: mosqueRow.saas_stripe_customer_id as string,
+        onboarding_status: mosqueRow.onboarding_status as string | null,
+        onboarding_progress: progress as Record<string, unknown>,
+      });
+      // The layout sends "ready" mosques on to their dashboard, so bounce
+      // through it rather than rendering a Go Live panel that is now wrong.
+      if (synced) redirect("/launching?payment=success");
+    }
+
     const allOnboardingTasks = ONBOARDING_CATEGORIES.flatMap((c) => c.tasks)
       .filter((t) => t.id !== "go_live");
     goLiveData = {

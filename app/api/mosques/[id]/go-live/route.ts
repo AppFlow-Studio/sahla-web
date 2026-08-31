@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { createStripeClient } from "@/lib/stripe";
+import { createStripeClient, reconcileSaasSubscription } from "@/lib/stripe";
 import { NextResponse } from "next/server";
 
 const TIER_CONFIG: Record<string, { envKey: string; name: string }> = {
@@ -26,12 +26,31 @@ export async function POST(
   // Verify mosque exists and get data
   const { data: mosque, error: mosqueError } = await supabase
     .from("mosques")
-    .select("id, name, email, onboarding_progress, onboarding_status, saas_stripe_customer_id")
+    .select("id, name, email, onboarding_progress, onboarding_status, saas_stripe_customer_id, subscription_status")
     .eq("id", mosqueId)
     .single();
 
   if (mosqueError || !mosque) {
     return NextResponse.json({ error: "Mosque not found" }, { status: 404 });
+  }
+
+  // Before anything else: if Stripe already has an active subscription for this
+  // mosque, they've paid — regardless of whether the webhook ever landed. Write
+  // the post-payment state now and send them down the success path instead of
+  // selling them a second subscription.
+  if (
+    mosque.saas_stripe_customer_id &&
+    mosque.onboarding_status !== "ready" &&
+    mosque.onboarding_status !== "live"
+  ) {
+    const reconciled = await reconcileSaasSubscription(supabase, mosque);
+    if (reconciled) {
+      const syncedAppUrl =
+        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      return NextResponse.json({
+        checkoutUrl: `${syncedAppUrl}/launching?payment=success`,
+      });
+    }
   }
 
   // Already-onboarded mosques (paid + ready, or fully live) shouldn't kick
