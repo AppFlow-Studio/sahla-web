@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export function createStripeClient(): Stripe {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -75,4 +76,104 @@ export function mapAccountStatus(
     requirements: { currently_due, past_due },
     business_profile: { name: account.display_name ?? null },
   };
+}
+
+const TIER_PRICE_ENV: Record<string, string> = {
+  core: "STRIPE_PRICE_CORE",
+  core_crm: "STRIPE_PRICE_CORE_CRM",
+};
+
+/** Price ID → tier, built from env at call time so a missing var can be logged. */
+function priceToTier(): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const [tier, envKey] of Object.entries(TIER_PRICE_ENV)) {
+    const priceId = process.env[envKey];
+    if (priceId) map[priceId] = tier;
+  }
+  return map;
+}
+
+type ReconcileMosque = {
+  id: string;
+  saas_stripe_customer_id: string | null;
+  onboarding_status: string | null;
+  onboarding_progress: Record<string, unknown> | null;
+};
+
+/**
+ * Reads the mosque's live subscription state straight from Stripe and writes the
+ * post-payment state if one exists.
+ *
+ * Payment — not webhook delivery — is what completes onboarding. The
+ * `checkout.session.completed` webhook is still the fast path, but it can be
+ * undelivered, misconfigured, or pointed at the wrong endpoint, and until it
+ * lands the mosque is stuck being asked to subscribe to something they already
+ * pay for. Calling this on the Go Live surfaces makes payment sufficient on its
+ * own; it writes exactly what the webhook would, and is safe to run repeatedly.
+ *
+ * Returns the tier when a subscription was found (whether or not the row needed
+ * updating), or null when the mosque has no active subscription.
+ */
+export async function reconcileSaasSubscription(
+  supabase: SupabaseClient,
+  mosque: ReconcileMosque
+): Promise<{ tier: string | null; alreadyLive: boolean } | null> {
+  if (!mosque.saas_stripe_customer_id) return null;
+
+  let subscription;
+  try {
+    const stripe = createStripeClient();
+    const subs = await stripe.subscriptions.list({
+      customer: mosque.saas_stripe_customer_id,
+      status: "all",
+      limit: 10,
+    });
+    subscription = subs.data.find(
+      (s) => s.status === "active" || s.status === "trialing"
+    );
+  } catch (err) {
+    console.error("reconcileSaasSubscription: Stripe lookup failed", err);
+    return null;
+  }
+
+  if (!subscription) return null;
+
+  const priceId = subscription.items.data[0]?.price?.id;
+  const tier = (priceId ? priceToTier()[priceId] : undefined) ?? null;
+  if (priceId && !tier) {
+    // Without a tier the CRM access flag stays false, so make the cause loud.
+    console.error(
+      `reconcileSaasSubscription: no tier for price ${priceId} — check STRIPE_PRICE_* env`
+    );
+  }
+
+  const alreadyLive = mosque.onboarding_status === "live";
+  const item = subscription.items.data[0] as { current_period_end?: number } | undefined;
+  const periodEnd =
+    item?.current_period_end ??
+    (subscription as unknown as { current_period_end?: number }).current_period_end;
+
+  const progress = { ...(mosque.onboarding_progress ?? {}), go_live: true };
+
+  const { error } = await supabase
+    .from("mosques")
+    .update({
+      subscription_status: "active",
+      saas_stripe_subscription_id: subscription.id,
+      // Never demote a launched mosque back to "ready".
+      onboarding_status: alreadyLive ? "live" : "ready",
+      onboarding_progress: progress,
+      ...(tier ? { subscription_tier: tier } : {}),
+      ...(periodEnd
+        ? { current_period_end: new Date(periodEnd * 1000).toISOString() }
+        : {}),
+    })
+    .eq("id", mosque.id);
+
+  if (error) {
+    console.error("reconcileSaasSubscription: mosque update failed", error);
+    return null;
+  }
+
+  return { tier, alreadyLive };
 }
