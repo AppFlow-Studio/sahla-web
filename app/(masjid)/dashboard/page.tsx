@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { ONBOARDING_CATEGORIES, ALL_TASKS } from "../components/onboarding-tasks";
 import { getMosqueOnboardingData } from "../data";
 import OnboardingDashboardClient from "../OnboardingDashboardClient";
-import LaunchedDashboard from "../components/LaunchedDashboard";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { getPlanPricing } from "@/lib/pricing";
+
+const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 
 export default async function OnboardingDashboard() {
   const session = await auth();
@@ -27,13 +27,23 @@ export default async function OnboardingDashboard() {
   // Find first incomplete task
   const nextTask = ALL_TASKS.find((t) => progress[t.id] !== true);
 
+  // Onboarding is finished — this checklist is not their screen any more.
+  // CRM mosques were already sent to /home by the layout; everyone else lands
+  // on /complete, which shows their plan and what they paid. The HQ and
+  // dev-reentry escapes mirror the layout's so QA can still walk the flow.
+  const hasShipped = onboardingStatus === "ready" || onboardingStatus === "live";
+  const isHQ = !!SAHLA_HQ_ORG_ID && orgId === SAHLA_HQ_ORG_ID;
+  const devReentry =
+    process.env.NODE_ENV !== "production" &&
+    process.env.ONBOARDING_ALLOW_REENTRY === "1";
+  if (hasShipped && !isHQ && !devReentry) {
+    redirect("/complete");
+  }
+
   // CRM CTA — surface only when the mosque is past onboarding AND has the
   // CRM tier active. Same feature-flags view the (crm) layout gate uses.
   let crmAvailable = false;
-  if (
-    mosque?.id &&
-    (onboardingStatus === "ready" || onboardingStatus === "live")
-  ) {
+  if (mosque?.id && hasShipped) {
     const supabase = createAdminSupabaseClient();
     const { data: flags } = await supabase
       .from("mosque_feature_flags")
@@ -41,22 +51,6 @@ export default async function OnboardingDashboard() {
       .eq("mosque_id", mosque.id)
       .maybeSingle();
     crmAvailable = !!flags?.has_crm_access;
-  }
-
-  // A shipped mosque without CRM access has nowhere else to go — the (crm)
-  // routes bounce them out. Show what they actually have (a live app) and the
-  // upgrade path, rather than an onboarding checklist they've already finished.
-  const hasShipped = onboardingStatus === "ready" || onboardingStatus === "live";
-  if (hasShipped && !crmAvailable && mosque?.id) {
-    const pricing = await getPlanPricing().catch(() => null);
-    return (
-      <LaunchedDashboard
-        mosqueName={mosqueName}
-        mosqueId={mosque.id as string}
-        isLive={onboardingStatus === "live"}
-        priceLabel={pricing?.core_crm.formatted ?? null}
-      />
-    );
   }
 
   return (
