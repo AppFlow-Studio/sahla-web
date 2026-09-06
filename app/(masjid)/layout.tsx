@@ -6,6 +6,7 @@ import LeaveOnboardingBeacon from "./components/LeaveOnboardingBeacon";
 import PageTransition from "@/app/components/PageTransition";
 import OnboardingPreviewProvider from "./components/OnboardingPreviewContext";
 import OnboardingPhonePreview from "./components/OnboardingPhonePreview";
+import CompletionCelebration from "./components/CompletionCelebration";
 import { getMosqueOnboardingData, getMosquePreviewContent } from "./data";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { normalizeFontTheme } from "@/lib/font-themes";
@@ -87,20 +88,22 @@ export default async function MasjidLayout({
 
   return (
     <OnboardingPreviewProvider initial={previewInitial}>
-      <div className="flex h-screen bg-[#fffbf2]">
-        <LeaveOnboardingBeacon />
-        <OnboardingSidebar
-          mosqueName={mosqueName}
-          progress={progress}
-          launched={hasShipped && !hasCrmAccess}
-        />
-        <main className="flex-1 overflow-y-auto p-8">
-          <ToastProvider>
-            <PageTransition>{children}</PageTransition>
-          </ToastProvider>
-        </main>
-        <OnboardingPhonePreview />
-      </div>
+      <CompletionCelebration progress={progress}>
+        <div className="flex h-screen bg-[#fffbf2]">
+          <LeaveOnboardingBeacon />
+          <OnboardingSidebar
+            mosqueName={mosqueName}
+            progress={progress}
+            launched={hasShipped && !hasCrmAccess}
+          />
+          <main className="flex-1 overflow-y-auto p-8">
+            <ToastProvider>
+              <PageTransition>{children}</PageTransition>
+            </ToastProvider>
+          </main>
+          <OnboardingPhonePreview />
+        </div>
+      </CompletionCelebration>
     </OnboardingPreviewProvider>
   );
 }

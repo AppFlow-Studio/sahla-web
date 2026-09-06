@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, Check, Loader2 } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
+import CheckDraw from "@/app/components/CheckDraw";
+import { DUR, EASE_OUT_EXPO } from "@/lib/motion";
 import { usePreview } from "../../components/OnboardingPreviewContext";
 import { Dropdown } from "@/app/(admin)/components/Dropdown";
 import AddressAutocomplete, { type SelectedPlace } from "../../components/AddressAutocomplete";
@@ -118,16 +121,32 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
 
   return (
     <div className="space-y-6">
-      {/* Progress Bar */}
+      {/* Progress Bar — the badge lands the moment the task clears its bar */}
       <div className="flex items-center gap-3">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-100">
-          <div
-            className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-            style={{ width: `${Math.round((filledCount / FIELDS.length) * 100)}%` }}
+          <motion.div
+            className="h-full w-full origin-left rounded-full bg-emerald-500"
+            initial={false}
+            animate={{ scaleX: filledCount / FIELDS.length }}
+            transition={{ duration: DUR.state, ease: EASE_OUT_EXPO }}
           />
         </div>
-        <span className="text-[11px] font-medium tabular-nums text-stone-500">
+        <span className="flex items-center gap-1.5 text-[11px] font-medium tabular-nums text-stone-500">
           {filledCount}/{FIELDS.length} fields
+          <AnimatePresence initial={false}>
+            {canComplete && (
+              <motion.span
+                key="complete"
+                className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white"
+                initial={{ scale: 0.3, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.3, opacity: 0 }}
+                transition={{ duration: DUR.state, ease: EASE_OUT_EXPO }}
+              >
+                <CheckDraw size={9} strokeWidth={4} />
+              </motion.span>
+            )}
+          </AnimatePresence>
         </span>
       </div>
 
