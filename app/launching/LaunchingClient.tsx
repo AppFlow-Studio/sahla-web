@@ -45,7 +45,7 @@ export default function LaunchingClient() {
           setPhase("ready");
           // Brief celebratory pause before routing, so the green check is visible
           window.setTimeout(() => {
-            router.push("/home");
+            router.push("/complete");
           }, 800);
           return;
         }
@@ -164,7 +164,7 @@ function ReadyCard({ mosqueName }: { mosqueName: string | null }) {
         {mosqueName ? `${mosqueName} is set up` : "You're set up"}
       </h1>
       <p className="mt-2 text-[13.5px] leading-relaxed text-[#0A261E]/65">
-        Redirecting you to your CRM dashboard…
+        Taking you to your setup summary…
       </p>
     </motion.div>
   );
