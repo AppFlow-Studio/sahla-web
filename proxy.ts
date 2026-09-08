@@ -64,6 +64,7 @@ const isOnboardingEntryRoute = createRouteMatcher(["/onboarding"]);
 
 const LAUNCH_PATH = "/launch";
 const MASJID_LANDING = "/dashboard";
+const COMPLETE_PATH = "/complete";
 const ADMIN_LANDING = "/overview";
 
 function isAdminPath(pathname: string): boolean {
@@ -109,9 +110,9 @@ export const proxy = clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(url);
     }
     // For mosque admins: route to /home only when onboarding has shipped AND
-    // the plan includes the CRM. Core-plan mosques land on /dashboard, which
-    // renders their launched-app view — sending them to /home would just bounce
-    // through the (crm) layout to /no-crm-access.
+    // the plan includes the CRM. Shipped Core-plan mosques land on /complete —
+    // sending them to /home would just bounce through the (crm) layout to
+    // /no-crm-access, and /dashboard is a checklist they've already finished.
     let landing: string = MASJID_LANDING;
     try {
       const supabase = createAdminSupabaseClient();
@@ -130,7 +131,7 @@ export const proxy = clerkMiddleware(async (auth, req) => {
           .select("has_crm_access")
           .eq("mosque_id", mosque.id)
           .maybeSingle();
-        if (flags?.has_crm_access) landing = "/home";
+        landing = flags?.has_crm_access ? "/home" : COMPLETE_PATH;
       }
     } catch {
       // Fall back to /dashboard if the lookup fails; the masjid layout has

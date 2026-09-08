@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, AlertCircle, AlertTriangle, Plus, Loader2, RefreshCcw } from "lucide-react";
 import { useToast } from "../../components/ToastProvider";
+import { useCompletion } from "../../components/CompletionCelebration";
 import { humanizeRequirement } from "@/lib/stripe-requirements";
 
 type StripeStatus = {
@@ -35,7 +37,9 @@ export default function StripeConnectPanel({
   initialStatus: StripeStatus;
   stripeReturn?: string;
 }) {
+  const router = useRouter();
   const { showToast } = useToast();
+  const { celebrate } = useCompletion();
   const [status, setStatus] = useState(initialStatus);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -65,14 +69,19 @@ export default function StripeConnectPanel({
           data.status === "connected" && statusRef.current !== "connected";
         setLastChecked(new Date());
         setStatus(data);
-        if (justConnected) showToast("Stripe account connected!", "success");
+        if (justConnected) {
+          showToast("Stripe account connected!", "success");
+          // Connect flips the task server-side; refresh so the sidebar check
+          // (and the completion celebration) actually fire.
+          router.refresh();
+        }
       } catch {
         // Leave the current status in place; the next check can recover.
       } finally {
         if (!silent) setChecking(false);
       }
     },
-    [mosqueId, showToast]
+    [mosqueId, showToast, router]
   );
 
   // Handle return from Stripe
@@ -82,6 +91,21 @@ export default function StripeConnectPanel({
         showToast("Stripe session expired, checking status...", "error");
       }
       void refreshStatus(true);
+    }
+
+    // Coming back from Stripe is a full page load, and the server marks the
+    // task done before this ever renders — so the progress diff sees nothing
+    // change and stays quiet. Announce it by hand, once per connection.
+    if (stripeReturn === "success" && initialStatus.status === "connected") {
+      const seenKey = `stripe_connect_celebrated:${mosqueId}`;
+      try {
+        if (!window.sessionStorage.getItem(seenKey)) {
+          window.sessionStorage.setItem(seenKey, "1");
+          celebrate("stripe_connect");
+        }
+      } catch {
+        // Private-mode storage failures just cost us the celebration.
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
