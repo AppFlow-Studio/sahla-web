@@ -71,7 +71,7 @@ async function resolveCta(): Promise<Cta> {
     }
   }
 
-  return { label: "Open Dashboard", href: "/dashboard" };
+  return { label: "Open Dashboard", href: "/complete" };
 }
 
 export default async function Home() {

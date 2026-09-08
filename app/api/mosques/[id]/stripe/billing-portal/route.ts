@@ -32,9 +32,14 @@ export async function POST(
     const stripe = createStripeClient();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+    // Return through /billing/return, not straight to a CRM page: a Core-plan
+    // mosque upgrading in the portal has no CRM access until the tier flips,
+    // and /settings/subscription would bounce them to /no-crm-access — telling
+    // them to buy what they just bought. /billing/return reconciles first,
+    // then sends them wherever their new plan belongs.
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: mosque.saas_stripe_customer_id,
-      return_url: `${appUrl}/settings/subscription`,
+      return_url: `${appUrl}/billing/return`,
     });
 
     return NextResponse.json({ url: portalSession.url });

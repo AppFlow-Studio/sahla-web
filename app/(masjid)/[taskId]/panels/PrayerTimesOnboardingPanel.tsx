@@ -17,6 +17,8 @@ import {
 } from "@/lib/prayer/constants";
 import { computeIqamahTime, to12Hour } from "@/lib/prayer/utils";
 import { useToast } from "../../components/ToastProvider";
+import CheckDraw from "@/app/components/CheckDraw";
+import { DUR, EASE_OUT_EXPO } from "@/lib/motion";
 import { Dropdown } from "@/app/(admin)/components/Dropdown";
 import { cn } from "@/lib/utils";
 import { BTN_PRIMARY, BTN_PRIMARY_DISABLED, BTN_GHOST, CARD } from "@/lib/ui-classes";
@@ -79,16 +81,40 @@ function Stepper({ step }: { step: Exclude<WizardStep, "view"> }) {
         return (
           <div key={label} className="flex flex-1 items-start last:flex-none">
             <div className="flex flex-col items-center">
-              <div
+              <motion.div
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold transition-all",
+                  "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold transition-colors",
                   isDone && "bg-emerald-500 text-white",
                   isActive && "bg-stone-900 text-white shadow-sm ring-4 ring-stone-100",
                   !isActive && !isDone && "border border-stone-200 bg-stone-50 text-stone-400"
                 )}
+                animate={{ scale: isActive ? 1.06 : 1 }}
+                transition={{ duration: DUR.state, ease: EASE_OUT_EXPO }}
               >
-                {isDone ? <Check size={14} strokeWidth={3} /> : stepNum}
-              </div>
+                <AnimatePresence mode="wait" initial={false}>
+                  {isDone ? (
+                    <motion.span
+                      key="done"
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.5 }}
+                      transition={{ duration: DUR.tick, ease: EASE_OUT_EXPO }}
+                    >
+                      <CheckDraw size={14} strokeWidth={3} />
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="num"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: DUR.tick }}
+                    >
+                      {stepNum}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.div>
               <span
                 className={cn(
                   "mt-2 whitespace-nowrap text-xs font-medium",
@@ -101,12 +127,14 @@ function Stepper({ step }: { step: Exclude<WizardStep, "view"> }) {
               </span>
             </div>
             {!isLast && (
-              <div
-                className={cn(
-                  "mx-2 mt-4 h-0.5 flex-1 rounded-full transition-colors",
-                  isDone ? "bg-emerald-400" : "bg-stone-200"
-                )}
-              />
+              <div className="mx-2 mt-4 h-0.5 flex-1 overflow-hidden rounded-full bg-stone-200">
+                <motion.div
+                  className="h-full w-full origin-left rounded-full bg-emerald-400"
+                  initial={false}
+                  animate={{ scaleX: isDone ? 1 : 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT_EXPO }}
+                />
+              </div>
             )}
           </div>
         );
