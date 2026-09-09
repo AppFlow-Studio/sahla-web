@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import PageHeader from "../../_components/PageHeader";
+import AutomatedNotifications from "./AutomatedNotifications";
 import HelpButton from "../../_components/HelpButton";
 import ConfirmInline from "../../_components/ConfirmInline";
 import { useMembers } from "../../_hooks/useMembers";
@@ -152,7 +153,7 @@ export default function NotificationsClient() {
       <PageHeader
         eyebrow="Mosque Setup"
         title="Notifications"
-        description="Compose, send, and reuse push notifications. Templates let you fire common messages with one click."
+        description="Compose and send push notifications, reuse them as templates, and set the wording for the ones the app sends on its own."
       />
 
       <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
@@ -520,6 +521,10 @@ export default function NotificationsClient() {
             </Button>
           </div>
         </aside>
+      </div>
+
+      <div className="mt-6">
+        <AutomatedNotifications />
       </div>
     </>
   );
