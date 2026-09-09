@@ -360,10 +360,7 @@ async function handleInvoiceFailed(invoice: Stripe.Invoice, connectedAccountId?:
 
   // Connected-account invoice → business-ad subscription (see handleInvoicePaid).
   if (connectedAccountId) {
-    await supabase
-      .from("ad_subscriptions")
-      .update({ status: "past_due", updated_at: new Date().toISOString() })
-      .eq("stripe_subscription_id", subscriptionId);
+    await handleAdInvoiceFailed(invoice, subscriptionId);
     return;
   }
 
@@ -775,6 +772,114 @@ function adReceiptHtml(r: AdReceipt): string {
 </body></html>`;
 }
 
+type AdPausedNotice = {
+  name?: string | null;
+  businessName?: string | null;
+  masjidName?: string | null;
+  masjidLogo?: string | null;
+  masjidLocation?: string | null;
+  masjidEmail?: string | null;
+  masjidPhone?: string | null;
+  brandColor?: string | null;
+  accentColor?: string | null;
+  amountDue: number;
+  /** Human date of Stripe's next automatic retry, when it has scheduled one. */
+  nextAttempt?: string | null;
+  /** Stripe's hosted invoice page — pays the outstanding invoice and updates the card. */
+  payUrl?: string | null;
+};
+
+/**
+ * Masjid-branded notice that a card was declined and the ad has come down.
+ *
+ * The tone matters here: nothing has been lost. The ad, the flyer and the
+ * masjid's approval are all still on file, and a successful payment puts the
+ * same ad back up on its own — there is nothing to re-submit and no second
+ * review to wait through.
+ */
+function adPausedHtml(r: AdPausedNotice): string {
+  const sans = "-apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif";
+  const brand = r.brandColor || "#0A261E";
+  const accent = r.accentColor || "#B8922A";
+  const masjid = r.masjidName ?? "the masjid";
+  const greeting = r.name ? `Assalamu alaikum ${r.name},` : "Assalamu alaikum,";
+  const business = r.businessName ? `<strong style="color:#111;">${r.businessName}</strong>` : "your business";
+  const footerBits = [r.masjidLocation, r.masjidEmail, r.masjidPhone].filter(Boolean).join("&nbsp;&nbsp;&middot;&nbsp;&nbsp;");
+
+  return `<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light only" />
+  <title>Payment unsuccessful</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1efe9;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your card was declined — ${masjid} ad paused until payment goes through</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1efe9" style="background-color:#f1efe9;">
+  <tr><td align="center" valign="top">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;" align="center">
+
+    <!-- Masjid header -->
+    <tr><td align="center" style="padding:40px 16px 24px;font-family:${sans};">
+      ${r.masjidLogo ? `<img src="${r.masjidLogo}" alt="${masjid}" width="72" style="width:72px;height:auto;border-radius:14px;display:block;margin:0 auto 12px;" />` : ""}
+      <div style="font-size:20px;font-weight:700;color:${brand};">${masjid}</div>
+      ${r.masjidLocation ? `<div style="margin-top:4px;font-size:12px;color:rgba(0,0,0,0.45);">${r.masjidLocation}</div>` : ""}
+    </td></tr>
+
+    <!-- Card -->
+    <tr><td align="center" style="padding:0 12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;">
+        <tr><td style="padding:36px 32px;font-family:${sans};">
+          <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${accent};">Action needed</p>
+          <h1 style="font-size:22px;font-weight:700;color:${brand};margin:0 0 16px;">Your card was declined</h1>
+          <p style="margin:0 0 20px;color:rgba(0,0,0,0.65);font-size:15px;line-height:1.7;">
+            ${greeting} we couldn&rsquo;t collect ${money(r.amountDue)} for ${business}&rsquo;s ad with
+            <strong style="color:#111;">${masjid}</strong>, so the ad has come down from the app for now.
+          </p>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:12px;border:1px solid rgba(0,0,0,0.08);margin-bottom:22px;">
+            <tr><td style="padding:16px 18px;font-family:${sans};color:rgba(0,0,0,0.65);font-size:14px;line-height:1.65;">
+              Everything is saved &mdash; your flyer, your details and ${masjid}&rsquo;s approval.
+              As soon as a payment goes through, the same ad goes straight back up.
+              There is nothing to re-submit and no second review to wait through.
+            </td></tr>
+          </table>
+
+          ${r.payUrl ? `<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 20px;"><tr>
+            <td style="background-color:${brand};border-radius:999px;">
+              <a href="${r.payUrl}" style="display:inline-block;padding:13px 30px;color:#ffffff;font-family:${sans};font-size:14px;font-weight:700;text-decoration:none;">Update card &amp; pay ${money(r.amountDue)}</a>
+            </td>
+          </tr></table>` : ""}
+
+          <p style="margin:0;color:rgba(0,0,0,0.5);font-size:13px;line-height:1.65;text-align:center;">
+            ${r.nextAttempt
+              ? `We&rsquo;ll try the card on file again on ${r.nextAttempt}. Paying sooner puts the ad back up sooner.`
+              : `You can also update your card in the app under Profile &rarr; Payment Methods.`}
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+
+    <!-- Masjid footer -->
+    <tr><td align="center" style="padding:24px 16px 44px;font-family:${sans};font-size:11px;line-height:1.6;color:rgba(0,0,0,0.45);">
+      <div style="font-weight:600;color:rgba(0,0,0,0.6);">${masjid}</div>
+      ${footerBits ? `<div style="margin-top:4px;">${footerBits}</div>` : ""}
+    </td></tr>
+  </table>
+  </td></tr>
+  </table>
+</body></html>`;
+}
+
+async function sendAdPausedEmail(to: string, r: AdPausedNotice) {
+  await sendEmail(
+    to,
+    "Your card was declined — ad paused",
+    adPausedHtml(r),
+    r.masjidName ?? undefined,
+  );
+}
+
 async function sendAdReceiptEmail(to: string, r: AdReceipt) {
   // Sender shows the masjid's name (address stays on the verified sahla.co
   // domain since masjids don't have their own verified sending domain).
@@ -910,8 +1015,128 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
       row?.submission_id ?? null,
       "recurring",
     );
+    // Covers both an ordinary renewal and a recovery after a decline: if the ad
+    // was pulled by handleAdInvoiceFailed, this is what puts it back — same
+    // flyer, same approval, live again as soon as the money clears.
+    if (row?.submission_id) {
+      await setAdLive(row.submission_id, row.mosque_id ?? null, true);
+    }
     console.log(`Ad subscription renewed: ${subscriptionId}`);
   }
+}
+
+/**
+ * Take an ad down, or put it back up.
+ *
+ * The app reads `approved_business_ads` as "currently live" — there is no
+ * status filter on that query — so this one row is the whole switch. Pausing
+ * deletes it and touches nothing else: the submission, the flyer and the
+ * masjid's approval all stay exactly as they were, which is what lets a
+ * recovered payment restore the ad without a second review.
+ */
+async function setAdLive(submissionId: string, mosqueId: string | null, live: boolean) {
+  if (!live) {
+    await supabase
+      .from("approved_business_ads")
+      .delete()
+      .eq("submission_id", submissionId);
+    return;
+  }
+
+  // Only an ad the masjid actually approved may go back up — a declined or
+  // still-in-review submission must not appear because a card cleared.
+  const { data: submission } = await supabase
+    .from("business_ads_submissions")
+    .select("status, mosque_id")
+    .eq("submission_id", submissionId)
+    .single();
+  if (submission?.status !== "approved") return;
+
+  const { data: existing } = await supabase
+    .from("approved_business_ads")
+    .select("id")
+    .eq("submission_id", submissionId)
+    .maybeSingle();
+  if (existing) return;
+
+  await supabase.from("approved_business_ads").insert({
+    submission_id: submissionId,
+    mosque_id: mosqueId ?? submission.mosque_id,
+  });
+}
+
+/**
+ * A business ad's card was declined. The ad comes down immediately and the
+ * advertiser is told why, with Stripe's next retry date and a link that both
+ * updates the card and settles the invoice. Stripe keeps retrying on its own
+ * schedule; `handleAdInvoicePaid` puts the ad back the moment one succeeds.
+ */
+async function handleAdInvoiceFailed(invoice: Stripe.Invoice, subscriptionId: string) {
+  const { data: updated } = await supabase
+    .from("ad_subscriptions")
+    .update({ status: "past_due", updated_at: new Date().toISOString() })
+    .eq("stripe_subscription_id", subscriptionId)
+    .select("submission_id, mosque_id");
+
+  const row = updated?.[0];
+  if (!row?.submission_id) {
+    console.warn(`[stripe-webhooks] no ad_subscriptions row for ${subscriptionId}`);
+    return;
+  }
+
+  const { data: sub } = await supabase
+    .from("business_ads_submissions")
+    .select("personal_email, personal_full_name, business_name, status")
+    .eq("submission_id", row.submission_id)
+    .single();
+
+  // A decline on the very first invoice is someone standing in the payment
+  // sheet watching their card get refused — the ad was never live and there is
+  // nothing to take down. Stripe's own error is the feedback there; an email
+  // saying their ad "has come down" would be nonsense.
+  if (sub?.status === "pending_payment") {
+    console.log(`Ad checkout declined (never live): ${subscriptionId}`);
+    return;
+  }
+
+  await setAdLive(row.submission_id, row.mosque_id ?? null, false);
+
+  if (sub?.personal_email) {
+    const { data: mosque } = await supabase
+      .from("mosques")
+      .select("name, app_name, logo_url, brand_color, accent_color, city, state, email, phone")
+      .eq("id", row.mosque_id)
+      .single();
+    const location = [mosque?.city, mosque?.state].filter(Boolean).join(", ");
+    await sendAdPausedEmail(sub.personal_email, {
+      name: sub.personal_full_name,
+      businessName: sub.business_name,
+      masjidName: mosque?.app_name || mosque?.name,
+      masjidLogo: mosque?.logo_url,
+      masjidLocation: location || null,
+      masjidEmail: mosque?.email,
+      masjidPhone: mosque?.phone,
+      brandColor: mosque?.brand_color,
+      accentColor: mosque?.accent_color,
+      amountDue: (invoice.amount_due ?? 0) / 100,
+      nextAttempt: invoice.next_payment_attempt
+        ? new Date(invoice.next_payment_attempt * 1000).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+        : null,
+      payUrl: invoice.hosted_invoice_url ?? null,
+    });
+  }
+
+  if (row.mosque_id) {
+    await logActivity(row.mosque_id, "ad_invoice_failed", "subscription", subscriptionId, {
+      amount_due: (invoice.amount_due ?? 0) / 100,
+      submission_id: row.submission_id,
+    });
+  }
+  console.log(`Ad payment failed, ad paused: ${subscriptionId}`);
 }
 
 async function handleAdSubscriptionUpdated(subscription: Stripe.Subscription) {
@@ -920,22 +1145,40 @@ async function handleAdSubscriptionUpdated(subscription: Stripe.Subscription) {
   const status = subscription.cancel_at_period_end
     ? "canceling"
     : mapAdStatus(subscription.status);
-  await supabase
+  const { data: updated } = await supabase
     .from("ad_subscriptions")
     .update({ status, updated_at: new Date().toISOString() })
-    .eq("stripe_subscription_id", subscription.id);
+    .eq("stripe_subscription_id", subscription.id)
+    .select("submission_id, mosque_id");
+
+  // Belt and braces: a subscription can reach `unpaid` or come back to `active`
+  // without an invoice event we handle, and the live row has to follow either
+  // way. 'canceling' stays up — they paid for the month they're in.
+  const row = updated?.[0];
+  if (row?.submission_id && (status === "active" || status === "past_due")) {
+    await setAdLive(row.submission_id, row.mosque_id ?? null, status === "active");
+  }
   console.log(`Ad subscription updated: ${subscription.id} → ${subscription.status}`);
 }
 
 async function handleAdSubscriptionDeleted(subscription: Stripe.Subscription) {
-  await supabase
+  const { data: updated } = await supabase
     .from("ad_subscriptions")
     .update({
       status: "canceled",
       end_date: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq("stripe_subscription_id", subscription.id);
+    .eq("stripe_subscription_id", subscription.id)
+    .select("submission_id, mosque_id");
+
+  // The subscription is gone — whether they cancelled or Stripe gave up after
+  // its retries — so the ad comes down. The submission row is left alone, so
+  // the masjid keeps the record and nothing has to be re-entered.
+  const row = updated?.[0];
+  if (row?.submission_id) {
+    await setAdLive(row.submission_id, row.mosque_id ?? null, false);
+  }
   console.log(`Ad subscription canceled: ${subscription.id}`);
 }
 
