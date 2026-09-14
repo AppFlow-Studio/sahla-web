@@ -349,7 +349,8 @@ async function handleInvoicePaid(invoice: Stripe.Invoice, connectedAccountId?: s
   await supabase
     .from("ad_subscriptions")
     .update({ status: "active", updated_at: new Date().toISOString() })
-    .eq("stripe_subscription_id", subscriptionId);
+    .eq("stripe_subscription_id", subscriptionId)
+    .neq("status", "canceled");
 
   console.log(`Invoice paid for subscription ${subscriptionId}`);
 }
@@ -363,7 +364,8 @@ async function handleInvoiceFailed(invoice: Stripe.Invoice, connectedAccountId?:
     await supabase
       .from("ad_subscriptions")
       .update({ status: "past_due", updated_at: new Date().toISOString() })
-      .eq("stripe_subscription_id", subscriptionId);
+      .eq("stripe_subscription_id", subscriptionId)
+      .neq("status", "canceled");
     return;
   }
 
@@ -659,6 +661,13 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
 }
 
 // ─── Business-ad Subscription Handlers ───
+//
+// 'canceled' is TERMINAL. Stripe does not guarantee event ordering, and when
+// dunning kills a subscription it emits customer.subscription.deleted and a
+// final invoice.payment_failed together — either order. Every write that could
+// move a row backwards out of 'canceled' carries .neq("status", "canceled"),
+// so a late invoice event can't resurrect a dead subscription into 'past_due'
+// or 'active' (which would put a stale Cancel button back in the app).
 
 /** Map a Stripe subscription status onto our ad_subscriptions.status vocabulary. */
 function mapAdStatus(status: Stripe.Subscription.Status): string {
@@ -900,6 +909,7 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
         updated_at: new Date().toISOString(),
       })
       .eq("stripe_subscription_id", subscriptionId)
+      .neq("status", "canceled")
       .select("submission_id, mosque_id");
     const row = updated?.[0];
     await recordAdPayment(
@@ -923,7 +933,8 @@ async function handleAdSubscriptionUpdated(subscription: Stripe.Subscription) {
   await supabase
     .from("ad_subscriptions")
     .update({ status, updated_at: new Date().toISOString() })
-    .eq("stripe_subscription_id", subscription.id);
+    .eq("stripe_subscription_id", subscription.id)
+    .neq("status", "canceled");
   console.log(`Ad subscription updated: ${subscription.id} → ${subscription.status}`);
 }
 
