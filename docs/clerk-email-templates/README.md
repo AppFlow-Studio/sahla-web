@@ -48,7 +48,7 @@ blank and off-brand.
 - `{{action_url}}` — the unique accept-invitation link
 - `{{app.name}}` — "Sahla" (used in the `<re-title>`)
 
-The header logo is a hardcoded `https://www.sahla.co/sahla-logo.png` —
+The header logo is a hardcoded `https://sahla.co/sahla-logo.png` —
 same asset used by the Business Ad receipt in
 `supabase/functions/stripe-webhooks/index.ts`. We intentionally don't use
 `{{org.logo_image_url}}` here so a fresh mosque that hasn't uploaded a

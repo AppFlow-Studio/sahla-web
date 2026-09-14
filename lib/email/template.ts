@@ -2,7 +2,7 @@
 // Matches the app's design: dark green, sand, gold, clean sans-serif
 // Mobile-hardened + Gmail dark mode resistant
 
-const LOGO_URL = "https://www.sahla.co/sahla-logo.png";
+const LOGO_URL = "https://sahla.co/sahla-logo.png";
 
 // Exact colors from globals.css
 const c = {
@@ -135,7 +135,7 @@ export function sahlaEmailHtml({
     <!-- Footer -->
     <tr>
       <td align="center" class="email-footer" style="padding:24px 16px 48px;font-family:${sans};font-size:11px;color:${c.subtle};">
-        <a href="https://www.sahla.co" style="color:${c.green};text-decoration:none;">sahla.co</a>
+        <a href="https://sahla.co" style="color:${c.green};text-decoration:none;">sahla.co</a>
         &nbsp;&nbsp;&middot;&nbsp;&nbsp;
         <a href="mailto:info@sahla.co" style="color:${c.green};text-decoration:none;">info@sahla.co</a>
       </td>

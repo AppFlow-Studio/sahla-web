@@ -63,7 +63,7 @@ function stripePeriodEndIso(
 // ─── Notifications ───
 
 function sahlaEmailHtml(body: string, preheader?: string, opts?: { signature?: boolean }): string {
-  const logoUrl = "https://www.sahla.co/sahla-logo.png";
+  const logoUrl = "https://sahla.co/sahla-logo.png";
   const sans = "-apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif";
   const showSignature = opts?.signature !== false;
   return `<!DOCTYPE html>
@@ -125,7 +125,7 @@ function sahlaEmailHtml(body: string, preheader?: string, opts?: { signature?: b
       </table>
     </td></tr>
     <tr><td align="center" class="email-footer" style="padding:24px 16px 48px;font-family:${sans};font-size:11px;color:rgba(10,38,30,0.55);">
-      <a href="https://www.sahla.co" style="color:#0A261E;text-decoration:none;">sahla.co</a>
+      <a href="https://sahla.co" style="color:#0A261E;text-decoration:none;">sahla.co</a>
       &nbsp;&nbsp;&middot;&nbsp;&nbsp;
       <a href="mailto:info@sahla.co" style="color:#0A261E;text-decoration:none;">info@sahla.co</a>
     </td></tr>
