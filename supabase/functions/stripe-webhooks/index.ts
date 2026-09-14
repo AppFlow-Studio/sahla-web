@@ -842,6 +842,7 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
         updated_at: new Date().toISOString(),
       })
       .eq("stripe_subscription_id", subscriptionId)
+      .neq("status", "canceled")
       .select("submission_id, mosque_id, onboarding_amount, recurring_amount");
 
     const row = updated?.[0];
