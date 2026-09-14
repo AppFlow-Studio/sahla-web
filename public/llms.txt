@@ -1,16 +1,17 @@
-# Sahla
+Sahla
 
-> Sahla builds fully branded iOS and Android apps for mosques — a mosque's own app in the App Store, with their name, colors, and community.
+Sahla builds fully branded iOS and Android apps for mosques - a mosque's own app in the App Store, with their name, colors, and community.
 
 Sahla gives mosque communities prayer times, donations, programs, events, and sponsor revenue tools in a white-labeled app, with a CRM for the mosque team behind it.
 
-## Pages
+Pages:
 
-- [Home](https://sahla.co/): Overview of Sahla and what it offers mosques.
-- [Pricing](https://sahla.co/pricing): Plans and pricing for mosques.
-- [Why Sahla](https://sahla.co/why-sahla): The case for a mosque having its own branded app.
-- [Case Study](https://sahla.co/customers/mas-si): How MAS-SI launched its app with Sahla.
-- [About](https://sahla.co/about): About the Sahla team.
-- [FAQ](https://sahla.co/faq): Common questions about Sahla.
-- [Waitlist](https://sahla.co/waitlist): Join the waitlist for a mosque app.
-- [Contact](https://sahla.co/contact): Get in touch with Sahla.
+Home - https://sahla.co/ - Overview of Sahla and what it offers mosques.
+Pricing - https://sahla.co/pricing - Plans and pricing for mosques.
+Why Sahla - https://sahla.co/why-sahla - The case for a mosque having its own branded app.
+Global - https://sahla.co/global - Mosque apps for communities worldwide.
+Case Study - https://sahla.co/customers/mas-si - How MAS-SI launched its app with Sahla.
+About - https://sahla.co/about - About the Sahla team.
+FAQ - https://sahla.co/faq - Common questions about Sahla.
+Waitlist - https://sahla.co/waitlist - Join the waitlist for a mosque app.
+Contact - https://sahla.co/contact - Get in touch with Sahla.
