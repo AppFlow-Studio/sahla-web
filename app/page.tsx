@@ -15,7 +15,7 @@ import CTASection from "./components/CTASection";
 import BottomBar from "./components/BottomBar";
 
 export const metadata: Metadata = {
-  title: "Sahla — Your Mosque Deserves Its Own App",
+  title: { absolute: "Sahla — Your Mosque Deserves Its Own App" },
   description:
     "Sahla builds fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community. White-label mosque app builder with built-in donations, prayer times, and sponsor revenue.",
 };

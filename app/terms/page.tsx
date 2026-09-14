@@ -4,7 +4,7 @@ import WaitlistContent from "../waitlist/WaitlistContent";
 import BottomBar from "../components/BottomBar";
 
 export const metadata: Metadata = {
-  title: "Terms of Use — Sahla",
+  title: "Terms of Use",
   description:
     "Terms governing your use of sahla.co. Does not govern the masjid apps or any subscription — those are separate documents.",
 };

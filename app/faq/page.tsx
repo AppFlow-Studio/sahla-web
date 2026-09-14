@@ -5,7 +5,7 @@ import BottomBar from "../components/BottomBar";
 import FAQContent from "./FAQContent";
 
 export const metadata: Metadata = {
-  title: "FAQ — Sahla",
+  title: "FAQ",
   description:
     "Answers to the most common questions mosque boards ask about Sahla: ownership, pricing, Apple Developer fees, data privacy, and more.",
 };

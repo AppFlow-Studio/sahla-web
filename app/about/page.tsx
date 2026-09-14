@@ -5,7 +5,7 @@ import BottomBar from "../components/BottomBar";
 import AboutContent from "./AboutContent";
 
 export const metadata: Metadata = {
-  title: "About Sahla — Built by Muslims, for Masjids",
+  title: "About",
   description:
     "Sahla was born from a simple frustration: not knowing what's happening at my own mosque. Meet the team building the future of mosque technology.",
 };

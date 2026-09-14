@@ -4,7 +4,7 @@ import WaitlistContent from "../waitlist/WaitlistContent";
 import BottomBar from "../components/BottomBar";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Sahla",
+  title: "Privacy Policy",
   description:
     "How Sahla, Inc. collects, uses, and protects information on sahla.co. Applies to the marketing site only; each masjid app has its own separate policy.",
 };

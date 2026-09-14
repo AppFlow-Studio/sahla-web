@@ -4,7 +4,7 @@ import BottomBar from "../components/BottomBar";
 import WaitlistContent, { WaitlistExtras } from "./WaitlistContent";
 
 export const metadata: Metadata = {
-  title: "Join the Waitlist — Sahla",
+  title: "Join the Waitlist",
   description:
     "Reserve your mosque's spot on the Sahla waitlist. We onboard new mosques in waves so each community gets the attention it deserves.",
 };

@@ -86,7 +86,10 @@ export const metadata: Metadata = {
     "Sahla",
   ],
   alternates: {
-    canonical: "/",
+    // "./" resolves against each page's own pathname (not just the site
+    // root), so every route gets its own canonical URL instead of all
+    // pages pointing at the homepage.
+    canonical: "./",
   },
   formatDetection: {
     email: false,
@@ -96,7 +99,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Sahla",
-    url: SITE_URL,
+    // Same "./" trick as alternates.canonical above, so og:url tracks
+    // each page's own URL instead of always pointing at the homepage.
+    url: "./",
     title: SITE_TITLE,
     description: SOCIAL_DESCRIPTION,
     locale: "en_US",

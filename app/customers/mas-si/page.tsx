@@ -5,7 +5,7 @@ import BottomBar from "../../components/BottomBar";
 import CaseStudyContent from "./CaseStudyContent";
 
 export const metadata: Metadata = {
-  title: "MAS Staten Island — Sahla Case Study",
+  title: "MAS Staten Island Case Study",
   description:
     "How MAS Staten Island launched their own branded mosque app with Sahla, reaching 3,000+ active users with prayer times, donations, and community programs.",
 };

@@ -5,7 +5,9 @@ import BottomBar from "../components/BottomBar";
 import WhySahlaContent from "./WhySahlaContent";
 
 export const metadata: Metadata = {
-  title: "Why Sahla — White-Label Standalone Mosque App",
+  // absolute: the title already says "Sahla" once, so skip the layout's
+  // "%s | Sahla" template instead of doubling it.
+  title: { absolute: "Why Sahla — Standalone White-Label Mosque Apps" },
   description:
     "Most mosque platforms put your masjid inside their app. Sahla builds your app — under your mosque's name, with your branding, in the App Store as a real, separate listing.",
 };

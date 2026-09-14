@@ -5,7 +5,7 @@ import BottomBar from "../components/BottomBar";
 import ContactContent from "./ContactContent";
 
 export const metadata: Metadata = {
-  title: "Contact — Sahla",
+  title: "Contact",
   description: "Get in touch with the Sahla team. We'd love to hear about your mosque and answer your questions.",
 };
 

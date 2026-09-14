@@ -4,7 +4,7 @@ import BottomBar from "../components/BottomBar";
 import GlobalContent from "./GlobalContent";
 
 export const metadata: Metadata = {
-  title: "Global Outreach — Built in New York, Serving Masjids Worldwide | Sahla",
+  title: "Mosque Apps Worldwide",
   description:
     "From New York to Dubai, London to Tokyo — Sahla powers mosque communities across every continent. Every time zone, every currency, every language your community speaks.",
 };
