@@ -928,14 +928,31 @@ async function handleAdSubscriptionUpdated(subscription: Stripe.Subscription) {
 }
 
 async function handleAdSubscriptionDeleted(subscription: Stripe.Subscription) {
-  await supabase
+  const { data: rows } = await supabase
     .from("ad_subscriptions")
     .update({
       status: "canceled",
       end_date: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq("stripe_subscription_id", subscription.id);
+    .eq("stripe_subscription_id", subscription.id)
+    .select("submission_id");
+
+  // The billing period is now genuinely over, so take the ad down. Presence in
+  // approved_business_ads is what makes an ad live in Community Partners —
+  // without this delete a self-serve cancellation stops the charges but leaves
+  // the flyer up forever (the admin decline/cancel path already does this).
+  const submissionId = rows?.[0]?.submission_id;
+  if (submissionId) {
+    await supabase
+      .from("approved_business_ads")
+      .delete()
+      .eq("submission_id", submissionId);
+    await supabase
+      .from("business_ads_submissions")
+      .update({ status: "canceled" })
+      .eq("submission_id", submissionId);
+  }
   console.log(`Ad subscription canceled: ${subscription.id}`);
 }
 
