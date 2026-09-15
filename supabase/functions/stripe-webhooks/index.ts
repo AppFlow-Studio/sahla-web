@@ -361,11 +361,23 @@ async function handleInvoiceFailed(invoice: Stripe.Invoice, connectedAccountId?:
 
   // Connected-account invoice → business-ad subscription (see handleInvoicePaid).
   if (connectedAccountId) {
-    await supabase
+    // Excluding past_due as well as canceled makes this fire only on the
+    // TRANSITION into past_due. Stripe re-sends invoice.payment_failed on every
+    // dunning retry, and the advertiser doesn't need four identical emails.
+    const { data: transitioned } = await supabase
       .from("ad_subscriptions")
       .update({ status: "past_due", updated_at: new Date().toISOString() })
       .eq("stripe_subscription_id", subscriptionId)
-      .neq("status", "canceled");
+      .neq("status", "canceled")
+      .neq("status", "past_due")
+      .select("submission_id, mosque_id");
+
+    // Only renewals. A failed first invoice is already surfaced inline in the
+    // app while the advertiser is still on the payment screen.
+    const row = transitioned?.[0];
+    if (row?.submission_id && invoice.billing_reason !== "subscription_create") {
+      await sendAdDunningEmail(invoice, row);
+    }
     return;
   }
 
@@ -923,6 +935,77 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
     );
     console.log(`Ad subscription renewed: ${subscriptionId}`);
   }
+}
+
+/**
+ * Tell the advertiser their renewal failed. Stripe retries on the connected
+ * account's dunning schedule and cancels the subscription when it runs out —
+ * without this the first sign of trouble is the ad quietly disappearing.
+ * Mirrors the SaaS dunning mail in handleInvoiceFailed.
+ */
+async function sendAdDunningEmail(
+  invoice: Stripe.Invoice,
+  row: { submission_id: string; mosque_id: string | null },
+) {
+  const { data: submission } = await supabase
+    .from("business_ads_submissions")
+    .select("personal_email, personal_full_name, business_name")
+    .eq("submission_id", row.submission_id)
+    .maybeSingle();
+  if (!submission?.personal_email) return;
+
+  const { data: mosque } = row.mosque_id
+    ? await supabase
+      .from("mosques")
+      .select("name, app_name, email, phone")
+      .eq("id", row.mosque_id)
+      .maybeSingle()
+    : { data: null };
+
+  const masjidName = mosque?.app_name || mosque?.name || "the masjid";
+  const businessName = submission.business_name || "your business";
+  const amount = `$${(invoice.amount_due / 100).toFixed(2)}`;
+  const greeting = submission.personal_full_name
+    ? `${submission.personal_full_name.split(" ")[0]}, your`
+    : "Your";
+  // No in-app way to re-enter a card yet, so point them at the masjid.
+  const contact = [mosque?.email, mosque?.phone].filter(Boolean).join(" &middot; ");
+
+  await sendEmail(
+    submission.personal_email,
+    "Your ad payment didn't go through",
+    sahlaEmailHtml(
+      `
+      <p style="margin:0 0 6px;font-size:10px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:#B8922A;">Action Required</p>
+      <h1 style="font-size:22px;font-weight:600;color:#0A261E;margin:0 0 6px;line-height:1.3;">
+        Payment unsuccessful
+      </h1>
+      <p style="margin:0 0 28px;font-size:13px;color:rgba(10,38,30,0.4);">${businessName} &middot; ${masjidName}</p>
+
+      <p style="margin:0 0 14px;color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">
+        ${greeting} monthly payment of <strong style="color:#0A261E;">${amount}</strong> for the
+        <strong style="color:#0A261E;">${businessName}</strong> ad at
+        <strong style="color:#0A261E;">${masjidName}</strong> didn't go through.
+      </p>
+
+      <div style="margin:0 0 20px;background-color:#fffbf2;border-radius:10px;padding:16px 20px;border:1px solid rgba(10,38,30,0.06);">
+        <p style="margin:0;color:rgba(10,38,30,0.7);font-size:14px;line-height:1.6;">
+          We'll retry the payment automatically over the next few days. If it keeps failing,
+          your ad will stop showing and the subscription will be canceled.
+        </p>
+      </div>
+
+      <p style="margin:0;color:rgba(10,38,30,0.7);font-size:15px;line-height:1.7;">
+        The usual cause is an expired or removed card. Get in touch with ${masjidName}${
+        contact ? ` at ${contact}` : ""
+      } to update your payment details, or reply to this email and we'll help sort it out.
+      </p>
+    `,
+      `Your ${amount} payment for the ${businessName} ad was unsuccessful`,
+    ),
+    masjidName,
+  );
+  console.log(`Ad dunning email sent for submission ${row.submission_id}`);
 }
 
 async function handleAdSubscriptionUpdated(subscription: Stripe.Subscription) {
