@@ -8,7 +8,6 @@
 
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID!;
 
@@ -64,7 +63,6 @@ const isOnboardingEntryRoute = createRouteMatcher(["/onboarding"]);
 
 const LAUNCH_PATH = "/launch";
 const MASJID_LANDING = "/dashboard";
-const COMPLETE_PATH = "/complete";
 const ADMIN_LANDING = "/overview";
 
 function isAdminPath(pathname: string): boolean {
@@ -99,46 +97,11 @@ export const proxy = clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(url);
   }
 
-  // /launch is a virtual route — it always redirects, never renders.
+  // /launch renders the hand-off screen, which resolves the destination
+  // itself (lib/auth/launch-destination.ts) so it can name the place before
+  // sending anyone there. Auth is already enforced above.
   if (url.pathname === LAUNCH_PATH) {
-    if (!session.orgId) {
-      url.pathname = "/onboarding";
-      return NextResponse.redirect(url);
-    }
-    if (session.orgId === SAHLA_HQ_ORG_ID) {
-      url.pathname = ADMIN_LANDING;
-      return NextResponse.redirect(url);
-    }
-    // For mosque admins: route to /home only when onboarding has shipped AND
-    // the plan includes the CRM. Shipped Core-plan mosques land on /complete —
-    // sending them to /home would just bounce through the (crm) layout to
-    // /no-crm-access, and /dashboard is a checklist they've already finished.
-    let landing: string = MASJID_LANDING;
-    try {
-      const supabase = createAdminSupabaseClient();
-      const { data: mosque } = await supabase
-        .from("mosques")
-        .select("id, onboarding_status")
-        .eq("clerk_org_id", session.orgId)
-        .maybeSingle();
-      if (
-        mosque?.id &&
-        (mosque.onboarding_status === "ready" ||
-          mosque.onboarding_status === "live")
-      ) {
-        const { data: flags } = await supabase
-          .from("mosque_feature_flags")
-          .select("has_crm_access")
-          .eq("mosque_id", mosque.id)
-          .maybeSingle();
-        landing = flags?.has_crm_access ? "/home" : COMPLETE_PATH;
-      }
-    } catch {
-      // Fall back to /dashboard if the lookup fails; the masjid layout has
-      // its own redirect-to-/home guard for already-shipped mosques.
-    }
-    url.pathname = landing;
-    return NextResponse.redirect(url);
+    return NextResponse.next();
   }
 
   if (isSelectOrgRoute(req) || isOnboardingEntryRoute(req)) {
