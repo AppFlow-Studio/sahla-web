@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Navbar from "../components/Navbar";
 import WaitlistContent from "../waitlist/WaitlistContent";
 import BottomBar from "../components/BottomBar";
+import { BreadcrumbJsonLd } from "../components/JsonLd";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -18,6 +19,12 @@ const UL = "list-disc space-y-2 pl-6 marker:text-dark-green/40";
 export default function PrivacyPage() {
   return (
     <div className="relative">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "https://sahla.co/" },
+          { name: "Privacy Policy", url: "https://sahla.co/privacy" },
+        ]}
+      />
       <Navbar />
 
       <section className="bg-[#fffbf2] pt-36 pb-10">

@@ -3,6 +3,7 @@ import Navbar from "../components/Navbar";
 import WaitlistContent from "../waitlist/WaitlistContent";
 import BottomBar from "../components/BottomBar";
 import WhySahlaContent from "./WhySahlaContent";
+import { BreadcrumbJsonLd } from "../components/JsonLd";
 
 export const metadata: Metadata = {
   // absolute: the title already says "Sahla" once, so skip the layout's
@@ -15,6 +16,12 @@ export const metadata: Metadata = {
 export default function WhySahlaPage() {
   return (
     <div className="relative">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "https://sahla.co/" },
+          { name: "Why Sahla", url: "https://sahla.co/why-sahla" },
+        ]}
+      />
       <Navbar />
       <WhySahlaContent />
       <WaitlistContent />

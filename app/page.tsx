@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { SoftwareApplicationJsonLd } from "./components/JsonLd";
+import { SoftwareApplicationJsonLd, FAQPageJsonLd } from "./components/JsonLd";
+import { faqs } from "./components/faqTeaserData";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import ProofBar from "./components/ProofBar";
@@ -80,6 +81,7 @@ export default async function Home() {
   return (
     <div className="relative">
       <SoftwareApplicationJsonLd />
+      <FAQPageJsonLd faqs={faqs} />
       <Navbar />
       <Hero ctaLabel={cta.label} ctaHref={cta.href} />
       <hr className="mx-auto max-w-[1200px] border-dark-green/[0.06]" />

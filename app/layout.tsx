@@ -6,7 +6,7 @@ import { dark } from "@clerk/themes";
 import Providers from "./providers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { OrganizationJsonLd } from "./components/JsonLd";
+import { OrganizationJsonLd, WebSiteJsonLd } from "./components/JsonLd";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -212,6 +212,7 @@ export default function RootLayout({
       >
         <body className="min-h-full flex flex-col">
           <OrganizationJsonLd />
+          <WebSiteJsonLd />
           <Providers>{children}</Providers>
         </body>
       </html>

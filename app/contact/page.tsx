@@ -3,6 +3,7 @@ import Navbar from "../components/Navbar";
 import WaitlistContent from "../waitlist/WaitlistContent";
 import BottomBar from "../components/BottomBar";
 import ContactContent from "./ContactContent";
+import { BreadcrumbJsonLd } from "../components/JsonLd";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -12,6 +13,12 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <div className="relative">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "https://sahla.co/" },
+          { name: "Contact", url: "https://sahla.co/contact" },
+        ]}
+      />
       <Navbar />
       {/* <ContactContent /> */}
       <WaitlistContent />

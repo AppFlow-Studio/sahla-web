@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Navbar from "../components/Navbar";
 import BottomBar from "../components/BottomBar";
 import WaitlistContent, { WaitlistExtras } from "./WaitlistContent";
+import { BreadcrumbJsonLd } from "../components/JsonLd";
 
 export const metadata: Metadata = {
   title: "Join the Waitlist",
@@ -12,6 +13,12 @@ export const metadata: Metadata = {
 export default function WaitlistPage() {
   return (
     <div className="relative">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "https://sahla.co/" },
+          { name: "Waitlist", url: "https://sahla.co/waitlist" },
+        ]}
+      />
       <Navbar />
       <WaitlistContent />
       <WaitlistExtras />

@@ -3,6 +3,7 @@ import Navbar from "../../components/Navbar";
 import WaitlistContent from "../../waitlist/WaitlistContent";
 import BottomBar from "../../components/BottomBar";
 import CaseStudyContent from "./CaseStudyContent";
+import { BreadcrumbJsonLd } from "../../components/JsonLd";
 
 export const metadata: Metadata = {
   title: "MAS Staten Island Case Study",
@@ -13,6 +14,15 @@ export const metadata: Metadata = {
 export default function CaseStudyPage() {
   return (
     <div className="relative">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "https://sahla.co/" },
+          {
+            name: "MAS Staten Island Case Study",
+            url: "https://sahla.co/customers/mas-si",
+          },
+        ]}
+      />
       <Navbar />
       <CaseStudyContent />
       <WaitlistContent />
