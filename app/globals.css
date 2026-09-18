@@ -455,3 +455,135 @@ input[type="month"]:hover::-webkit-calendar-picker-indicator,
 input[type="week"]:hover::-webkit-calendar-picker-indicator {
   opacity: 1;
 }
+
+/* ── Clerk on a light surface ──────────────────────────────────────────────
+ * The blanket rule above paints every descendant of a Clerk surface cream and
+ * re-darkens primary buttons with `!important`, because almost every Clerk
+ * widget in this app sits on the dark-green chrome. Sign-in is the exception:
+ * a white card on cream, where that fallback makes the whole form invisible.
+ *
+ * So colours for this one surface are decided here rather than in the
+ * component's `appearance` prop, which can't outrank a stylesheet rule. Two
+ * classes beats the blanket rule's one on specificity; `!important` appears
+ * only where the rule being overridden already used it. Scoped to
+ * `.sahla-auth`, so the dark chrome everywhere else is untouched.
+ * ───────────────────────────────────────────────────────────────────────── */
+.sahla-auth .cl-headerTitle {
+  color: #0a261e !important;
+  font-family: var(--font-hero);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.sahla-auth .cl-headerSubtitle,
+.sahla-auth .cl-formHeaderSubtitle {
+  color: rgba(10, 38, 30, 0.5) !important;
+}
+
+.sahla-auth .cl-formFieldLabel {
+  color: rgba(10, 38, 30, 0.65) !important;
+}
+
+.sahla-auth .cl-dividerText {
+  color: rgba(10, 38, 30, 0.35) !important;
+}
+
+.sahla-auth .cl-dividerLine {
+  background-color: rgba(10, 38, 30, 0.08) !important;
+}
+
+.sahla-auth .cl-formFieldInput,
+.sahla-auth .cl-otpCodeFieldInput,
+.sahla-auth .cl-phoneInputBox {
+  background-color: #fffbf2 !important;
+  border-color: rgba(10, 38, 30, 0.12) !important;
+  color: #0a261e !important;
+  transition:
+    border-color 200ms,
+    box-shadow 200ms,
+    background-color 200ms;
+}
+
+.sahla-auth .cl-formFieldInput::placeholder {
+  color: rgba(10, 38, 30, 0.32) !important;
+}
+
+.sahla-auth .cl-formFieldInput:hover,
+.sahla-auth .cl-otpCodeFieldInput:hover {
+  border-color: rgba(10, 38, 30, 0.22) !important;
+}
+
+/* Gold is the focus colour across the product; here it also keeps the ring
+   off the dark-green primary button sitting directly below the field. */
+.sahla-auth .cl-formFieldInput:focus,
+.sahla-auth .cl-otpCodeFieldInput:focus,
+.sahla-auth .cl-phoneInputBox:focus-within {
+  background-color: #ffffff !important;
+  border-color: #b8922a !important;
+  box-shadow: 0 0 0 3px rgba(184, 146, 42, 0.16) !important;
+}
+
+.sahla-auth .cl-socialButtonsBlockButton {
+  background-color: #ffffff !important;
+  border-color: rgba(10, 38, 30, 0.16) !important;
+}
+
+.sahla-auth .cl-socialButtonsBlockButton:hover {
+  border-color: rgba(10, 38, 30, 0.28) !important;
+}
+
+/* Monochrome provider marks (Apple, GitHub, X) are a mask filled with
+   background-color, which the dark base theme sets to white: invisible on a
+   white button. Full-colour marks (Google) use a background-image and leave
+   that colour transparent, so repainting them here would put a green square
+   behind the logo. Only the masked ones are listed. */
+.sahla-auth .cl-providerIcon__apple {
+  background-color: #0a261e !important;
+}
+
+.sahla-auth .cl-socialButtonsBlockButtonText,
+.sahla-auth .cl-socialButtonsBlockButtonArrowBlockText,
+.sahla-auth .cl-identityPreviewText,
+.sahla-auth .cl-alertText,
+.sahla-auth .cl-formHeaderTitle {
+  color: #0a261e !important;
+}
+
+.sahla-auth .cl-formButtonPrimary {
+  background-color: #0a261e !important;
+  background-image: none !important;
+}
+
+.sahla-auth .cl-formButtonPrimary,
+.sahla-auth .cl-formButtonPrimary * {
+  color: #fffbf2 !important;
+}
+
+.sahla-auth .cl-formFieldAction,
+.sahla-auth .cl-formResendCodeLink,
+.sahla-auth .cl-identityPreviewEditButton,
+.sahla-auth .cl-backLink,
+.sahla-auth .cl-footerActionLink,
+.sahla-auth .cl-alternativeMethodsBlockButton {
+  color: #8a6b1e !important;
+}
+
+.sahla-auth .cl-identityPreview,
+.sahla-auth .cl-alert {
+  background-color: #fffbf2 !important;
+  border-color: rgba(10, 38, 30, 0.1) !important;
+}
+
+.sahla-auth .cl-formFieldErrorText {
+  color: #a3231c !important;
+}
+
+.sahla-auth .cl-formFieldInputShowPasswordButton,
+.sahla-auth .cl-footer,
+.sahla-auth .cl-footer * {
+  color: rgba(10, 38, 30, 0.4) !important;
+}
+
+.sahla-auth .cl-spinner {
+  color: #0a261e !important;
+}
