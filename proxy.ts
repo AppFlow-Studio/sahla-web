@@ -58,6 +58,10 @@ const isMarketingRoute = createRouteMatcher([
   "/privacy(.*)",
   "/terms(.*)",
   "/why-sahla(.*)",
+  "/resources(.*)",
+  "/glossary(.*)",
+  "/vs(.*)",
+  "/features(.*)",
 ]);
 const isLoginRoute = createRouteMatcher(["/login(.*)"]);
 const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
