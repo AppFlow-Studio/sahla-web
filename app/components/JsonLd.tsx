@@ -18,7 +18,8 @@ type JsonLdType =
   | "SoftwareApplication"
   | "BreadcrumbList"
   | "FAQPage"
-  | "Product";
+  | "Product"
+  | "Article";
 
 /**
  * Generic schema.org structured-data emitter. Prefer this (or one of the
@@ -103,7 +104,7 @@ export function SoftwareApplicationJsonLd() {
 export function BreadcrumbJsonLd({
   items,
 }: {
-  items: Array<{ name: string; url: string }>;
+  items: Array<{ name: string; url?: string }>;
 }) {
   return (
     <JsonLd
@@ -113,7 +114,7 @@ export function BreadcrumbJsonLd({
           "@type": "ListItem",
           position: i + 1,
           name: item.name,
-          item: item.url,
+          ...(item.url ? { item: item.url } : {}),
         })),
       }}
     />
@@ -138,6 +139,36 @@ export function FAQPageJsonLd({
             text: faq.a,
           },
         })),
+      }}
+    />
+  );
+}
+
+/** Any MDX content page (resources/glossary/vs/features) whose frontmatter sets schema: "Article". */
+export function ArticleJsonLd({
+  headline,
+  description,
+  datePublished,
+  dateModified,
+  url,
+}: {
+  headline: string;
+  description: string;
+  datePublished: string;
+  dateModified: string;
+  url: string;
+}) {
+  return (
+    <JsonLd
+      type="Article"
+      data={{
+        headline,
+        description,
+        datePublished,
+        dateModified,
+        url,
+        author: { "@type": "Organization", name: "Sahla" },
+        publisher: { "@type": "Organization", name: "Sahla" },
       }}
     />
   );
