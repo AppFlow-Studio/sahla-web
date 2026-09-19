@@ -66,6 +66,32 @@ describe("frontmatterSchema", () => {
     expect(result.faqs).toHaveLength(1);
   });
 
+  it("rejects a date that doesn't exist on the calendar", () => {
+    expect(() =>
+      frontmatterSchema.parse({
+        title: "Bad date",
+        description: "desc",
+        publishedAt: "2026-09-31",
+        updatedAt: "2026-09-15",
+        schema: "Article",
+        relatedPages: [],
+      })
+    ).toThrow();
+  });
+
+  it("rejects a non-ISO date string", () => {
+    expect(() =>
+      frontmatterSchema.parse({
+        title: "Bad date",
+        description: "desc",
+        publishedAt: "2026-09-15",
+        updatedAt: "Sept 19 2026",
+        schema: "Article",
+        relatedPages: [],
+      })
+    ).toThrow();
+  });
+
   it("rejects an unknown schema value", () => {
     expect(() =>
       frontmatterSchema.parse({

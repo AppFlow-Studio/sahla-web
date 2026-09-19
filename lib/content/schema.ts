@@ -8,12 +8,18 @@ const faqSchema = z.object({
   a: z.string().min(1),
 });
 
+// Calendar-accurate "YYYY-MM-DD" only (zod 4 rejects e.g. "2026-09-31"). These
+// dates end up in sitemap.xml's <lastmod> and in JSON-LD datePublished /
+// dateModified, where an unparseable value is worse than a missing one — so a
+// malformed date fails the build instead of rendering "Invalid Date".
+const isoDate = z.iso.date();
+
 export const frontmatterSchema = z
   .object({
     title: z.string().min(1),
     description: z.string().min(1),
-    publishedAt: z.string().min(1),
-    updatedAt: z.string().min(1),
+    publishedAt: isoDate,
+    updatedAt: isoDate,
     schema: z.enum(["Article", "FAQPage"]),
     relatedPages: z.array(z.string()).default([]),
     faqs: z.array(faqSchema).optional(),

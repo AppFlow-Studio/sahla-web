@@ -2,7 +2,11 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { getAllContentMeta, getContentBySlug, getAllContentAcrossCollections } from "./index";
+import {
+  getAllContentMeta,
+  getContentBySlugOrNull,
+  getAllContentAcrossCollections,
+} from "./index";
 
 let contentRoot: string;
 
@@ -22,6 +26,20 @@ relatedPages: ["/pricing"]
 ---
 
 Body content here.
+`
+  );
+  // Sits outside every collection folder — a traversal slug must not reach it.
+  fs.writeFileSync(
+    path.join(contentRoot, "outside.mdx"),
+    `---
+title: "Outside"
+description: "Not inside any collection."
+publishedAt: "2026-09-15"
+updatedAt: "2026-09-15"
+schema: "Article"
+---
+
+Outside body.
 `
   );
 });
@@ -49,11 +67,72 @@ describe("getAllContentMeta", () => {
   });
 });
 
-describe("getContentBySlug", () => {
+describe("getContentBySlugOrNull", () => {
   it("returns meta and the raw MDX body for a known slug", () => {
-    const { meta, body } = getContentBySlug("features", "prayer-times", contentRoot);
-    expect(meta.slug).toBe("prayer-times");
-    expect(body.trim()).toBe("Body content here.");
+    const content = getContentBySlugOrNull("features", "prayer-times", contentRoot);
+    expect(content).not.toBeNull();
+    expect(content!.meta.slug).toBe("prayer-times");
+    expect(content!.body.trim()).toBe("Body content here.");
+  });
+
+  it("returns null for an unknown slug instead of throwing", () => {
+    expect(getContentBySlugOrNull("features", "does-not-exist", contentRoot)).toBeNull();
+  });
+
+  it("returns null for a collection folder that doesn't exist", () => {
+    expect(getContentBySlugOrNull("vs", "anything", contentRoot)).toBeNull();
+  });
+
+  it("returns null for a traversal slug without reading outside the collection", () => {
+    // `outside.mdx` sits one level above `features/` and is valid content —
+    // the only thing stopping it from being served at /features/../outside
+    // is the slug charset guard.
+    expect(getContentBySlugOrNull("features", "../outside", contentRoot)).toBeNull();
+    expect(getContentBySlugOrNull("features", "..\\outside", contentRoot)).toBeNull();
+  });
+
+  it("returns null for other unsafe slug characters", () => {
+    for (const slug of ["foo/bar", "foo.bar", "foo bar", "", "foo\0bar"]) {
+      expect(getContentBySlugOrNull("features", slug, contentRoot)).toBeNull();
+    }
+  });
+});
+
+describe("malformed frontmatter", () => {
+  let brokenRoot: string;
+
+  beforeAll(() => {
+    brokenRoot = fs.mkdtempSync(path.join(os.tmpdir(), "content-broken-"));
+    fs.mkdirSync(path.join(brokenRoot, "features"));
+    fs.writeFileSync(
+      path.join(brokenRoot, "features", "broken-page.mdx"),
+      `---
+title: "Broken"
+description: "desc"
+publishedAt: "2026-09-31"
+updatedAt: "2026-09-15"
+schema: "Article"
+---
+
+Body.
+`
+    );
+  });
+
+  afterAll(() => {
+    fs.rmSync(brokenRoot, { recursive: true, force: true });
+  });
+
+  it("throws an error naming the offending file", () => {
+    expect(() => getContentBySlugOrNull("features", "broken-page", brokenRoot)).toThrow(
+      /features\/broken-page\.mdx/
+    );
+  });
+
+  it("names the offending file when scanning a whole collection", () => {
+    expect(() => getAllContentMeta("features", brokenRoot)).toThrow(
+      /Invalid frontmatter in features\/broken-page\.mdx/
+    );
   });
 });
 
