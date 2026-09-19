@@ -56,7 +56,8 @@ function scrollToHowItWorks(attempt = 0) {
   }
 }
 
-export default function WaitlistContent() {
+export default function WaitlistContent({ asH1 = false }: { asH1?: boolean }) {
+  const Heading = asH1 ? "h1" : "h2";
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -149,9 +150,9 @@ export default function WaitlistContent() {
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             >
               <p className="mb-4 text-[11px] font-semibold tracking-[0.28em] uppercase text-dark-green/40">Reserve Now</p>
-              <h1 className="mb-6 font-[family-name:var(--font-hero)] text-[clamp(36px,4.5vw,56px)] leading-[1.06] text-dark-green">
+              <Heading className="mb-6 font-[family-name:var(--font-hero)] text-[clamp(36px,4.5vw,56px)] leading-[1.06] text-dark-green">
                 Reserve your mosque&apos;s spot.
-              </h1>
+              </Heading>
               <p className="mb-10 max-w-[480px] text-[16px] leading-[1.7] text-dark-green/70">
                 We&apos;re onboarding new mosques in waves so each community gets the attention it deserves. Add your masjid to the list — we&apos;ll reach out as your wave opens.
               </p>

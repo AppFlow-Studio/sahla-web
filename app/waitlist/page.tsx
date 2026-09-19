@@ -20,7 +20,7 @@ export default function WaitlistPage() {
         ]}
       />
       <Navbar />
-      <WaitlistContent />
+      <WaitlistContent asH1 />
       <WaitlistExtras />
       <BottomBar />
     </div>

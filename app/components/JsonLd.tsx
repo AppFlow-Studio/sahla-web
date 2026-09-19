@@ -56,7 +56,7 @@ export function OrganizationJsonLd() {
           "Sahla builds fully branded iOS and Android apps for mosques. White-label mosque app builder with donations, prayer times, and sponsor revenue.",
         contactPoint: {
           "@type": "ContactPoint",
-          email: "hello@sahla.co",
+          email: "info@sahla.co",
           contactType: "sales",
         },
         sameAs: SAHLA_SAME_AS,

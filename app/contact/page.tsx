@@ -20,7 +20,7 @@ export default function ContactPage() {
         ]}
       />
       <Navbar />
-      {/* <ContactContent /> */}
+      <ContactContent />
       <WaitlistContent />
       <BottomBar />
     </div>

@@ -4,6 +4,8 @@ Sahla builds fully branded iOS and Android apps for mosques - a mosque's own app
 
 Sahla gives mosque communities prayer times, donations, programs, events, and sponsor revenue tools in a white-labeled app, with a CRM for the mosque team behind it.
 
+Contact: info@sahla.co
+
 Pages:
 
 Home - https://sahla.co/ - Overview of Sahla and what it offers mosques.
