@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import fs from "node:fs";
 import path from "node:path";
+import { getAllContentAcrossCollections } from "@/lib/content";
 
 const BASE_URL = "https://sahla.co";
 
@@ -58,12 +59,22 @@ function collectRoutes(dir: string, urlSegments: string[]): string[] {
   return routes;
 }
 
+export function collectContentRoutes(contentRoot?: string): MetadataRoute.Sitemap {
+  return getAllContentAcrossCollections(contentRoot).map((entry) => ({
+    url: `${BASE_URL}${entry.path}`,
+    lastModified: new Date(entry.updatedAt),
+  }));
+}
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const appDir = path.join(process.cwd(), "app");
   const routes = collectRoutes(appDir, []);
 
-  return routes.map((route) => ({
-    url: `${BASE_URL}${route}`,
-    lastModified: new Date(),
-  }));
+  return [
+    ...routes.map((route) => ({
+      url: `${BASE_URL}${route}`,
+      lastModified: new Date(),
+    })),
+    ...collectContentRoutes(),
+  ];
 }
