@@ -91,7 +91,12 @@ export function ContentPage({ collection, slug }: { collection: Collection; slug
           prose-blockquote:border-accent prose-blockquote:text-dark-green/70
           prose-li:text-dark-green/80 prose-code:text-dark-green"
       >
-        <MDXRemote source={body} components={mdxComponents} />
+        {/* blockJS: false — next-mdx-remote defaults to stripping every `prop={...}`
+            JSX attribute (keeping only string literals), which breaks any content
+            component that takes structured props (arrays/objects). content/README.md
+            already treats .mdx files as trusted, reviewed-like-code input, so this is
+            safe here; blockDangerousJS stays on (its default) as defense-in-depth. */}
+        <MDXRemote source={body} components={mdxComponents} options={{ blockJS: false }} />
       </div>
 
       {relatedLinks.length > 0 && (

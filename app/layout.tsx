@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist, Fraunces, Newsreader, Mrs_Saint_Delafield, Bodoni_Moda } from "next/font/google";
+import { Inter, Geist, Fraunces, Newsreader, Mrs_Saint_Delafield, Bodoni_Moda, Playfair_Display } from "next/font/google";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
@@ -47,6 +47,15 @@ const signatureFont = Mrs_Saint_Delafield({
 const bodoniModa = Bodoni_Moda({
   subsets: ["latin"],
   variable: "--font-hero",
+  display: "swap",
+});
+
+// Sahla Brand System v1.1 — large headings in the new MDX content-block
+// components (app/components/mdx/). Kept separate from --font-hero so it
+// doesn't change the look of any existing page.
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
   display: "swap",
 });
 
@@ -206,6 +215,7 @@ export default function RootLayout({
           newsreader.variable,
           signatureFont.variable,
           bodoniModa.variable,
+          playfairDisplay.variable,
           "font-sans",
           geist.variable
         )}

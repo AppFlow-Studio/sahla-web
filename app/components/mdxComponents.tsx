@@ -2,6 +2,13 @@ import Link from "next/link";
 import Image from "next/image";
 import type { MDXComponents } from "mdx/types";
 import type { AnchorHTMLAttributes, ImgHTMLAttributes } from "react";
+import { ComparisonTable } from "./mdx/ComparisonTable";
+import { FaqAccordion } from "./mdx/FaqAccordion";
+import { CtaBlock } from "./mdx/CtaBlock";
+import { StatCard } from "./mdx/StatCard";
+import { AppCard } from "./mdx/AppCard";
+import { PricingTable } from "./mdx/PricingTable";
+import { PrayerTimesTable } from "./mdx/PrayerTimesTable";
 
 function MdxLink({ href = "", children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
   if (href.startsWith("/")) {
@@ -41,4 +48,11 @@ function MdxImage({ src, alt, width, height, ...props }: ImgHTMLAttributes<HTMLI
 export const mdxComponents: MDXComponents = {
   a: MdxLink,
   img: MdxImage,
+  ComparisonTable,
+  FaqAccordion,
+  CtaBlock,
+  StatCard,
+  AppCard,
+  PricingTable,
+  PrayerTimesTable,
 };
