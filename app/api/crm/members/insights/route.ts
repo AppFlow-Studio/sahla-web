@@ -30,11 +30,17 @@ type PrefRow = {
   profiles: { created_at: string | null } | null;
 };
 
+/**
+ * `user_preferences.gender` holds "male"/"female" and "brother"/"sister" side by
+ * side (the app's wording changed between releases), so the synonyms have to
+ * fold together — otherwise a third of the community lands in "Other". Kept in
+ * step with the same helper in `/api/crm/insights`.
+ */
 function normalizeGender(raw: string | null): EnrichedMember["gender"] {
   if (raw == null || raw.trim() === "") return null;
   const g = raw.trim().toLowerCase();
-  if (g === "male" || g === "m") return "male";
-  if (g === "female" || g === "f") return "female";
+  if (g === "male" || g === "m" || g === "brother" || g === "brothers") return "male";
+  if (g === "female" || g === "f" || g === "sister" || g === "sisters") return "female";
   return "other";
 }
 

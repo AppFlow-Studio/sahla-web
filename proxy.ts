@@ -26,6 +26,7 @@ const ADMIN_PATHS = [
 // switching orgs. Tighten in the backend pass.
 const CRM_PATHS = [
   "/home",
+  "/insights",
   "/people",
   "/content",
   "/money",
