@@ -1,0 +1,5 @@
+-- Reconciliation placeholder for a migration applied directly on prod
+-- (project arlvxsoeecvfhkepalna) with no local file — the recurring local↔prod
+-- drift. The actual schema change is already live on the remote; this empty file
+-- only realigns the CLI migration-history check so later migrations can push.
+-- See memory: "Migration sync gap".
