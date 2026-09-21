@@ -1,0 +1,30 @@
+[
+  {
+    "name": "PLACEHOLDER — Sample Masjid (replace with real data)",
+    "name_ar": null,
+    "address": "123 Placeholder St",
+    "city": "New York",
+    "state": "NY",
+    "zip": "10001",
+    "lat": 40.7505,
+    "lng": -73.9934,
+    "phone": null,
+    "website": null,
+    "email": null,
+    "data_source": "manual_import"
+  },
+  {
+    "name": "PLACEHOLDER — Second Sample Masjid (replace with real data)",
+    "name_ar": null,
+    "address": "456 Placeholder Ave",
+    "city": "Brooklyn",
+    "state": "NY",
+    "zip": "11201",
+    "lat": 40.6944,
+    "lng": -73.9903,
+    "phone": null,
+    "website": null,
+    "email": null,
+    "data_source": "manual_import"
+  }
+]
