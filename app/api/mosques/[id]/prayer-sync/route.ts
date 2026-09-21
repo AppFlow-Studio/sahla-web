@@ -2,8 +2,12 @@ import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { PRAYER_NAMES } from "@/lib/prayer/constants";
-import { parseAlAdhanTime, computeIqamahTime, ALADHAN_KEY_MAP, buildAlAdhanQuery } from "@/lib/prayer/utils";
+import { parseAlAdhanTime, computeIqamahTime, ALADHAN_KEY_MAP, buildAlAdhanCoordQuery } from "@/lib/prayer/utils";
 import { localDay, localCalendarDate } from "@/lib/prayer/timezone";
+import {
+  resolveMosqueCoordinates,
+  coordinateErrorResponse,
+} from "@/lib/prayer/coordinates";
 import type { AlAdhanDayData, IqamahConfig } from "@/lib/prayer/types";
 
 export async function POST(
@@ -21,7 +25,7 @@ export async function POST(
   // 1. Get mosque info
   const { data: mosque, error: mosqueError } = await supabase
     .from("mosques")
-    .select("id, address, calculation_method, school, timezone, midnight_mode, latitude_adjustment_method, prayer_tune, shafaq")
+    .select("id, address, city, state, latitude, longitude, calculation_method, school, timezone, midnight_mode, latitude_adjustment_method, prayer_tune, shafaq")
     .eq("id", mosqueId)
     .single();
 
@@ -29,8 +33,13 @@ export async function POST(
     return NextResponse.json({ error: "Mosque not found" }, { status: 404 });
   }
 
-  if (!mosque.address) {
-    return NextResponse.json({ error: "Mosque address is required" }, { status: 400 });
+  // Resolve to coordinates — geocoded once by us and cached on the row — rather
+  // than handing the address to AlAdhan. Their geocoder 503s on most real
+  // street addresses, and `address` alone is often just a street line.
+  const located = await resolveMosqueCoordinates(supabase, mosque);
+  if (located.status !== "ok") {
+    const { error, status } = coordinateErrorResponse(located);
+    return NextResponse.json({ error }, { status });
   }
 
   // Everything below is anchored to the mosque's own calendar day, not the
@@ -40,17 +49,21 @@ export async function POST(
   const { year, month } = today;
 
   // 2. Fetch month from AlAdhan
-  const qs = buildAlAdhanQuery(mosque.address, {
-    method: mosque.calculation_method || 2,
-    school: mosque.school || 0,
-    midnightMode: mosque.midnight_mode,
-    latitudeAdjustmentMethod: mosque.latitude_adjustment_method,
-    tune: mosque.prayer_tune,
-    shafaq: mosque.shafaq,
-  });
-  const url = `https://api.aladhan.com/v1/calendarByAddress/${year}/${month}?${qs}`;
+  const qs = buildAlAdhanCoordQuery(
+    located.coordinates,
+    {
+      method: mosque.calculation_method || 2,
+      school: mosque.school || 0,
+      midnightMode: mosque.midnight_mode,
+      latitudeAdjustmentMethod: mosque.latitude_adjustment_method,
+      tune: mosque.prayer_tune,
+      shafaq: mosque.shafaq,
+    },
+    mosque.timezone
+  );
+  const url = `https://api.aladhan.com/v1/calendar/${year}/${month}?${qs}`;
 
-  const aladhanRes = await fetch(url);
+  const aladhanRes = await fetch(url, { cache: "no-store" });
   if (!aladhanRes.ok) {
     return NextResponse.json({ error: "AlAdhan API failed" }, { status: 502 });
   }
