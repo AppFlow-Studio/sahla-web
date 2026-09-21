@@ -8,6 +8,7 @@ import { breadcrumbFor } from "../_lib/nav";
 import { useMosque } from "../_lib/mock-mosque";
 import { useCommandPalette } from "./CommandPalette";
 import NotificationInbox from "./NotificationInbox";
+import LanguageSelector from "./LanguageSelector";
 import { crmProfileAppearance } from "../_lib/clerkAppearance";
 
 export default function TopBar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
@@ -84,6 +85,9 @@ export default function TopBar({ onOpenMobileNav }: { onOpenMobileNav: () => voi
       >
         <Search size={16} />
       </button>
+
+      {/* Language */}
+      <LanguageSelector />
 
       {/* Notifications */}
       <NotificationInbox />
