@@ -7,6 +7,9 @@ const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID;
 
 const ALLOWED_FIELDS = [
   "name", "address", "city", "state", "phone", "email", "timezone",
+  // Coordinates resolved by Google Places when the admin picks an address.
+  // Prayer times are computed from these, so AlAdhan never has to geocode.
+  "latitude", "longitude", "geocoded_at", "geocode_source",
   "app_name", "logo_url", "brand_color", "accent_color", "secondary_color",
   "font_theme", "header_style",
   "calculation_method", "school",

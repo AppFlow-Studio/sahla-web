@@ -49,6 +49,8 @@ export async function POST(
     calculationMethod,
     school,
     address,
+    latitude,
+    longitude,
     midnightMode,
     latitudeAdjustmentMethod,
     prayerTune,
@@ -59,6 +61,8 @@ export async function POST(
     calculationMethod: number;
     school: number;
     address?: string;
+    latitude?: number | null;
+    longitude?: number | null;
     midnightMode?: number;
     latitudeAdjustmentMethod?: number | null;
     prayerTune?: string | null;
@@ -95,6 +99,14 @@ export async function POST(
     school: school,
   };
   if (address) updateFields.address = address;
+  // Coordinates from the Google suggestion the admin picked. Storing them here
+  // means prayer-time sync never has to geocode the address string again.
+  if (typeof latitude === "number" && typeof longitude === "number") {
+    updateFields.latitude = latitude;
+    updateFields.longitude = longitude;
+    updateFields.geocoded_at = new Date().toISOString();
+    updateFields.geocode_source = "google_places";
+  }
   if (midnightMode !== undefined) updateFields.midnight_mode = midnightMode;
   if (latitudeAdjustmentMethod !== undefined) updateFields.latitude_adjustment_method = latitudeAdjustmentMethod;
   if (prayerTune !== undefined) updateFields.prayer_tune = prayerTune;
