@@ -1,0 +1,541 @@
+:root {
+  --cream: #f4eee2;
+  --paper: #fbf8f1;
+  --green-deep: #0a2e24;
+  --green-darker: #071f18;
+  --green-tint-1: #123b2f;
+  --green-tint-2: #164434;
+  --gold-on-dark: #d4b15a;
+  --gold-line: #b8922e;
+  --gold-text: #7f5f17;
+  --ink: #14231c;
+  --body-ink: #3c4a43;
+  --muted-ink: #5c645f;
+  --on-green-main: #f4eee2;
+  --on-green-secondary: #cfd9d3;
+  --on-green-muted: #9fb3a8;
+  --hairline-1: #e6dcc1;
+  --hairline-2: #ded4c2;
+
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-body: var(--font-source-sans), ui-sans-serif, system-ui,
+    -apple-system, sans-serif;
+  --font-arabic: var(--font-amiri), serif;
+
+  --max-width: 1120px;
+  --side-pad: 80px;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --side-pad: 24px;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--cream);
+  color: var(--body-ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+}
+
+.wrap {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding-left: var(--side-pad);
+  padding-right: var(--side-pad);
+}
+
+.label {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-text);
+}
+
+.label--on-dark {
+  color: var(--gold-on-dark);
+}
+
+/* ---------- Header ---------- */
+
+.site-header {
+  background: var(--cream);
+  border-bottom: 1px solid var(--hairline-1);
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 22px;
+  padding-bottom: 22px;
+}
+
+.site-header__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.site-header__name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.15rem;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  position: relative;
+  background: var(--green-deep);
+  color: var(--on-green-main);
+  overflow: hidden;
+}
+
+.hero__pattern {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.hero__inner {
+  position: relative;
+  z-index: 1;
+  padding-top: 96px;
+  padding-bottom: 96px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 64px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .hero__inner {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+}
+
+.hero__eyebrow {
+  margin-bottom: 22px;
+}
+
+.hero__legal-name {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.1rem, 4.1vw, 3.4rem);
+  line-height: 1.12;
+  margin: 0 0 22px;
+  color: var(--on-green-main);
+  max-width: 15ch;
+}
+
+.hero__masjid-name {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(1.15rem, 1.8vw, 1.45rem);
+  color: var(--gold-on-dark);
+  margin: 0 0 6px;
+}
+
+.hero__masjid-name-arabic {
+  font-family: var(--font-arabic);
+  font-weight: 700;
+  font-size: clamp(1.3rem, 2vw, 1.6rem);
+  color: var(--gold-on-dark);
+  margin: 0 0 28px;
+  direction: rtl;
+}
+
+.hero__tagline {
+  font-size: 1.05rem;
+  color: var(--on-green-secondary);
+  max-width: 42ch;
+  margin: 0 0 32px;
+}
+
+.hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  font-size: 0.85rem;
+  color: var(--on-green-muted);
+  border-top: 1px solid rgba(212, 177, 90, 0.25);
+  padding-top: 20px;
+}
+
+.hero__meta strong {
+  color: var(--on-green-secondary);
+  font-weight: 600;
+}
+
+.hero__photo {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(212, 177, 90, 0.3);
+}
+
+.hero__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---------- Section shell ---------- */
+
+.section {
+  padding-top: 88px;
+  padding-bottom: 88px;
+}
+
+@media (max-width: 720px) {
+  .section {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+}
+
+.section--paper {
+  background: var(--paper);
+  border-top: 1px solid var(--hairline-1);
+  border-bottom: 1px solid var(--hairline-1);
+}
+
+.section--green {
+  background: var(--green-deep);
+  color: var(--on-green-main);
+}
+
+.section-heading {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.7rem, 2.6vw, 2.3rem);
+  color: var(--ink);
+  margin: 10px 0 0;
+}
+
+.section--green .section-heading {
+  color: var(--on-green-main);
+}
+
+.section-head {
+  margin-bottom: 40px;
+  max-width: 640px;
+}
+
+/* ---------- About ---------- */
+
+.about__body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  margin-top: 32px;
+}
+
+.about__lede {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-style: italic;
+  font-size: 1.3rem;
+  line-height: 1.5;
+  color: var(--ink);
+  border-left: 2px solid var(--gold-line);
+  padding-left: 28px;
+  max-width: 62ch;
+}
+
+.about__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.about__fact {
+  font-size: 0.85rem;
+  color: var(--muted-ink);
+  border: 1px solid var(--hairline-2);
+  background: var(--cream);
+  border-radius: 999px;
+  padding: 8px 18px;
+}
+
+/* ---------- Prayer times ---------- */
+
+.prayer-table {
+  margin-top: 40px;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.prayer-table th {
+  text-align: left;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--on-green-muted);
+  padding: 0 0 16px;
+  border-bottom: 1px solid rgba(212, 177, 90, 0.35);
+}
+
+.prayer-table td {
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(212, 177, 90, 0.16);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 400;
+}
+
+.prayer-table tr:last-child td {
+  border-bottom: none;
+}
+
+.prayer-table td:first-child {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--on-green-secondary);
+  width: 40%;
+}
+
+.prayer-table td:not(:first-child) {
+  color: var(--on-green-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.prayer-table tr.prayer-table__jummah td:first-child {
+  color: var(--gold-on-dark);
+}
+
+.prayer-note {
+  margin-top: 28px;
+  font-size: 0.9rem;
+  color: var(--on-green-muted);
+  max-width: 60ch;
+}
+
+/* ---------- Programs ---------- */
+
+.programs-grid {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--hairline-2);
+  border: 1px solid var(--hairline-2);
+}
+
+@media (max-width: 720px) {
+  .programs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.program-card {
+  background: var(--paper);
+  padding: 32px;
+}
+
+.program-card__name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.2rem;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+
+.program-card__desc {
+  font-size: 0.95rem;
+  color: var(--body-ink);
+  margin: 0 0 16px;
+}
+
+.program-card__schedule {
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  color: var(--gold-text);
+  font-weight: 600;
+}
+
+/* ---------- Leadership ---------- */
+
+.leadership {
+  text-align: center;
+  border-top: 1px solid var(--hairline-1);
+  border-bottom: 1px solid var(--hairline-1);
+}
+
+.leadership__name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.6rem;
+  color: var(--ink);
+  margin: 28px 0 6px;
+}
+
+.leadership__title {
+  font-size: 0.95rem;
+  color: var(--muted-ink);
+}
+
+/* ---------- Contact ---------- */
+
+.contact__grid {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 56px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .contact__grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+.contact__block {
+  margin-bottom: 22px;
+}
+
+.contact__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--on-green-muted);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.contact__value {
+  font-size: 1.05rem;
+  color: var(--on-green-main);
+}
+
+.contact__value a {
+  text-decoration: none;
+  border-bottom: 1px solid rgba(212, 177, 90, 0.5);
+}
+
+.contact__value a:hover {
+  border-bottom-color: var(--gold-on-dark);
+}
+
+.map-frame {
+  border: 1px solid rgba(212, 177, 90, 0.3);
+  border-radius: 6px;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: var(--green-tint-1);
+}
+
+.map-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  background: var(--green-darker);
+  color: var(--on-green-muted);
+  padding: 48px 0 32px;
+  font-size: 0.88rem;
+}
+
+.site-footer p {
+  margin: 0 0 10px;
+}
+
+.site-footer a {
+  color: var(--on-green-secondary);
+  text-decoration: underline;
+  text-decoration-color: rgba(212, 177, 90, 0.4);
+  text-underline-offset: 3px;
+}
+
+.site-footer__legal {
+  color: var(--on-green-secondary);
+}
+
+.site-footer__links {
+  display: flex;
+  gap: 18px;
+  margin: 18px 0;
+}
+
+.site-footer__credit {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(212, 177, 90, 0.15);
+  font-size: 0.78rem;
+  color: var(--on-green-muted);
+}
+
+/* ---------- Simple legal pages ---------- */
+
+.legal-page h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2rem;
+  color: var(--ink);
+  margin: 12px 0 24px;
+}
+
+.legal-page {
+  padding-top: 72px;
+  padding-bottom: 96px;
+}
+
+.legal-page p {
+  max-width: 68ch;
+  color: var(--body-ink);
+}
