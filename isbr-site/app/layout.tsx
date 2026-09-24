@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Source_Sans_3, Amiri } from "next/font/google";
+import localFont from "next/font/local";
 import { site } from "@/config/site";
 import "./globals.css";
 
@@ -25,6 +26,14 @@ const amiri = Amiri({
   display: "swap",
 });
 
+const italianOldStyle = localFont({
+  src: "./fonts/ItalianOldStyleMT-BoldItalic.otf",
+  style: "italic",
+  weight: "700",
+  variable: "--font-italian-old-style",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: `${site.legalName} | Masjid in Bay Ridge, Brooklyn`,
@@ -47,7 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${sourceSans.variable} ${amiri.variable}`}
+      className={`${fraunces.variable} ${sourceSans.variable} ${amiri.variable} ${italianOldStyle.variable}`}
     >
       <body>{children}</body>
     </html>
