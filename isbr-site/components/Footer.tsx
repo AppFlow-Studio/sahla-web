@@ -1,31 +1,26 @@
-import { site, fullAddress } from "@/config/site";
+import { site } from "@/config/site";
 
 export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
     <footer className="site-footer">
-      <div className="wrap">
+      <div className="wrap site-footer__bar">
         <p className="site-footer__legal">
           &copy; {year} {site.legalName} All rights reserved.
         </p>
-        <p>
-          {fullAddress} &middot; <a href={`tel:${site.phone}`}>{site.phoneDisplay}</a>{" "}
-          &middot;{" "}
-          <a href={site.facebookUrl} target="_blank" rel="noreferrer">
-            Facebook
-          </a>
-        </p>
-        <div className="site-footer__links">
-          <a href="/privacy">Privacy</a>
-          <a href="/terms">Terms</a>
+        <div className="site-footer__right">
+          <div className="site-footer__links">
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Use</a>
+          </div>
+          <p className="site-footer__credit">
+            Website provided by{" "}
+            <a href="https://sahla.co" target="_blank" rel="noreferrer">
+              Sahla
+            </a>
+          </p>
         </div>
-        <p className="site-footer__credit">
-          Website provided by{" "}
-          <a href="https://sahla.co" target="_blank" rel="noreferrer">
-            Sahla
-          </a>
-        </p>
       </div>
     </footer>
   );
