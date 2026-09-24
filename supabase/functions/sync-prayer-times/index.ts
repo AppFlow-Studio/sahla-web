@@ -8,9 +8,77 @@ const CORS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const PRAYER_NAMES = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
+/**
+ * Al Adhan's key → the name we store. `todays_prayers.prayer_name` is
+ * lowercase everywhere else (lib/prayer/constants.ts, the web sync route, and
+ * the rows the app reads), but this function used to write "Fajr"/"Dhuhr".
+ * The unique key is (mosque_id, prayer_name, date) and text comparison is
+ * case-sensitive, so the two spellings coexisted as duplicate rows instead of
+ * upserting over each other.
+ */
+const PRAYER_KEYS: [string, string][] = [
+  ["Fajr", "fajr"],
+  ["Dhuhr", "dhuhr"],
+  ["Asr", "asr"],
+  ["Maghrib", "maghrib"],
+  ["Isha", "isha"],
+];
 const WINDOW_DAYS = 30;
 const DEFAULT_TIMEZONE = "America/New_York";
+
+type IqamahConfig = {
+  prayer_name: string;
+  mode: "fixed" | "offset" | "seasonal";
+  fixed_time: string | null;
+  offset_minutes: number | null;
+  seasonal_rules:
+    | { start_date: string; end_date: string; mode: string; value: string | number }[]
+    | null;
+};
+
+/** "05:12" + 20 -> "05:32". Mirrors addMinutes in lib/prayer/utils.ts. */
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m + minutes;
+  const newH = Math.floor(total / 60) % 24;
+  const newM = total % 60;
+  return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
+}
+
+function isDateInRange(mmdd: string, start: string, end: string): boolean {
+  return start <= end
+    ? mmdd >= start && mmdd <= end
+    : mmdd >= start || mmdd <= end; // wraps year-end
+}
+
+/**
+ * Iqamah for one prayer on one date. Previously this function wrote only
+ * athan_time and left iqamah_time NULL on every row it produced, so any day
+ * covered by the cron had no iqamah times at all. Mirrors computeIqamahTime in
+ * lib/prayer/utils.ts (edge functions can't import from lib/).
+ */
+function computeIqamah(
+  athan: string,
+  config: IqamahConfig | undefined,
+  isoDate: string,
+): string | null {
+  if (!config) return null;
+  if (config.mode === "fixed") return config.fixed_time;
+  if (config.mode === "offset") {
+    return config.offset_minutes == null
+      ? null
+      : addMinutes(athan, config.offset_minutes);
+  }
+  if (config.mode === "seasonal" && config.seasonal_rules?.length) {
+    const mmdd = isoDate.slice(5); // 'YYYY-MM-DD' -> 'MM-DD'
+    for (const rule of config.seasonal_rules) {
+      if (!isDateInRange(mmdd, rule.start_date, rule.end_date)) continue;
+      if (rule.mode === "fixed") return String(rule.value);
+      if (rule.mode === "offset") return addMinutes(athan, Number(rule.value));
+    }
+  }
+  return null;
+}
 
 /**
  * 'YYYY-MM-DD' right now in an IANA zone. Al Adhan returns each day's timings
@@ -76,7 +144,9 @@ Deno.serve(async (req: Request) => {
     // Fetch mosques
     let query = supabase
       .from("mosques")
-      .select("id, city, state, calculation_method, school, timezone");
+      .select(
+        "id, name, latitude, longitude, calculation_method, school, timezone",
+      );
     if (filterMosqueId) {
       query = query.eq("id", filterMosqueId);
     }
@@ -94,6 +164,9 @@ Deno.serve(async (req: Request) => {
 
     let totalUpserted = 0;
     const windows: { from: string; to: string }[] = [];
+    // Collected rather than just logged, so a run that quietly synced nothing
+    // is visible in the response instead of reporting success.
+    const failures: { mosque_id: string; reason: string }[] = [];
 
     for (const mosque of mosques) {
       // Window start/end are this mosque's own calendar days.
@@ -121,32 +194,73 @@ Deno.serve(async (req: Request) => {
         monthsNeeded.push({ year: ey, month: em });
       }
 
-      const city = mosque.city || "New York";
-      const country = "US";
+      // Coordinates, not a city name. The previous version called
+      // calendarByCity with a hardcoded country=US and fell back to
+      // city "New York" whenever `city` was null — so a mosque with no city on
+      // file silently received New York's prayer times, and any non-US mosque
+      // could never work at all. Al Adhan's geocoder also answers 503 for most
+      // real addresses, which the /calendar lat/lng endpoint avoids entirely.
+      if (mosque.latitude == null || mosque.longitude == null) {
+        failures.push({
+          mosque_id: mosque.id,
+          reason: "no coordinates on file — run the geocode backfill",
+        });
+        continue;
+      }
       const method = mosque.calculation_method ?? 2;
       const school = mosque.school ?? 0;
+      const tzParam = mosque.timezone
+        ? `&timezonestring=${encodeURIComponent(mosque.timezone)}`
+        : "";
 
       // Fetch all needed months from Al Adhan calendar API
       const allDays: AlAdhanDay[] = [];
+      let monthFetchFailed = false;
       for (const { year, month } of monthsNeeded) {
         const url =
-          `https://api.aladhan.com/v1/calendarByCity/${year}/${month}?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=${method}&school=${school}`;
+          `https://api.aladhan.com/v1/calendar/${year}/${month}?latitude=${mosque.latitude}&longitude=${mosque.longitude}&method=${method}&school=${school}${tzParam}`;
         const res = await fetch(url);
         if (!res.ok) {
-          console.error(
-            `Al Adhan API error for ${city} ${year}/${month}: ${res.status}`,
-          );
+          // Record it. Previously this only logged and continued, so a run
+          // that fetched nothing still reported success:true.
+          monthFetchFailed = true;
+          failures.push({
+            mosque_id: mosque.id,
+            reason: `Al Adhan ${res.status} for ${year}/${month}`,
+          });
           continue;
         }
         const json = await res.json();
         allDays.push(...(json.data as AlAdhanDay[]));
       }
+      if (allDays.length === 0) {
+        if (!monthFetchFailed) {
+          failures.push({
+            mosque_id: mosque.id,
+            reason: "Al Adhan returned no days",
+          });
+        }
+        continue;
+      }
+
+      // This mosque's iqamah rules, so the cron writes the same shape of row
+      // as the onboarding sync route rather than leaving iqamah_time NULL.
+      const { data: iqamahConfigs } = await supabase
+        .from("iqamah_config")
+        .select("prayer_name, mode, fixed_time, offset_minutes, seasonal_rules")
+        .eq("mosque_id", mosque.id);
+      const configByPrayer = new Map<string, IqamahConfig>(
+        (iqamahConfigs ?? []).map((
+          c: IqamahConfig,
+        ) => [c.prayer_name.toLowerCase(), c]),
+      );
 
       // Filter to 30-day window and build upsert rows
       const rows: {
         mosque_id: string;
         prayer_name: string;
         athan_time: string;
+        iqamah_time: string;
         date: string;
       }[] = [];
 
@@ -157,14 +271,18 @@ Deno.serve(async (req: Request) => {
 
         if (dateStr < todayStr || dateStr > endStr) continue;
 
-        for (const prayerName of PRAYER_NAMES) {
-          const raw = day.timings[prayerName]?.replace(/\s*\(.*\)/, "") ?? "";
+        for (const [aladhanKey, prayerName] of PRAYER_KEYS) {
+          const raw = day.timings[aladhanKey]?.replace(/\s*\(.*\)/, "") ?? "";
           if (!raw) continue;
           rows.push({
             mosque_id: mosque.id,
             prayer_name: prayerName,
             date: dateStr,
             athan_time: raw,
+            // Same fallback the web route uses: with no rule configured, the
+            // iqamah column mirrors athan rather than going null.
+            iqamah_time:
+              computeIqamah(raw, configByPrayer.get(prayerName), dateStr) ?? raw,
           });
         }
       }
@@ -180,6 +298,7 @@ Deno.serve(async (req: Request) => {
             `Upsert error for mosque ${mosque.id}:`,
             upsertErr.message,
           );
+          failures.push({ mosque_id: mosque.id, reason: upsertErr.message });
         } else {
           totalUpserted += batch.length;
         }
@@ -193,12 +312,18 @@ Deno.serve(async (req: Request) => {
         .lt("date", todayStr);
     }
 
+    // A mosque can contribute more than one failure (two months, say), so
+    // count distinct mosques rather than failure entries.
+    const failedMosques = new Set(failures.map((f) => f.mosque_id));
+
     return new Response(
       JSON.stringify({
-        success: true,
-        mosques_synced: mosques.length,
+        success: failures.length === 0,
+        mosques_seen: mosques.length,
+        mosques_synced: mosques.length - failedMosques.size,
         rows_upserted: totalUpserted,
         windows,
+        failures,
       }),
       { status: 200, headers: { ...CORS, "Content-Type": "application/json" } },
     );

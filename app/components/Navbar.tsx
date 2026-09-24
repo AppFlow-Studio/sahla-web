@@ -145,9 +145,9 @@ export default function Navbar() {
                 <ArrowRight size={14} />
               </Link>
             ) : isSignedIn && orgId ? (
-              // Signed-in mosque admin — link to /launch, which the proxy
-              // routes to /dashboard. From there the "Open your CRM" CTA
-              // takes them into /home if they have CRM access.
+              // Signed-in mosque admin — link to /launch, the hand-off screen
+              // that works out where this admin belongs (unfinished checklist,
+              // CRM, or the receipt) and forwards them there.
               <Link
                 href="/launch"
                 className={`hidden items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 sm:inline-flex ${

@@ -1,7 +1,13 @@
 
 [functions.sync-prayer-times]
 enabled = true
-verify_jwt = true
+# Invoked by the bi-weekly prayer cron via net.http_post, which sends no
+# Authorization header — with verify_jwt on, every run dies at the gateway with
+# UNAUTHORIZED_NO_AUTH_HEADER before the function boots. It reads mosques and
+# writes todays_prayers under the service role and trusts nothing from the
+# caller. Staging was broken exactly this way; prod only kept working because it
+# still ran an older build with this off.
+verify_jwt = false
 import_map = "./functions/sync-prayer-times/deno.json"
 entrypoint = "./functions/sync-prayer-times/index.ts"
 
@@ -49,3 +55,20 @@ enabled = true
 # JWT check off so Cal.com's requests aren't rejected at the auth layer.
 verify_jwt = false
 entrypoint = "./functions/cal-webhook/index.ts"
+
+[functions.send-prayer-notifications]
+enabled = true
+# Driven by the per-minute cron via net.http_post (no Authorization header).
+# Resolves each mosque's local "now" and pushes only times already stored in
+# todays_prayers — it accepts no payload from the caller. Previously had no
+# block at all, which silently defaults to verify_jwt = true.
+verify_jwt = false
+entrypoint = "./functions/send-prayer-notifications/index.ts"
+
+[functions.get-todays-prayers]
+enabled = true
+# Service-role read bypass for prayer times (see the note at the top of the
+# function). Declared explicitly so the deployed setting stops depending on
+# whatever was last pushed by hand.
+verify_jwt = false
+entrypoint = "./functions/get-todays-prayers/index.ts"

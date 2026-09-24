@@ -1,6 +1,8 @@
--- Reconciliation placeholder for a migration applied directly on the Sahla
--- project (arlvxsoeecvfhkepalna) with no local file — the recurring
--- local↔remote drift. The actual schema change is already live on the
--- remote; this empty file only realigns the CLI migration-history check so
--- later migrations can push. Confirmed intentional/known by the team
--- (2026-09-21).
+-- Reconciliation placeholder for migrations applied directly on two remotes
+-- with no local file — the recurring local↔remote drift. The actual schema
+-- changes are already live; this empty file only realigns the CLI
+-- migration-history check so later migrations can push.
+--
+-- Sahla project (arlvxsoeecvfhkepalna): confirmed intentional/known by the
+-- team (2026-09-21).
+-- Staging (project rpepxdgdiqeirdqsazuc): see memory "Migration sync gap".

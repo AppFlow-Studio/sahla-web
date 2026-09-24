@@ -349,7 +349,8 @@ async function handleInvoicePaid(invoice: Stripe.Invoice, connectedAccountId?: s
   await supabase
     .from("ad_subscriptions")
     .update({ status: "active", updated_at: new Date().toISOString() })
-    .eq("stripe_subscription_id", subscriptionId);
+    .eq("stripe_subscription_id", subscriptionId)
+    .neq("status", "canceled");
 
   console.log(`Invoice paid for subscription ${subscriptionId}`);
 }
@@ -656,6 +657,13 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
 }
 
 // ─── Business-ad Subscription Handlers ───
+//
+// 'canceled' is TERMINAL. Stripe does not guarantee event ordering, and when
+// dunning kills a subscription it emits customer.subscription.deleted and a
+// final invoice.payment_failed together — either order. Every write that could
+// move a row backwards out of 'canceled' carries .neq("status", "canceled"),
+// so a late invoice event can't resurrect a dead subscription into 'past_due'
+// or 'active' (which would put a stale Cancel button back in the app).
 
 /** Map a Stripe subscription status onto our ad_subscriptions.status vocabulary. */
 function mapAdStatus(status: Stripe.Subscription.Status): string {
@@ -938,6 +946,7 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
         updated_at: new Date().toISOString(),
       })
       .eq("stripe_subscription_id", subscriptionId)
+      .neq("status", "canceled")
       .select("submission_id, mosque_id, onboarding_amount, recurring_amount");
 
     const row = updated?.[0];
@@ -1005,6 +1014,7 @@ async function handleAdInvoicePaid(invoice: Stripe.Invoice, subscriptionId: stri
         updated_at: new Date().toISOString(),
       })
       .eq("stripe_subscription_id", subscriptionId)
+      .neq("status", "canceled")
       .select("submission_id, mosque_id");
     const row = updated?.[0];
     await recordAdPayment(
@@ -1076,6 +1086,10 @@ async function handleAdInvoiceFailed(invoice: Stripe.Invoice, subscriptionId: st
     .from("ad_subscriptions")
     .update({ status: "past_due", updated_at: new Date().toISOString() })
     .eq("stripe_subscription_id", subscriptionId)
+    // canceled is terminal: an out-of-order payment_failed arriving after
+    // subscription.deleted must not revive the row to past_due (the bug that
+    // left a dead subscription showing a Cancel button).
+    .neq("status", "canceled")
     .select("submission_id, mosque_id");
 
   const row = updated?.[0];
@@ -1149,6 +1163,9 @@ async function handleAdSubscriptionUpdated(subscription: Stripe.Subscription) {
     .from("ad_subscriptions")
     .update({ status, updated_at: new Date().toISOString() })
     .eq("stripe_subscription_id", subscription.id)
+    // canceled is terminal — a late 'updated' event (e.g. reordered after
+    // subscription.deleted) must not flip a canceled ad back to active/past_due.
+    .neq("status", "canceled")
     .select("submission_id, mosque_id");
 
   // Belt and braces: a subscription can reach `unpaid` or come back to `active`
@@ -1173,11 +1190,17 @@ async function handleAdSubscriptionDeleted(subscription: Stripe.Subscription) {
     .select("submission_id, mosque_id");
 
   // The subscription is gone — whether they cancelled or Stripe gave up after
-  // its retries — so the ad comes down. The submission row is left alone, so
-  // the masjid keeps the record and nothing has to be re-entered.
+  // its retries — so the ad comes down and the submission is marked canceled.
+  // setAdLive removes the approved_business_ads row (what makes it live);
+  // marking the submission canceled ends its lifecycle so it reads as ended,
+  // becomes eligible to Renew, and can't be revived by a stray recovery event.
   const row = updated?.[0];
   if (row?.submission_id) {
     await setAdLive(row.submission_id, row.mosque_id ?? null, false);
+    await supabase
+      .from("business_ads_submissions")
+      .update({ status: "canceled" })
+      .eq("submission_id", row.submission_id);
   }
   console.log(`Ad subscription canceled: ${subscription.id}`);
 }

@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
+  BarChart3,
   Users,
   Calendar,
   HeartHandshake,
@@ -47,6 +48,12 @@ export const CRM_NAV: CrmSection[] = [
     label: "Home",
     href: "/home",
     icon: LayoutDashboard,
+  },
+  {
+    id: "insights",
+    label: "Community Overview",
+    href: "/insights",
+    icon: BarChart3,
   },
   {
     id: "people",

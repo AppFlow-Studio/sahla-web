@@ -184,6 +184,10 @@ export default function PrayerTimesOnboardingPanel({
   const [todaysPrayersError, setTodaysPrayersError] = useState<string | null>(null);
   const [syncingTodaysPrayers, setSyncingTodaysPrayers] = useState(false);
   const [address, setAddress] = useState(mosque.address || "");
+  const [coords, setCoords] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [method, setMethod] = useState(mosque.calculation_method ?? 2);
   const [school, setSchool] = useState(mosque.school ?? 0);
   const [midnightMode, setMidnightMode] = useState(mosque.midnight_mode ?? 0);
@@ -272,6 +276,13 @@ export default function PrayerTimesOnboardingPanel({
     setAddress(
       place.formattedAddress ||
         [place.address, place.city, place.state].filter(Boolean).join(", ")
+    );
+    // Places already resolved this pin, so keep it — prayer times are computed
+    // from coordinates and AlAdhan's own geocoder is unreliable.
+    setCoords(
+      place.lat != null && place.lng != null
+        ? { latitude: place.lat, longitude: place.lng }
+        : null
     );
   }
 
@@ -383,6 +394,7 @@ export default function PrayerTimesOnboardingPanel({
           calculationMethod: method,
           school,
           address,
+          ...(coords ?? {}),
           midnightMode,
           latitudeAdjustmentMethod: latAdjMethod >= 0 ? latAdjMethod : null,
           prayerTune: prayerTune.trim() || null,

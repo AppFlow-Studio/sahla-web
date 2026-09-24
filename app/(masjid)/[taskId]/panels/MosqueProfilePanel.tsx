@@ -51,6 +51,12 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
     timezone: mosque.timezone || "America/New_York",
   };
   const [form, setForm] = useState(initialForm);
+  // Set only when the admin picks a fresh Google suggestion. Kept outside
+  // `form` so it never counts toward the completion threshold.
+  const [coords, setCoords] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const lastSavedRef = useRef<string>(JSON.stringify(initialForm));
   const debounceRef = useRef<number | null>(null);
@@ -63,16 +69,29 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
     }
   }
 
-  // When the admin picks a Google suggestion, fill the street line and
-  // auto-populate city/state from the structured components so they don't
-  // retype (and can't typo) them. They stay editable afterward.
+  // When the admin picks a Google suggestion, keep the FULL formatted address
+  // — a street line on its own ("200 Vesey Street") is ambiguous and can't be
+  // geocoded, and this column is what prayer-time sync reads. The prayer
+  // wizard writes the same shape, so the two panels can no longer overwrite
+  // each other with incompatible formats.
+  //
+  // Places hands back coordinates alongside the address; keeping them means
+  // prayer times never depend on a geocoder being up.
   function handlePlaceSelect(place: SelectedPlace) {
     setForm((prev) => ({
       ...prev,
-      address: place.address || prev.address,
+      address:
+        place.formattedAddress ||
+        [place.address, place.city, place.state].filter(Boolean).join(", ") ||
+        prev.address,
       city: place.city || prev.city,
       state: place.state || prev.state,
     }));
+    setCoords(
+      place.lat != null && place.lng != null
+        ? { latitude: place.lat, longitude: place.lng }
+        : null
+    );
   }
 
   const filledCount = FIELDS.filter((f) => form[f].trim() !== "").length;
@@ -87,7 +106,7 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
       isFirstRender.current = false;
       return;
     }
-    const serialized = JSON.stringify(form);
+    const serialized = JSON.stringify({ ...form, coords });
     if (serialized === lastSavedRef.current) return;
 
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
@@ -100,6 +119,16 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...form,
+            // Only sent when a suggestion was just picked, so hand-editing the
+            // address text doesn't silently keep the old pin.
+            ...(coords
+              ? {
+                  latitude: coords.latitude,
+                  longitude: coords.longitude,
+                  geocoded_at: new Date().toISOString(),
+                  geocode_source: "google_places",
+                }
+              : {}),
             [canComplete ? "markComplete" : "unmarkComplete"]: "mosque_profile",
           }),
           keepalive: true,
@@ -117,7 +146,7 @@ export default function MosqueProfilePanel({ mosque }: { mosque: MosqueData }) {
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [form, canComplete, mosque.id, router, showToast]);
+  }, [form, coords, canComplete, mosque.id, router, showToast]);
 
   return (
     <div className="space-y-6">

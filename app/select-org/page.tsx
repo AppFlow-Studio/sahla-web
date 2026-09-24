@@ -8,8 +8,8 @@ export default function SelectOrgPage() {
   // the redirect fires only when the user actually picks an org (no race
   // against the session-cookie write, no "already-active org → bounce
   // straight back" trap that the old useEffect-based logic suffered from).
-  // /launch is our virtual middleware route that forwards to /overview (HQ)
-  // or /dashboard (mosque) based on the newly-active orgId.
+  // /launch is the hand-off screen: it names the destination for the
+  // newly-active org (HQ, an unfinished checklist, the CRM) and forwards there.
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-[#f8f6f1]">
       {/* Subtle top accent */}

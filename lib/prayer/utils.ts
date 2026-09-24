@@ -5,20 +5,48 @@ import type {
   AlAdhanParams,
 } from "./types";
 
-/**
- * Builds AlAdhan API query string from mosque prayer settings.
- */
-export function buildAlAdhanQuery(address: string, params: AlAdhanParams): string {
-  const qs = new URLSearchParams({
-    address,
-    method: String(params.method),
-    school: String(params.school),
-  });
+/** Appends the optional calculation settings shared by every AlAdhan endpoint. */
+function applyAlAdhanParams(qs: URLSearchParams, params: AlAdhanParams): string {
+  qs.set("method", String(params.method));
+  qs.set("school", String(params.school));
   if (params.midnightMode != null) qs.set("midnightMode", String(params.midnightMode));
   if (params.latitudeAdjustmentMethod != null) qs.set("latitudeAdjustmentMethod", String(params.latitudeAdjustmentMethod));
   if (params.tune) qs.set("tune", params.tune);
   if (params.shafaq && params.shafaq !== "general") qs.set("shafaq", params.shafaq);
   return qs.toString();
+}
+
+/**
+ * Builds AlAdhan API query string from mosque prayer settings.
+ *
+ * Prefer {@link buildAlAdhanCoordQuery}. The *ByAddress endpoints make AlAdhan
+ * geocode the string, and their geocoder returns 503 for most real addresses.
+ */
+export function buildAlAdhanQuery(address: string, params: AlAdhanParams): string {
+  // URLSearchParams encodes exactly once. Do not hand it a pre-encoded value —
+  // AlAdhan's own docs show that mistake and it produces %2520.
+  return applyAlAdhanParams(new URLSearchParams({ address }), params);
+}
+
+/**
+ * Builds an AlAdhan query from coordinates, for the /timings and /calendar
+ * endpoints. No geocoding happens anywhere in the request.
+ *
+ * `timezonestring` is passed explicitly because AlAdhan otherwise infers the
+ * zone from the coordinates, which disagrees with the mosque's configured
+ * timezone near borders and returns times shifted by an hour.
+ */
+export function buildAlAdhanCoordQuery(
+  coords: { latitude: number; longitude: number },
+  params: AlAdhanParams,
+  timezone?: string | null
+): string {
+  const qs = new URLSearchParams({
+    latitude: String(coords.latitude),
+    longitude: String(coords.longitude),
+  });
+  if (timezone) qs.set("timezonestring", timezone);
+  return applyAlAdhanParams(qs, params);
 }
 
 export const ALADHAN_KEY_MAP: Record<PrayerName, string> = {

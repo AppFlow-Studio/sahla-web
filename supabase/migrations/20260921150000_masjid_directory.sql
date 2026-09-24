@@ -52,10 +52,13 @@ COMMENT ON TABLE public.masjids_directory IS
   'Public masjid directory (sahla.co). Distinct from mosques (paying customers). Most rows here are not customers.';
 COMMENT ON COLUMN public.masjids_directory.mosque_id IS
   'Set only when is_sahla_customer = true. Links to mosques.id so real iqamah times can be read from iqamah_config.';
+
 COMMENT ON COLUMN public.masjids_directory.verification_status IS
   'unverified: no times set yet. computed: AlAdhan athan times shown, not confirmed by the masjid. masjid_confirmed: the masjid confirmed the times shown. The "Verified" label on a directory page requires masjid_confirmed — enforced in lib/masjid-directory/publish-rules.ts, not just by convention.';
+
 COMMENT ON COLUMN public.masjids_directory.data_source IS
   'Where this row''s times/info came from, e.g. aladhan, mosque_admin, manual_import, google_places. Shown on the page per the accuracy requirement.';
+
 COMMENT ON COLUMN public.masjids_directory.opted_out IS
   'Set true when a masjid asks to be removed from the directory. Hides the row from public reads immediately.';
 
@@ -88,8 +91,11 @@ COMMENT ON COLUMN public.mosques.directory_opt_in IS
 -- ---------------------------------------------------------------------------
 
 CREATE INDEX IF NOT EXISTS idx_masjids_directory_city ON masjids_directory (city);
+
 CREATE INDEX IF NOT EXISTS idx_masjids_directory_opted_out ON masjids_directory (opted_out);
+
 CREATE INDEX IF NOT EXISTS idx_masjids_directory_mosque_id ON masjids_directory (mosque_id) WHERE mosque_id IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_jummah_directory_masjid_id ON jummah_directory (masjid_id);
 
 -- ---------------------------------------------------------------------------
@@ -97,11 +103,13 @@ CREATE INDEX IF NOT EXISTS idx_jummah_directory_masjid_id ON jummah_directory (m
 -- ---------------------------------------------------------------------------
 
 DROP TRIGGER IF EXISTS masjids_directory_updated_at ON masjids_directory;
+
 CREATE TRIGGER masjids_directory_updated_at
   BEFORE UPDATE ON masjids_directory
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 DROP TRIGGER IF EXISTS jummah_directory_updated_at ON jummah_directory;
+
 CREATE TRIGGER jummah_directory_updated_at
   BEFORE UPDATE ON jummah_directory
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -113,14 +121,17 @@ CREATE TRIGGER jummah_directory_updated_at
 -- ---------------------------------------------------------------------------
 
 ALTER TABLE masjids_directory ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE jummah_directory ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "masjids_directory_public_read" ON masjids_directory;
+
 CREATE POLICY "masjids_directory_public_read" ON masjids_directory
   FOR SELECT TO public
   USING (opted_out = false);
 
 DROP POLICY IF EXISTS "masjids_directory_sahla_team_write" ON masjids_directory;
+
 CREATE POLICY "masjids_directory_sahla_team_write" ON masjids_directory
   FOR ALL TO public
   USING (is_sahla_team())
@@ -129,6 +140,7 @@ CREATE POLICY "masjids_directory_sahla_team_write" ON masjids_directory
 -- Jummah rows follow their masjid's visibility: readable when the parent
 -- masjid is public, regardless of the requester's own opted_out row access.
 DROP POLICY IF EXISTS "jummah_directory_public_read" ON jummah_directory;
+
 CREATE POLICY "jummah_directory_public_read" ON jummah_directory
   FOR SELECT TO public
   USING (
@@ -139,6 +151,7 @@ CREATE POLICY "jummah_directory_public_read" ON jummah_directory
   );
 
 DROP POLICY IF EXISTS "jummah_directory_sahla_team_write" ON jummah_directory;
+
 CREATE POLICY "jummah_directory_sahla_team_write" ON jummah_directory
   FOR ALL TO public
   USING (is_sahla_team())
