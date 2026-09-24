@@ -58,10 +58,10 @@ export async function getPrayerTimes(): Promise<PrayerData> {
     ];
 
     const hijriDate = hijri
-      ? `${hijri.day} ${hijri.month?.en} ${hijri.year} AH`
+      ? `${hijri.day} ${hijri.month?.en} ${hijri.year}`
       : null;
     const gregorianReadable = gregorian
-      ? `${gregorian.month?.en} ${gregorian.day}, ${gregorian.year}`
+      ? `${gregorian.weekday?.en}, ${gregorian.month?.en} ${gregorian.day}, ${gregorian.year}`
       : null;
 
     return {
