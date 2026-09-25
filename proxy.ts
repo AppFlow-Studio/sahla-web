@@ -72,7 +72,17 @@ function isAdminPath(pathname: string): boolean {
   );
 }
 
+// isbr.sahla.co is a static site served from public/isbr/ via rewrites in
+// next.config.ts. None of the Sahla routing below applies to it — in
+// particular, the HQ-admin redirect from "/" would fire for Sahla staff whose
+// Clerk session cookie is shared across *.sahla.co.
+const ISBR_HOST_RE = /^isbr\.(sahla\.co|localhost)(:\d+)?$/;
+
 export const proxy = clerkMiddleware(async (auth, req) => {
+  if (ISBR_HOST_RE.test(req.headers.get("host") ?? "")) {
+    return NextResponse.next();
+  }
+
   if (isWebhookRoute(req) || isLoginRoute(req) || isPublicApiRoute(req)) {
     return NextResponse.next();
   }
