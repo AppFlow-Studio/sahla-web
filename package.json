@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run build:isbr",
     "build": "next build",
+    "build:isbr": "cd isbr-site && npm ci && npm run build && rm -rf ../public/isbr && cp -R out ../public/isbr",
     "start": "next start",
     "lint": "eslint"
   },

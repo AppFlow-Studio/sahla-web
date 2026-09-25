@@ -36,17 +36,6 @@ yarn-error.log*
 # vercel
 .vercel
 
-# schema dumps
-schema_dump.sql
-schema_clean.sql
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# clerk configuration (can include secrets)
-/.clerk/
-.env.local
-
-# isbr-site static export, copied in by `npm run build:isbr`
-/public/isbr/
