@@ -27,11 +27,17 @@ export default function BottomBar() {
             <p className="mt-4 max-w-[300px] text-[13.5px] leading-[1.7] text-sand/70">
               Fully branded iOS and Android apps for mosques. Your name in the App Store, your colors, your community.
             </p>
+            <a
+              href="mailto:info@sahla.co"
+              className="mt-3 inline-block text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand"
+            >
+              info@sahla.co
+            </a>
           </div>
 
           {/* Product */}
           <div>
-            <h4 className="mb-[18px] text-[12px] font-semibold uppercase tracking-[0.18em] text-sand/45">Product</h4>
+            <h3 className="mb-[18px] text-[12px] font-semibold uppercase tracking-[0.18em] text-sand/45">Product</h3>
             <div className="flex flex-col">
               <Link href="/why-sahla" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Why Sahla</Link>
               <Link href="/pricing" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Pricing</Link>
@@ -43,7 +49,7 @@ export default function BottomBar() {
 
           {/* Company */}
           <div>
-            <h4 className="mb-[18px] text-[12px] font-semibold uppercase tracking-[0.18em] text-sand/45">Company</h4>
+            <h3 className="mb-[18px] text-[12px] font-semibold uppercase tracking-[0.18em] text-sand/45">Company</h3>
             <div className="flex flex-col">
               <Link href="/about" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">About</Link>
               <Link href="/contact" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Contact</Link>
@@ -53,7 +59,7 @@ export default function BottomBar() {
 
           {/* Legal */}
           <div>
-            <h4 className="mb-[18px] text-[12px] font-semibold uppercase tracking-[0.18em] text-sand/45">Legal</h4>
+            <h3 className="mb-[18px] text-[12px] font-semibold uppercase tracking-[0.18em] text-sand/45">Legal</h3>
             <div className="flex flex-col">
               <Link href="/privacy" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Privacy Policy</Link>
               <Link href="/terms" className="py-[5px] text-[13.5px] text-sand/60 transition-colors duration-200 hover:text-sand">Terms of Use</Link>

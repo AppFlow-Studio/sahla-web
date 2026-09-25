@@ -1,0 +1,736 @@
+:root {
+  --cream: #f4eee2;
+  --paper: #fbf8f1;
+  --green-deep: #0a2e24;
+  --green-darker: #071f18;
+  --green-tint-1: #123b2f;
+  --green-tint-2: #164434;
+  --gold-on-dark: #d4b15a;
+  --gold-line: #b8922e;
+  --gold-text: #7f5f17;
+  --ink: #14231c;
+  --body-ink: #3c4a43;
+  --muted-ink: #5c645f;
+  --on-green-main: #f4eee2;
+  --on-green-secondary: #cfd9d3;
+  --on-green-muted: #9fb3a8;
+  --hairline-1: #e6dcc1;
+  --hairline-2: #ded4c2;
+
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-body: var(--font-source-sans), ui-sans-serif, system-ui,
+    -apple-system, sans-serif;
+  --font-arabic: var(--font-amiri), serif;
+  --font-script: var(--font-italian-old-style), "Book Antiqua", Georgia, serif;
+
+  --max-width: 1120px;
+  --side-pad: 80px;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --side-pad: 24px;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--cream);
+  color: var(--body-ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+}
+
+.wrap {
+  max-width: var(--max-width);
+  margin: 0 auto;
+
+}
+
+.label {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-text);
+}
+
+.label--on-dark {
+  color: var(--gold-on-dark);
+}
+
+/* ---------- Header ---------- */
+
+.site-header {
+  position: relative;
+  z-index: 1;
+  background: var(--green-deep);
+  border-bottom: 1px solid rgba(212, 177, 90, 0.2);
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+  padding-top: 22px;
+  padding-bottom: 22px;
+}
+
+.site-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.site-header__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--gold-on-dark);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--gold-on-dark);
+}
+
+.site-header__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--on-green-main);
+}
+
+.site-header__subtitle {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold-on-dark);
+  margin-top: 4px;
+}
+
+.site-header__contact {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  font-size: 0.85rem;
+  color: var(--on-green-secondary);
+}
+
+.site-header__contact a {
+  text-decoration: none;
+  color: var(--on-green-main);
+  font-weight: 600;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  position: relative;
+  background: var(--green-deep);
+  color: var(--on-green-main);
+  overflow: hidden;
+}
+
+.hero__pattern {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.hero__inner {
+  position: relative;
+  z-index: 1;
+  padding-top: 64px;
+  padding-bottom: 88px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .hero__inner {
+    padding-top: 40px;
+    padding-bottom: 56px;
+  }
+}
+
+.hero__arabic-block {
+  text-align: center;
+  width: 100%;
+  margin: 0 0 28px;
+}
+
+.hero__masjid-name-arabic {
+  font-family: var(--font-arabic);
+  font-weight: 700;
+  font-size: clamp(4rem, 6vw, 5rem);
+  color: var(--gold-on-dark);
+  margin: 0;
+  direction: rtl;
+  width: 100%;
+}
+
+.hero__divider {
+  display: block;
+  width: 56px;
+  height: 1px;
+  background: var(--gold-line);
+  margin: 18px auto 0;
+}
+
+.hero__legal-name {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.1rem, 4.1vw, 3.4rem);
+  line-height: 1.12;
+  margin: 0 0 22px;
+  color: var(--on-green-main);
+  max-width: 30ch;
+  text-align: center;
+}
+
+.hero__tagline {
+  display: inline-block;
+  font-family: var(--font-script);
+  font-size: 1.25rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  margin: 0 0 32px;
+}
+
+@media (max-width: 640px) {
+  .hero__tagline {
+    white-space: normal;
+    font-size: 1.05rem;
+  }
+}
+
+.hero__meta {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px 28px;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-green-muted);
+  border-top: 1px solid rgba(212, 177, 90, 0.25);
+  padding-top: 20px;
+}
+
+/* ---------- Hero gallery ---------- */
+
+.hero__gallery {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 720px) {
+  .hero__gallery {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hero__gallery-item {
+  aspect-ratio: 16 / 10;
+  display: flex;
+  align-items: flex-end;
+  padding: 20px 24px;
+  background: var(--green-deep);
+  border: 1px solid rgba(212, 177, 90, 0.15);
+  border-bottom:none;
+}
+
+
+.hero__gallery-item:last-child {
+  border-right: none;
+}
+
+.hero__gallery-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--on-green-muted);
+}
+
+/* ---------- Section shell ---------- */
+
+.section {
+  padding-top: 88px;
+  padding-bottom: 88px;
+}
+
+@media (max-width: 720px) {
+  .section {
+    padding-top: 56px;
+    padding-bottom: 56px;
+  }
+}
+
+.section--paper {
+  background: var(--paper);
+  border-top: 1px solid var(--hairline-1);
+  border-bottom: 1px solid var(--hairline-1);
+}
+
+.section--green {
+  background: var(--green-deep);
+  color: var(--on-green-main);
+}
+
+.section-heading {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.7rem, 2.6vw, 2.3rem);
+  color: var(--ink);
+  margin: 10px 0 0;
+}
+
+.section--green .section-heading {
+  color: var(--on-green-main);
+}
+
+.section-head {
+  margin-bottom: 40px;
+  max-width: 640px;
+}
+
+.section-head--split {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+  gap: 48px;
+  align-items: start;
+  max-width: none;
+}
+
+@media (max-width: 800px) {
+  .section-head--split {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+/* ---------- About ---------- */
+
+.about__lede {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-style: italic;
+  font-size: 1.3rem;
+  line-height: 1.5;
+  color: var(--ink);
+  border-left: 2px solid var(--gold-line);
+  padding-left: 28px;
+  max-width: 62ch;
+}
+
+.about__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px 48px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--hairline-2);
+}
+
+.about__fact-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.about__fact-desc {
+  font-size: 0.85rem;
+  color: var(--muted-ink);
+}
+
+/* ---------- Prayer times ---------- */
+
+.prayer-card {
+  background: var(--green-deep);
+  border-radius: 10px;
+  padding: 36px 40px;
+  box-shadow: 0 24px 48px rgba(10, 46, 36, 0.22);
+}
+
+.prayer-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.prayer-table th {
+  text-align: left;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--on-green-muted);
+  padding: 0 0 16px;
+  border-bottom: 1px solid rgba(212, 177, 90, 0.35);
+}
+
+.prayer-table td {
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(212, 177, 90, 0.16);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 400;
+}
+
+.prayer-table tr:last-child td {
+  border-bottom: none;
+}
+
+.prayer-table td:first-child {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--on-green-secondary);
+  width: 40%;
+}
+
+.prayer-table td:not(:first-child) {
+  color: var(--on-green-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.prayer-table tr.prayer-table__jummah td:first-child {
+  color: var(--gold-on-dark);
+}
+
+.prayer-note {
+  margin-top: 20px;
+  font-size: 0.9rem;
+  color: var(--muted-ink);
+  max-width: 60ch;
+}
+
+/* ---------- Programs ---------- */
+
+.section-head--rule {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--hairline-2);
+}
+
+.programs__intro {
+  color: var(--muted-ink);
+  font-size: 0.95rem;
+  max-width: 46ch;
+  align-self: center;
+}
+
+.programs-grid {
+  margin-top: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 900px) {
+  .programs-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .program-card:nth-child(3) {
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .programs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .program-card {
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+.program-card {
+  padding: 32px 32px 0 32px;
+  border-left: 1px solid var(--hairline-2);
+}
+
+.program-card:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+.program-card__number {
+  display: block;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--gold-text);
+  margin-bottom: 16px;
+}
+
+.program-card__name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.2rem;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+
+.program-card__desc {
+  font-size: 0.95rem;
+  color: var(--body-ink);
+  margin: 0 0 16px;
+}
+
+.program-card__schedule {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-text);
+  font-weight: 600;
+}
+
+/* ---------- Leadership ---------- */
+
+.leadership {
+  border-top: 1px solid var(--hairline-1);
+  border-bottom: 1px solid var(--hairline-1);
+}
+
+.leadership__card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--paper);
+  border: 1px solid var(--hairline-2);
+  border-radius: 8px;
+  padding: 24px 28px;
+  max-width: 420px;
+  box-shadow: 0 12px 28px rgba(20, 35, 28, 0.08);
+}
+
+.leadership__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--hairline-2);
+  color: var(--muted-ink);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.leadership__name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.15rem;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.leadership__title {
+  font-size: 0.85rem;
+  color: var(--muted-ink);
+}
+
+/* ---------- Contact ---------- */
+
+.section-head--contact {
+  padding-bottom: 24px;
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(212, 177, 90, 0.2);
+}
+
+.contact__grid {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 56px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .contact__grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+.contact__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 480px) {
+  .contact__row {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+}
+
+.contact__block {
+  margin-bottom: 0;
+}
+
+.contact__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--on-green-muted);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.contact__value {
+  font-size: 1.05rem;
+  color: var(--on-green-main);
+}
+
+.contact__value a {
+  text-decoration: none;
+  border-bottom: 1px solid rgba(212, 177, 90, 0.5);
+}
+
+.contact__value a:hover {
+  border-bottom-color: var(--gold-on-dark);
+}
+
+.map-frame {
+  border: 1px solid rgba(212, 177, 90, 0.3);
+  border-radius: 6px;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: var(--green-tint-1);
+}
+
+.map-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  background: var(--green-darker);
+  color: var(--on-green-muted);
+  padding: 48px 0 32px;
+  font-size: 0.88rem;
+}
+
+.site-footer p {
+  margin: 0 0 10px;
+}
+
+.site-footer a {
+  color: var(--on-green-secondary);
+  text-decoration: underline;
+  text-decoration-color: rgba(212, 177, 90, 0.4);
+  text-underline-offset: 3px;
+}
+
+.site-footer__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.site-footer__legal {
+  color: var(--on-green-secondary);
+  margin: 0;
+}
+
+.site-footer__right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.site-footer__links {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+}
+
+.site-footer__credit {
+  font-size: 0.78rem;
+  color: var(--on-green-muted);
+  margin: 0;
+}
+
+/* ---------- Simple legal pages ---------- */
+
+.legal-page h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2rem;
+  color: var(--ink);
+  margin: 12px 0 24px;
+}
+
+.legal-page {
+  padding-top: 72px;
+  padding-bottom: 96px;
+}
+
+.legal-page p {
+  max-width: 68ch;
+  color: var(--body-ink);
+}

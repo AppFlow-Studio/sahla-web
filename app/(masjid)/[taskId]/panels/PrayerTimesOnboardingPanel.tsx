@@ -46,6 +46,7 @@ type MosqueData = {
   prayer_tune: string | null;
   shafaq: string | null;
   timezone: string | null;
+  directory_opt_in: boolean | null;
 };
 
 const DEFAULT_OFFSETS: Record<PrayerName, number> = {
@@ -197,6 +198,7 @@ export default function PrayerTimesOnboardingPanel({
   // this mosque is computed in it, so it's saved alongside the other settings.
   const [timezone, setTimezone] = useState(mosque.timezone || DEFAULT_TIMEZONE);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [directoryOptIn, setDirectoryOptIn] = useState(mosque.directory_opt_in ?? false);
   const [previewTimings, setPreviewTimings] = useState<PreviewTimings | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -398,6 +400,7 @@ export default function PrayerTimesOnboardingPanel({
           prayerTune: prayerTune.trim() || null,
           shafaq,
           timezone,
+          directoryOptIn,
         }),
       });
       if (!configRes.ok) throw new Error("Failed to save config");
@@ -820,6 +823,27 @@ export default function PrayerTimesOnboardingPanel({
                     Shown in {timezone.replace(/_/g, " ")} — detected from your address. Prayer
                     times will update automatically each day based on your configuration.
                   </p>
+                </div>
+              </div>
+              <div className={CARD}>
+                <div className="px-6 py-5">
+                  <label className="flex items-start gap-3 text-[13px] text-stone-700">
+                    <input
+                      type="checkbox"
+                      checked={directoryOptIn}
+                      onChange={(e) => setDirectoryOptIn(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-400"
+                    />
+                    <span>
+                      <span className="font-medium text-stone-900">
+                        Show our masjid in the Sahla public directory.
+                      </span>
+                      <span className="mt-0.5 block text-[12px] text-stone-500">
+                        These iqamah times will appear on your masjid&apos;s public directory
+                        page at sahla.co, with a &quot;Verified&quot; label.
+                      </span>
+                    </span>
+                  </label>
                 </div>
               </div>
               <div className="flex items-center justify-between">

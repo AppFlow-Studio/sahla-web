@@ -56,6 +56,7 @@ export async function POST(
     prayerTune,
     shafaq,
     timezone,
+    directoryOptIn,
   }: {
     configs: IqamahConfig[];
     calculationMethod: number;
@@ -68,6 +69,7 @@ export async function POST(
     prayerTune?: string | null;
     shafaq?: string;
     timezone?: string;
+    directoryOptIn?: boolean;
   } = body;
 
   if (!configs || !Array.isArray(configs) || configs.length !== 5) {
@@ -115,6 +117,7 @@ export async function POST(
   // anything that isn't a real IANA name rather than writing a value that
   // would break every later "today" lookup.
   if (isValidTimeZone(timezone)) updateFields.timezone = timezone;
+  if (typeof directoryOptIn === "boolean") updateFields.directory_opt_in = directoryOptIn;
 
   const { data: mosqueData, error: mosqueError } = await supabase
     .from("mosques")
