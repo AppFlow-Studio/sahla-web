@@ -276,6 +276,8 @@ a {
 }
 
 .hero__gallery-item {
+  position: relative;
+  overflow: hidden;
   aspect-ratio: 16 / 10;
   display: flex;
   align-items: flex-end;
@@ -290,11 +292,25 @@ a {
   border-right: none;
 }
 
+.hero__gallery-img {
+  object-fit: cover;
+}
+
+.hero__gallery-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent 55%);
+  pointer-events: none;
+}
+
 .hero__gallery-label {
+  position: relative;
+  z-index: 1;
   font-size: 0.68rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--on-green-muted);
+  color: #fff;
 }
 
 /* ---------- Section shell ---------- */
