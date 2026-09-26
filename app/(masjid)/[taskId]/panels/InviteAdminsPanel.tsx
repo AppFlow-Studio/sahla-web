@@ -8,25 +8,7 @@ import { useToast } from "../../components/ToastProvider";
 type QueuedInvite = {
   name: string;
   email: string;
-  role: "org:admin" | "org:editor" | "org:viewer";
-};
-
-const ROLE_OPTIONS: { value: QueuedInvite["role"]; label: string; description: string }[] = [
-  { value: "org:admin", label: "Admin", description: "Full access to all settings" },
-  { value: "org:editor", label: "Editor", description: "Can manage content and events" },
-  { value: "org:viewer", label: "Viewer", description: "Read-only access" },
-];
-
-const ROLE_COLORS: Record<QueuedInvite["role"], string> = {
-  "org:admin": "bg-amber-100 text-amber-700",
-  "org:editor": "bg-blue-100 text-blue-700",
-  "org:viewer": "bg-stone-100 text-stone-500",
-};
-
-const ROLE_LABELS: Record<QueuedInvite["role"], string> = {
-  "org:admin": "Admin",
-  "org:editor": "Editor",
-  "org:viewer": "Viewer",
+  role: string;
 };
 
 export default function InviteAdminsPanel({
@@ -44,7 +26,6 @@ export default function InviteAdminsPanel({
   // New invite form
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<QueuedInvite["role"]>("org:admin");
   const [showForm, setShowForm] = useState(false);
 
   async function addInvite() {
@@ -69,18 +50,16 @@ export default function InviteAdminsPanel({
       const res = await fetch(`/api/mosques/${mosqueId}/invites`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: trimmedName,
-          email: trimmedEmail,
-          role,
-        }),
+        body: JSON.stringify({ name: trimmedName, email: trimmedEmail }),
       });
       if (!res.ok) throw new Error("Failed to queue invite");
 
-      setInvites((prev) => [...prev, { name: trimmedName, email: trimmedEmail, role }]);
+      setInvites((prev) => [
+        ...prev,
+        { name: trimmedName, email: trimmedEmail, role: "org:admin" },
+      ]);
       setName("");
       setEmail("");
-      setRole("org:admin");
       setShowForm(false);
       showToast("Invite queued", "success");
       router.refresh();
@@ -100,6 +79,7 @@ export default function InviteAdminsPanel({
       if (!res.ok) throw new Error("Failed to remove invite");
       setInvites((prev) => prev.filter((i) => i.email !== emailToRemove));
       showToast("Invite removed", "success");
+      router.refresh();
     } catch {
       showToast("Failed to remove invite", "error");
     }
@@ -110,8 +90,12 @@ export default function InviteAdminsPanel({
       {/* Info callout */}
       <div className="rounded-xl border border-blue-200 bg-blue-50/50 px-5 py-4">
         <p className="text-[13px] text-blue-800">
-          Invites are queued and will be sent when you Go Live. Team members will
-          receive an email to join your mosque&apos;s dashboard.
+          Everyone you add here becomes a full admin: they get the admin menu
+          inside your app and, on the Core + CRM plan, your mosque&apos;s CRM.
+          Only add people you trust with those keys.
+        </p>
+        <p className="mt-2 text-[13px] text-blue-800">
+          Invites are queued and sent when you Go Live.
         </p>
       </div>
 
@@ -120,7 +104,7 @@ export default function InviteAdminsPanel({
         <div className="rounded-xl border-2 border-dashed border-stone-200 bg-white p-12 text-center">
           <p className="text-[14px] text-stone-500">No team members added yet</p>
           <p className="mt-1 text-[12px] text-stone-400">
-            Invite admins, editors, or viewers to help manage your mosque app
+            Invite the people who will help you run your mosque app
           </p>
         </div>
       ) : (
@@ -140,8 +124,8 @@ export default function InviteAdminsPanel({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-[13px] font-semibold text-stone-900">{invite.name}</p>
-                    <span className={`text-[9px] font-bold rounded px-1.5 py-0.5 ${ROLE_COLORS[invite.role]}`}>
-                      {ROLE_LABELS[invite.role]}
+                    <span className="text-[9px] font-bold rounded px-1.5 py-0.5 bg-amber-100 text-amber-700">
+                      Admin
                     </span>
                   </div>
                   <p className="text-[11px] text-stone-400 truncate">{invite.email}</p>
@@ -169,7 +153,7 @@ export default function InviteAdminsPanel({
             exit={{ opacity: 0, y: 8 }}
             className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5"
           >
-            <p className="mb-3 text-[13px] font-semibold text-stone-900">New Team Member</p>
+            <p className="mb-3 text-[13px] font-semibold text-stone-900">New Admin</p>
             <div className="space-y-3">
               <div>
                 <label className="mb-1 block text-[12px] font-medium text-stone-600">Name</label>
@@ -191,52 +175,13 @@ export default function InviteAdminsPanel({
                   className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-[13px] text-stone-900 placeholder:text-stone-400 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
-              <div>
-                <label className="mb-1 block text-[12px] font-medium text-stone-600">Role</label>
-                <div className="space-y-2">
-                  {ROLE_OPTIONS.map((option) => (
-                    <label
-                      key={option.value}
-                      className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
-                        role === option.value
-                          ? "border-emerald-400 bg-emerald-50"
-                          : "border-stone-200 bg-white hover:border-stone-300"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="role"
-                        value={option.value}
-                        checked={role === option.value}
-                        onChange={() => setRole(option.value)}
-                        className="sr-only"
-                      />
-                      <div className={`h-3.5 w-3.5 rounded-full border-2 ${
-                        role === option.value
-                          ? "border-emerald-600 bg-emerald-600"
-                          : "border-stone-300"
-                      }`}>
-                        {role === option.value && (
-                          <div className="flex h-full w-full items-center justify-center">
-                            <div className="h-1.5 w-1.5 rounded-full bg-white" />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-medium text-stone-900">{option.label}</p>
-                        <p className="text-[11px] text-stone-400">{option.description}</p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={addInvite}
                   disabled={saving}
                   className="rounded-lg bg-emerald-600 px-4 py-2 text-[12px] font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
                 >
-                  {saving ? "Adding..." : "Add Member"}
+                  {saving ? "Adding..." : "Add Admin"}
                 </button>
                 <button
                   onClick={() => setShowForm(false)}
@@ -258,7 +203,7 @@ export default function InviteAdminsPanel({
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
           </svg>
-          Add Team Member
+          Add Admin
         </button>
       )}
     </div>

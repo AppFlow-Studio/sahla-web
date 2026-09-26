@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { createStripeClient, reconcileSaasSubscription } from "@/lib/stripe";
+import { sendQueuedInvites } from "@/lib/invites";
 import { NextResponse } from "next/server";
 
 const TIER_CONFIG: Record<string, { envKey: string; name: string }> = {
@@ -150,6 +151,13 @@ export async function POST(
       .from("pipeline_stages")
       .update({ stage: "building", updated_at: new Date().toISOString() })
       .eq("mosque_id", mosqueId);
+
+    // Real invitations, even on the bypass — otherwise staging can't exercise
+    // the one part of go-live that emails a human.
+    await sendQueuedInvites(supabase, mosqueId).catch((err) => {
+      console.error("[go-live] bypass: sendQueuedInvites failed", err);
+      return null;
+    });
 
     return NextResponse.json({
       checkoutUrl: `${appUrl}/launching?payment=success&dev_bypass=1`,
