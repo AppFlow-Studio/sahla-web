@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { resolveMosqueId } from "@/lib/supabase/resolveMosqueId";
 import { reconcileSaasSubscription } from "@/lib/stripe";
+import { sendQueuedInvites } from "@/lib/invites";
 
 /**
  * Lightweight status poll for the post-Stripe-checkout transitional page.
@@ -60,6 +61,18 @@ export async function GET() {
       status = synced.alreadyLive ? "live" : "ready";
       tier = synced.tier ?? tier;
     }
+  }
+
+  // Payment is what releases the invites queued during onboarding. `/launching`
+  // polls this route right after checkout, so this fires within seconds of the
+  // mosque paying — whichever of the webhook or the reconcile above got there
+  // first. It's a no-op once the queue is empty.
+  if (status === "ready" || status === "live") {
+    await sendQueuedInvites(supabase, mosqueId).catch((err) => {
+      // Never fail the status poll over invites — /launching would stall.
+      console.error("me/status: sendQueuedInvites failed", err);
+      return null;
+    });
   }
 
   return NextResponse.json({

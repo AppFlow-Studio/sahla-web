@@ -1,41 +1,44 @@
-import { auth } from "@clerk/nextjs/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { requireMosqueAccess } from "@/lib/supabase/requireMosqueAccess";
+import { MOSQUE_ADMIN_ROLE, readQueuedInvites, type QueuedInvite } from "@/lib/invites";
 import { NextResponse } from "next/server";
 
-type QueuedInvite = {
-  name: string;
-  email: string;
-  role: "org:admin" | "org:editor" | "org:viewer";
-};
+/**
+ * The onboarding "Invite Admins" queue.
+ *
+ * Nothing is emailed here — invites sit in
+ * `mosques.onboarding_progress._queued_invites` until the mosque pays, at which
+ * point `sendQueuedInvites` promotes them to real Clerk org invitations.
+ */
 
-const VALID_ROLES = ["org:admin", "org:editor", "org:viewer"];
-
-async function getQueuedInvites(mosqueId: string): Promise<QueuedInvite[]> {
+/** Read the queue plus the progress object it lives in, in one round trip. */
+async function loadProgress(
+  mosqueId: string
+): Promise<{ progress: Record<string, unknown>; invites: QueuedInvite[] }> {
   const supabase = createAdminSupabaseClient();
   const { data } = await supabase
     .from("mosques")
     .select("onboarding_progress")
     .eq("id", mosqueId)
-    .single();
-
-  const progress = (data?.onboarding_progress ?? {}) as Record<string, unknown>;
-  return (progress._queued_invites as QueuedInvite[]) ?? [];
-}
-
-async function setQueuedInvites(mosqueId: string, invites: QueuedInvite[], markComplete?: boolean) {
-  const supabase = createAdminSupabaseClient();
-
-  const { data } = await supabase
-    .from("mosques")
-    .select("onboarding_progress")
-    .eq("id", mosqueId)
-    .single();
+    .maybeSingle();
 
   const progress = ((data?.onboarding_progress ?? {}) as Record<string, unknown>);
+  return { progress, invites: readQueuedInvites(progress) };
+}
+
+/**
+ * Write the queue back. The task is complete exactly when the queue is
+ * non-empty — removing the last invite has to un-complete it, or the checklist
+ * claims a step the mosque never finished.
+ */
+async function saveInvites(
+  mosqueId: string,
+  progress: Record<string, unknown>,
+  invites: QueuedInvite[]
+) {
+  const supabase = createAdminSupabaseClient();
   progress._queued_invites = invites;
-  if (markComplete) {
-    progress.invite_admins = true;
-  }
+  progress.invite_admins = invites.length > 0;
 
   const { error } = await supabase
     .from("mosques")
@@ -49,13 +52,11 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { id: mosqueId } = await params;
-  const invites = await getQueuedInvites(mosqueId);
+  const access = await requireMosqueAccess(mosqueId);
+  if (!access.ok) return access.response;
+
+  const { invites } = await loadProgress(mosqueId);
   return NextResponse.json(invites);
 }
 
@@ -63,40 +64,38 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { id: mosqueId } = await params;
-  const body = await request.json();
-  const { name, email, role } = body as { name?: string; email?: string; role?: string };
+  const access = await requireMosqueAccess(mosqueId);
+  if (!access.ok) return access.response;
+
+  const body = await request.json().catch(() => ({}));
+  const { name, email } = body as { name?: string; email?: string };
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
-  if (!email?.trim()) {
-    return NextResponse.json({ error: "Email is required" }, { status: 400 });
+  if (!email?.trim() || !email.includes("@")) {
+    return NextResponse.json({ error: "Valid email is required" }, { status: 400 });
   }
-  if (!role || !VALID_ROLES.includes(role)) {
-    return NextResponse.json({ error: "Invalid role" }, { status: 400 });
-  }
+
+  const normalizedEmail = email.trim().toLowerCase();
 
   try {
-    const invites = await getQueuedInvites(mosqueId);
+    const { progress, invites } = await loadProgress(mosqueId);
 
-    if (invites.some((i) => i.email === email.trim().toLowerCase())) {
+    if (invites.some((i) => i.email.trim().toLowerCase() === normalizedEmail)) {
       return NextResponse.json({ error: "Email already invited" }, { status: 409 });
     }
 
     invites.push({
       name: name.trim(),
-      email: email.trim().toLowerCase(),
-      role: role as QueuedInvite["role"],
+      email: normalizedEmail,
+      // Sahla grants one level of access — see MOSQUE_ADMIN_ROLE. Any role sent
+      // by a client is ignored rather than honored as a narrower grant it isn't.
+      role: MOSQUE_ADMIN_ROLE,
     });
 
-    // Mark task complete on first invite
-    await setQueuedInvites(mosqueId, invites, invites.length === 1);
+    await saveInvites(mosqueId, progress, invites);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -109,12 +108,10 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { id: mosqueId } = await params;
+  const access = await requireMosqueAccess(mosqueId);
+  if (!access.ok) return access.response;
+
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("email");
 
@@ -122,10 +119,14 @@ export async function DELETE(
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
   }
 
+  const normalizedEmail = email.trim().toLowerCase();
+
   try {
-    const invites = await getQueuedInvites(mosqueId);
-    const filtered = invites.filter((i) => i.email !== email);
-    await setQueuedInvites(mosqueId, filtered);
+    const { progress, invites } = await loadProgress(mosqueId);
+    const filtered = invites.filter(
+      (i) => i.email.trim().toLowerCase() !== normalizedEmail
+    );
+    await saveInvites(mosqueId, progress, filtered);
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to remove invite";

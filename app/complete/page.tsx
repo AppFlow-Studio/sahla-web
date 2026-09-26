@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { sendQueuedInvites } from "@/lib/invites";
 import { getPlanPricing } from "@/lib/pricing";
 import {
   getSubscriptionSummary,
@@ -53,6 +55,13 @@ export default async function CompletePage() {
   const status = mosque?.onboarding_status;
   const shipped = status === "ready" || status === "live";
   if (!mosque || !shipped) redirect("/dashboard");
+
+  // Backstop for the invite queue. `/api/mosques/me/status` normally releases
+  // it seconds after payment, but that poll gives up after ~60s and a mosque
+  // whose webhook landed late would never have run it. Everyone who finishes
+  // onboarding passes through here, so sweep once more — after the response, so
+  // a slow Clerk call can't hold up the receipt.
+  after(() => sendQueuedInvites(supabase, mosque.id as string));
 
   const { data: flags } = await supabase
     .from("mosque_feature_flags")
