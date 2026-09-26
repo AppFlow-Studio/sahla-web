@@ -28,7 +28,6 @@ export const HONEYPOT_FIELD = "companyWebsite" as const;
 const ALLOWED_ORIGINS = new Set<string>(
   [
     "https://sahla.co",
-    "https://www.sahla.co",
     process.env.NEXT_PUBLIC_APP_URL,
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
     process.env.VERCEL_BRANCH_URL

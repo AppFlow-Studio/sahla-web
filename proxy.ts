@@ -7,9 +7,15 @@
 //   Not signed in             → /login (or marketing page at /)
 
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { ALL_TASKS } from "@/app/(masjid)/components/onboarding-tasks";
 
 const SAHLA_HQ_ORG_ID = process.env.NEXT_PUBLIC_SAHLA_ORG_ID!;
+
+// Every onboarding task slug renders at a bare top-level URL (e.g.
+// /mosque_profile) via the (masjid)/[taskId] catch-all. Anything else at a
+// single segment is not a real page.
+const TASK_IDS = new Set(ALL_TASKS.map((t) => t.id));
 
 const ADMIN_PATHS = [
   "/overview",
@@ -52,6 +58,10 @@ const isMarketingRoute = createRouteMatcher([
   "/privacy(.*)",
   "/terms(.*)",
   "/why-sahla(.*)",
+  "/resources(.*)",
+  "/glossary(.*)",
+  "/vs(.*)",
+  "/features(.*)",
 ]);
 const isLoginRoute = createRouteMatcher(["/login(.*)"]);
 const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
@@ -62,6 +72,19 @@ const isApiRoute = createRouteMatcher(["/api/(.*)"]);
 const isSelectOrgRoute = createRouteMatcher(["/select-org"]);
 const isOnboardingEntryRoute = createRouteMatcher(["/onboarding"]);
 
+// Routes that exist but aren't covered by the matchers above — used only to
+// tell a real (if unauthenticated) page apart from a genuinely nonexistent
+// URL. Keep in sync with Step 3 of SAHLA-WEB-01: every page that needs a
+// login must be reachable through one of these checks, or it will 404
+// instead of prompting sign-in.
+const isOtherKnownRoute = createRouteMatcher([
+  "/dashboard",
+  "/complete",
+  "/no-crm-access",
+  "/onboarding(.*)",
+  "/billing(.*)",
+]);
+
 const LAUNCH_PATH = "/launch";
 const MASJID_LANDING = "/dashboard";
 const ADMIN_LANDING = "/overview";
@@ -69,6 +92,25 @@ const ADMIN_LANDING = "/overview";
 function isAdminPath(pathname: string): boolean {
   return ADMIN_PATHS.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
+
+function isKnownAppPath(req: NextRequest, pathname: string): boolean {
+  const segment = pathname.replace(/^\/+|\/+$/g, "");
+  const isSingleSegmentTaskRoute = segment.length > 0 && !segment.includes("/") && TASK_IDS.has(segment);
+
+  return (
+    isMarketingRoute(req) ||
+    isLoginRoute(req) ||
+    isWebhookRoute(req) ||
+    isPublicApiRoute(req) ||
+    isApiRoute(req) ||
+    isSelectOrgRoute(req) ||
+    isOtherKnownRoute(req) ||
+    isAdminPath(pathname) ||
+    isCrmPath(pathname) ||
+    pathname === LAUNCH_PATH ||
+    isSingleSegmentTaskRoute
   );
 }
 
@@ -87,8 +129,22 @@ export const proxy = clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  const session = await auth();
   const url = req.nextUrl.clone();
+
+  if (!isKnownAppPath(req, url.pathname)) {
+    // Not a real route. Previously every unmatched URL fell through to the
+    // "not signed in -> /login" branch below, so 404s (typos, bots probing
+    // /wp-admin, etc.) redirected to the login page instead of 404ing.
+    // Rewriting into a two-segment path that nothing can match forces Next's
+    // own not-found rendering — going straight to NextResponse.next() would
+    // instead let this single-segment path fall into the masjid layout's
+    // /[taskId] catch-all, which redirects before the page gets a chance to
+    // 404 an unrecognized task id.
+    url.pathname = `/__not-found__${url.pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
+  const session = await auth();
 
   if (isMarketingRoute(req)) {
     // HQ admins go straight to their workspace.
@@ -161,7 +217,7 @@ export const proxy = clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|txt|xml|docx?|xlsx?|zip|webmanifest)).*)",
     "/(api|trpc)(.*)",
   ],
 };

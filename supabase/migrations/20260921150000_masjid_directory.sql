@@ -50,7 +50,6 @@ CREATE TABLE IF NOT EXISTS masjids_directory (
 
 COMMENT ON TABLE public.masjids_directory IS
   'Public masjid directory (sahla.co). Distinct from mosques (paying customers). Most rows here are not customers.';
-
 COMMENT ON COLUMN public.masjids_directory.mosque_id IS
   'Set only when is_sahla_customer = true. Links to mosques.id so real iqamah times can be read from iqamah_config.';
 

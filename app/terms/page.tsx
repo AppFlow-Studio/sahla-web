@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Navbar from "../components/Navbar";
 import WaitlistContent from "../waitlist/WaitlistContent";
 import BottomBar from "../components/BottomBar";
+import { BreadcrumbJsonLd } from "../components/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Terms of Use — Sahla",
+  title: "Terms of Use",
   description:
     "Terms governing your use of sahla.co. Does not govern the masjid apps or any subscription — those are separate documents.",
 };
@@ -22,6 +23,12 @@ const LEGAL_CAPS = "text-dark-green/75";
 export default function TermsPage() {
   return (
     <div className="relative">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "https://sahla.co/" },
+          { name: "Terms of Use", url: "https://sahla.co/terms" },
+        ]}
+      />
       <Navbar />
 
       <section className="bg-[#fffbf2] pt-36 pb-10">

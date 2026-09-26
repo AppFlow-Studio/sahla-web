@@ -48,5 +48,8 @@ next-env.d.ts
 /.clerk/
 .env.local
 
+# superpowers subagent-driven-development scratch workspace
+/.superpowers/
+
 # isbr-site static export, copied in by `npm run build:isbr`
 /public/isbr/

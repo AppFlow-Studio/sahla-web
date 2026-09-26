@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist, Fraunces, Newsreader, Mrs_Saint_Delafield, Bodoni_Moda } from "next/font/google";
+import { Inter, Geist, Fraunces, Newsreader, Mrs_Saint_Delafield, Bodoni_Moda, Playfair_Display } from "next/font/google";
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 import Providers from "./providers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { OrganizationJsonLd } from "./components/JsonLd";
+import { OrganizationJsonLd, WebSiteJsonLd } from "./components/JsonLd";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -50,6 +50,15 @@ const bodoniModa = Bodoni_Moda({
   display: "swap",
 });
 
+// Sahla Brand System v1.1 — large headings in the new MDX content-block
+// components (app/components/mdx/). Kept separate from --font-hero so it
+// doesn't change the look of any existing page.
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  display: "swap",
+});
+
 const SITE_URL = "https://sahla.co";
 const SITE_TITLE = "Sahla — Your Mosque Deserves Its Own App";
 const SITE_DESCRIPTION =
@@ -86,7 +95,10 @@ export const metadata: Metadata = {
     "Sahla",
   ],
   alternates: {
-    canonical: "/",
+    // "./" resolves against each page's own pathname (not just the site
+    // root), so every route gets its own canonical URL instead of all
+    // pages pointing at the homepage.
+    canonical: "./",
   },
   formatDetection: {
     email: false,
@@ -96,7 +108,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Sahla",
-    url: SITE_URL,
+    // Same "./" trick as alternates.canonical above, so og:url tracks
+    // each page's own URL instead of always pointing at the homepage.
+    url: "./",
     title: SITE_TITLE,
     description: SOCIAL_DESCRIPTION,
     locale: "en_US",
@@ -201,12 +215,14 @@ export default function RootLayout({
           newsreader.variable,
           signatureFont.variable,
           bodoniModa.variable,
+          playfairDisplay.variable,
           "font-sans",
           geist.variable
         )}
       >
         <body className="min-h-full flex flex-col">
           <OrganizationJsonLd />
+          <WebSiteJsonLd />
           <Providers>{children}</Providers>
         </body>
       </html>
