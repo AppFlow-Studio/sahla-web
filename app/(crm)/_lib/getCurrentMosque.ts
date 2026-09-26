@@ -210,14 +210,16 @@ export const getCurrentMosque = cache(async (): Promise<CurrentMosqueResult> => 
         .eq("id", selectedMosqueId)
         .maybeSingle();
       if (mosque) {
-        const { data: flags } = await supabase
-          .from("mosque_feature_flags")
-          .select("has_crm_access")
-          .eq("mosque_id", mosque.id)
-          .maybeSingle();
+        // HQ's own access never depends on the masjid's plan: we manage every
+        // masjid's app, including ones on the app-only tier and ones we haven't
+        // created an account for yet. `requireCrmAccess` already skips the plan
+        // gate for HQ — this keeps the profile it seeds consistent, so a future
+        // `mosque.hasCrmAccess` check can't quietly lock HQ out of a Core
+        // masjid. The masjid's own team is unaffected: their branch below still
+        // reads the real flag and still gets bounced to /no-crm-access.
         return {
           kind: "ok",
-          mosque: toProfile(mosque as MosqueRow, !!flags?.has_crm_access, true),
+          mosque: toProfile(mosque as MosqueRow, true, true),
         };
       }
     }
