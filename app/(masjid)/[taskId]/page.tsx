@@ -8,6 +8,7 @@ import { getMosqueOnboardingData } from "../data";
 import TaskPageTransition from "./TaskPageTransition";
 import { createStripeClient, ACCOUNT_INCLUDES, mapAccountStatus, reconcileSaasSubscription } from "@/lib/stripe";
 import { markOnboardingStep } from "@/lib/supabase/onboarding";
+import { readQueuedInvites, type QueuedInvite } from "@/lib/invites";
 
 // Lazy-load panels — only the active panel is compiled/loaded per request.
 // This prevents Turbopack from parsing all 13 panels + their deps on every page load.
@@ -185,9 +186,9 @@ export default async function TaskPage({
 
   const progress = ((mosque.onboarding_progress ?? {}) as Record<string, unknown>);
 
-  let queuedInvites: { name: string; email: string; role: "org:admin" | "org:editor" | "org:viewer" }[] = [];
+  let queuedInvites: QueuedInvite[] = [];
   if (taskId === "invite_admins") {
-    queuedInvites = (progress._queued_invites as typeof queuedInvites) ?? [];
+    queuedInvites = readQueuedInvites(progress);
   }
 
   let donationsConfig = null;
